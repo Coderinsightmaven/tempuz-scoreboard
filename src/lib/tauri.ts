@@ -7,6 +7,7 @@ import { GameState } from '../types/scoreboard';
 export interface TauriScoreboardConfig {
   id: string;
   name: string;
+  filename: string;
   data: any;
   created_at: string;
   updated_at: string;

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { DesignCanvas } from './components/Designer/Canvas/DesignCanvas';
 import { CreateScoreboardDialog } from './components/ui/CreateScoreboardDialog';
+import { LoadScoreboardDialog } from './components/ui/LoadScoreboardDialog';
 import { ImageManager } from './components/ui/ImageManager';
 import { MultipleScoreboardManager } from './components/ui/MultipleScoreboardManager';
 import { PropertyPanel } from './components/Designer/PropertyPanel';
@@ -28,7 +29,10 @@ function App() {
     addComponent,
   } = useScoreboardStore();
 
+  const { setCanvasSize } = useCanvasStore();
+
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showLoadDialog, setShowLoadDialog] = useState(false);
   const [showImageManager, setShowImageManager] = useState(false);
   const [showMultipleScoreboardManager, setShowMultipleScoreboardManager] = useState(false);
   const [selectedComponentForImage, setSelectedComponentForImage] = useState<string | null>(null);
@@ -206,6 +210,16 @@ function App() {
             </button>
 
             <button
+              onClick={() => setShowLoadDialog(true)}
+              className="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center space-x-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+              </svg>
+              <span>Load Scoreboard</span>
+            </button>
+            
+            <button
               onClick={() => setShowCreateDialog(true)}
               className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
             >
@@ -319,7 +333,17 @@ function App() {
         onClose={() => setShowCreateDialog(false)}
         onCreateScoreboard={(name: string, width: number, height: number, sport: SportType) => {
           createNewScoreboard(name, width, height, sport);
+          
+          // Update canvas size to match scoreboard dimensions
+          setCanvasSize(width, height);
+          
+          setShowCreateDialog(false);
         }}
+      />
+
+      <LoadScoreboardDialog
+        isOpen={showLoadDialog}
+        onClose={() => setShowLoadDialog(false)}
       />
 
       <ImageManager
