@@ -8,7 +8,7 @@ import { PropertyPanel } from './components/Designer/PropertyPanel';
 import { useAppStore } from './stores/useAppStore';
 import { useScoreboardStore } from './stores/useScoreboardStore';
 import { useCanvasStore } from './stores/useCanvasStore';
-import { ComponentType, SportType } from './types/scoreboard';
+import { ComponentType } from './types/scoreboard';
 import { TauriAPI } from './lib/tauri';
 import './App.css';
 
@@ -331,8 +331,8 @@ function App() {
       <CreateScoreboardDialog
         isOpen={showCreateDialog}
         onClose={() => setShowCreateDialog(false)}
-        onCreateScoreboard={(name: string, width: number, height: number, sport: SportType) => {
-          createNewScoreboard(name, width, height, sport);
+        onCreateScoreboard={(name: string, width: number, height: number) => {
+          createNewScoreboard(name, width, height, 'GENERIC' as any);
           
           // Update canvas size to match scoreboard dimensions
           setCanvasSize(width, height);

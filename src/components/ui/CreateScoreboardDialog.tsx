@@ -1,11 +1,10 @@
 // src/components/ui/CreateScoreboardDialog.tsx
 import React, { useState } from 'react';
-import { SportType } from '../../types/scoreboard';
 
 interface CreateScoreboardDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onCreateScoreboard: (name: string, width: number, height: number, sport: SportType) => void;
+  onCreateScoreboard: (name: string, width: number, height: number) => void;
 }
 
 export const CreateScoreboardDialog: React.FC<CreateScoreboardDialogProps> = ({
@@ -13,25 +12,24 @@ export const CreateScoreboardDialog: React.FC<CreateScoreboardDialogProps> = ({
   onClose,
   onCreateScoreboard,
 }) => {
-  const [name, setName] = useState('New Tennis Scoreboard');
+  const [name, setName] = useState('New Scoreboard');
   const [width, setWidth] = useState(800);
   const [height, setHeight] = useState(600);
-  const [sport, setSport] = useState<SportType>(SportType.TENNIS);
 
   const presetSizes = [
+    { name: '512x256 (Small)', width: 512, height: 256 },
+    { name: '896x512 (Medium)', width: 896, height: 512 },
+    { name: '1024x896 (Large)', width: 1024, height: 896 },
+    { name: '800x600 (4:3)', width: 800, height: 600 },
     { name: '1920x1080 (Full HD)', width: 1920, height: 1080 },
     { name: '1366x768 (HD)', width: 1366, height: 768 },
     { name: '1280x720 (HD Ready)', width: 1280, height: 720 },
-    { name: '1600x900 (HD+)', width: 1600, height: 900 },
-    { name: '2560x1440 (QHD)', width: 2560, height: 1440 },
-    { name: '3840x2160 (4K)', width: 3840, height: 2160 },
-    { name: '800x600 (Small)', width: 800, height: 600 },
   ];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (name.trim() && width > 0 && height > 0) {
-      onCreateScoreboard(name.trim(), width, height, sport);
+      onCreateScoreboard(name.trim(), width, height);
       onClose();
     }
   };
@@ -72,27 +70,6 @@ export const CreateScoreboardDialog: React.FC<CreateScoreboardDialogProps> = ({
               placeholder="Enter scoreboard name"
               required
             />
-          </div>
-
-          {/* Sport Type */}
-          <div>
-            <label className="form-label">Sport Type</label>
-            <select
-              value={sport}
-              onChange={(e) => setSport(e.target.value as SportType)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md 
-                         bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                         focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value={SportType.TENNIS}>🎾 Tennis</option>
-              <option value={SportType.BASKETBALL}>🏀 Basketball</option>
-              <option value={SportType.FOOTBALL}>🏈 Football</option>
-              <option value={SportType.SOCCER}>⚽ Soccer</option>
-              <option value={SportType.HOCKEY}>🏒 Hockey</option>
-              <option value={SportType.VOLLEYBALL}>🏐 Volleyball</option>
-              <option value={SportType.BASEBALL}>⚾ Baseball</option>
-              <option value={SportType.GENERIC}>⚙️ Generic</option>
-            </select>
           </div>
 
           {/* Canvas Size Presets */}

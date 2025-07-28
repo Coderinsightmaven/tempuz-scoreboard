@@ -15,7 +15,7 @@ interface ScoreboardState {
 
 interface ScoreboardActions {
   // Configuration
-  createNewScoreboard: (name: string, width: number, height: number, sport: SportType) => void;
+  createNewScoreboard: (name: string, width: number, height: number, sport?: SportType) => void;
   loadScoreboard: (config: ScoreboardConfig) => void;
   updateScoreboardName: (name: string) => void;
   updateScoreboardDimensions: (width: number, height: number) => void;
@@ -255,7 +255,7 @@ export const useScoreboardStore = create<ScoreboardState & ScoreboardActions>()(
     lastSaved: null,
 
     // Configuration actions
-    createNewScoreboard: (name: string, width: number, height: number, sport: SportType) =>
+    createNewScoreboard: (name: string, width: number, height: number, sport: SportType = SportType.GENERIC) =>
       set(() => {
         const now = new Date();
         const config: ScoreboardConfig = {
