@@ -1,6 +1,7 @@
 // src/stores/useCanvasStore.ts
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
+import { AlignmentGuide } from '../utils/alignment';
 
 interface CanvasState {
   canvasSize: { width: number; height: number };
@@ -19,6 +20,7 @@ interface CanvasState {
   isResizing: boolean;
   resizeHandle: string | null;
   viewportBounds: DOMRect | null;
+  alignmentGuides: AlignmentGuide[];
 }
 
 interface CanvasActions {
@@ -41,6 +43,8 @@ interface CanvasActions {
   zoomOut: () => void;
   zoomToFit: (canvasWidth: number, canvasHeight: number, viewportWidth: number, viewportHeight: number) => void;
   resetView: () => void;
+  setAlignmentGuides: (guides: AlignmentGuide[]) => void;
+  clearAlignmentGuides: () => void;
 }
 
 export const useCanvasStore = create<CanvasState & CanvasActions>()(
@@ -62,6 +66,7 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()(
     isResizing: false,
     resizeHandle: null,
     viewportBounds: null,
+    alignmentGuides: [],
 
     // Actions
     setCanvasSize: (width: number, height: number) => 
@@ -181,10 +186,20 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()(
         return { zoom, pan };
       }),
 
-    resetView: () =>
-      set(() => ({
-        zoom: 1,
-        pan: { x: 0, y: 0 }
-      })),
+          resetView: () =>
+        set(() => ({
+          zoom: 1,
+          pan: { x: 0, y: 0 }
+        })),
+
+      setAlignmentGuides: (guides: AlignmentGuide[]) =>
+        set(() => ({
+          alignmentGuides: guides
+        })),
+
+      clearAlignmentGuides: () =>
+        set(() => ({
+          alignmentGuides: []
+        })),
   }))
 ); 
