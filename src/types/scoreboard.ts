@@ -198,4 +198,24 @@ export interface MonitorInfo {
   y: number;
   is_primary: boolean;
   scale_factor: number;
+}
+
+export interface ScoreboardInstance {
+  id: string;
+  windowId: string;
+  name: string;
+  monitorId: number;
+  position: {
+    x: number;
+    y: number;
+    offsetX: number;
+    offsetY: number;
+  };
+  size: {
+    width: number;
+    height: number;
+  };
+  isActive: boolean;
+  createdAt: Date;
+  scoreboardData?: any; // Saved scoreboard configuration and components
 } 

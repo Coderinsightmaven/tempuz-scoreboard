@@ -54,7 +54,7 @@ fn save_image_metadata(app: &AppHandle, images: &[StoredImage]) -> Result<(), Bo
     Ok(())
 }
 
-fn create_thumbnail(image_data: &[u8], image_type: &str) -> Option<String> {
+fn create_thumbnail(image_data: &[u8], _image_type: &str) -> Option<String> {
     // For now, just return the first 1000 characters of base64 as a simple thumbnail
     // In a real implementation, you'd want to use an image processing library
     // to create actual thumbnails

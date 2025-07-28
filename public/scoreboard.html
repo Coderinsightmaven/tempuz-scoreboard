@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scoreboard Display</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: Arial, sans-serif; 
+            background: #000; 
+            color: #fff; 
+            overflow: hidden; 
+            height: 100vh; 
+            width: 100vw; 
+        }
+        .scoreboard-container { 
+            width: 100%; 
+            height: 100%; 
+            position: relative; 
+            background: #000; 
+        }
+        .component { 
+            position: absolute; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            font-weight: bold; 
+            user-select: none; 
+        }
+        .status-indicator { 
+            position: absolute; 
+            top: 20px; 
+            right: 20px; 
+            padding: 8px 16px; 
+            background: rgba(0,255,136,0.2); 
+            border: 2px solid #00ff88; 
+            border-radius: 20px; 
+            font-size: 0.9rem; 
+            font-weight: bold; 
+            color: #00ff88; 
+            z-index: 1000; 
+        }
+        .default-scoreboard { 
+            width: 100%; 
+            height: 100%; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460); 
+        }
+        .default-title { 
+            font-size: 2.5rem; 
+            margin-bottom: 2rem; 
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5); 
+        }
+        .default-scores { 
+            display: flex; 
+            align-items: center; 
+            gap: 4rem; 
+            margin: 2rem 0; 
+        }
+        .default-team { 
+            text-align: center; 
+            min-width: 200px; 
+        }
+        .default-team-name { 
+            font-size: 1.8rem; 
+            margin-bottom: 1rem; 
+        }
+        .default-score { 
+            font-size: 4rem; 
+            color: #00ff88; 
+            text-shadow: 2px 2px 8px rgba(0,255,136,0.3); 
+        }
+        .default-vs { 
+            font-size: 2rem; 
+            color: #888; 
+        }
+        .default-time { 
+            font-size: 2.5rem; 
+            color: #ffaa00; 
+            text-shadow: 2px 2px 8px rgba(255,170,0,0.3); 
+            margin-top: 2rem; 
+        }
+    </style>
+</head>
+<body>
+    <div class="scoreboard-container" id="scoreboardContainer">
+        <div class="status-indicator" id="status">LIVE</div>
+        <div class="default-scoreboard">
+            <div class="default-title">Scoreboard Display</div>
+            <div class="default-scores">
+                <div class="default-team">
+                    <div class="default-team-name" id="home-team">Home Team</div>
+                    <div class="default-score" id="home-score">0</div>
+                </div>
+                <div class="default-vs">VS</div>
+                <div class="default-team">
+                    <div class="default-team-name" id="away-team">Away Team</div>
+                    <div class="default-score" id="away-score">0</div>
+                </div>
+            </div>
+            <div class="default-time" id="game-time">00:00</div>
+        </div>
+    </div>
+
+    <script>
+        let gameState = null;
+
+        // Listen for game state updates
+        if (window.__TAURI__) {
+            window.__TAURI__.event.listen('game_state_updated', (event) => {
+                gameState = event.payload;
+                updateDisplay();
+            });
+        }
+
+        // Update display with current game state
+        function updateDisplay() {
+            if (!gameState) return;
+            
+            const homeTeamEl = document.getElementById('home-team');
+            const awayTeamEl = document.getElementById('away-team');
+            const homeScoreEl = document.getElementById('home-score');
+            const awayScoreEl = document.getElementById('away-score');
+            const gameTimeEl = document.getElementById('game-time');
+            const statusEl = document.getElementById('status');
+            
+            if (homeTeamEl) homeTeamEl.textContent = gameState.homeTeam?.name || 'Home Team';
+            if (awayTeamEl) awayTeamEl.textContent = gameState.awayTeam?.name || 'Away Team';
+            if (homeScoreEl) homeScoreEl.textContent = gameState.homeScore || 0;
+            if (awayScoreEl) awayScoreEl.textContent = gameState.awayScore || 0;
+            if (gameTimeEl) gameTimeEl.textContent = gameState.timeRemaining || '00:00';
+            
+            if (statusEl) {
+                const status = gameState.isGameActive ? 'LIVE' : 'PAUSED';
+                statusEl.textContent = status;
+                statusEl.style.background = gameState.isGameActive ? 
+                    'rgba(0,255,136,0.2)' : 'rgba(255,170,0,0.2)';
+                statusEl.style.borderColor = gameState.isGameActive ? 
+                    '#00ff88' : '#ffaa00';
+                statusEl.style.color = gameState.isGameActive ? 
+                    '#00ff88' : '#ffaa00';
+            }
+        }
+
+        // Load initial game state
+        async function loadInitialGameState() {
+            try {
+                if (window.__TAURI__) {
+                    const state = await window.__TAURI__.core.invoke('get_game_state');
+                    if (state) {
+                        gameState = state;
+                        updateDisplay();
+                    }
+                }
+            } catch (error) {
+                console.warn('Failed to load initial game state:', error);
+            }
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', loadInitialGameState);
+        
+        console.log('Scoreboard display initialized');
+    </script>
+</body>
+</html>
