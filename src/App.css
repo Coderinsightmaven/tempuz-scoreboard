@@ -91,6 +91,11 @@
     @apply opacity-50 z-50;
   }
   
+  .alignment-guide {
+    @apply bg-blue-500 opacity-80;
+    box-shadow: 0 0 1px rgba(59, 130, 246, 0.5);
+  }
+  
   .resize-handle {
     @apply absolute w-2 h-2 bg-primary border border-background rounded-sm;
   }
