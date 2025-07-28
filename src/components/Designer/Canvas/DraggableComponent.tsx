@@ -2,18 +2,22 @@ import React from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { ScoreboardComponent, ComponentType } from '../../../types/scoreboard';
+import { ResizeHandle } from '../../../types/canvas';
+import { ResizeHandles } from './ResizeHandles';
 import { useCanvasStore } from '../../../stores/useCanvasStore';
 
 interface DraggableComponentProps {
   component: ScoreboardComponent;
   onSelect?: (id: string) => void;
+  onResizeStart?: (componentId: string, handle: ResizeHandle, event: React.MouseEvent) => void;
 }
 
 export const DraggableComponent: React.FC<DraggableComponentProps> = ({
   component,
   onSelect,
+  onResizeStart,
 }) => {
-  const { selectedComponents } = useCanvasStore();
+  const { selectedComponents, isResizing } = useCanvasStore();
   const isSelected = selectedComponents.has(component.id);
 
   const {
@@ -29,6 +33,12 @@ export const DraggableComponent: React.FC<DraggableComponentProps> = ({
       component,
     },
   });
+
+  const handleResizeStart = (handle: ResizeHandle, event: React.MouseEvent) => {
+    if (onResizeStart) {
+      onResizeStart(component.id, handle, event);
+    }
+  };
 
   const renderComponentContent = () => {
     switch (component.type) {
@@ -151,21 +161,20 @@ export const DraggableComponent: React.FC<DraggableComponentProps> = ({
         opacity: isDragging ? 0.5 : (component.style.opacity || 1),
         zIndex: component.zIndex || 1,
         userSelect: 'none',
-        cursor: isDragging ? 'grabbing' : 'grab',
+        cursor: isDragging ? 'grabbing' : (isResizing ? 'default' : 'grab'),
         ...getComponentSpecificStyles(),
         ...transformStyle,
       }}
       onClick={handleClick}
-      {...listeners}
-      {...attributes}
+      {...(!isResizing ? listeners : {})}
+      {...(!isResizing ? attributes : {})}
     >
       {renderComponentContent()}
-      {isSelected && (
-        <div 
-          className="absolute -top-1 -right-1 w-3 h-3 bg-primary rounded-full border-2 border-white"
-          style={{ pointerEvents: 'none' }}
-        />
-      )}
+      <ResizeHandles
+        component={component}
+        isSelected={isSelected}
+        onResizeStart={handleResizeStart}
+      />
     </div>
   );
 }; 

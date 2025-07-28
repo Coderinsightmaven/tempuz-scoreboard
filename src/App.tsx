@@ -1,10 +1,11 @@
-import { useEffect } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useAppStore } from './stores/useAppStore';
 import { useScoreboardStore } from './stores/useScoreboardStore';
 import { useCanvasStore } from './stores/useCanvasStore';
 import { SportType, ComponentType } from './types/scoreboard';
 import { DesignCanvas } from './components/Designer/Canvas/DesignCanvas';
 import { ColorPicker } from './components/ui/ColorPicker';
+import { CreateScoreboardDialog } from './components/ui/CreateScoreboardDialog';
 import './App.css';
 
 function App() {
@@ -27,6 +28,8 @@ function App() {
   
   const { canvasSize, zoom, selectedComponents: canvasSelection } = useCanvasStore();
 
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+
   useEffect(() => {
     // Initialize the app on mount
     initializeApp();
@@ -42,9 +45,94 @@ function App() {
     }
   }, [theme]);
 
-  const handleCreateNewScoreboard = () => {
-    createNewScoreboard('New Tennis Scoreboard', 1920, 1080, SportType.TENNIS);
+  const handleCreateNewScoreboard = (name: string, width: number, height: number, sport: SportType) => {
+    createNewScoreboard(name, width, height, sport);
+    
+    // Update canvas size to match scoreboard dimensions
+    const canvasStore = useCanvasStore.getState();
+    canvasStore.setCanvasSize(width, height);
+    
+    // Auto-fit the canvas to the viewport with some padding
+    setTimeout(() => {
+      // Get the canvas container element to determine available space
+      const canvasContainer = document.querySelector('.canvas-container');
+      if (canvasContainer) {
+        const containerRect = canvasContainer.getBoundingClientRect();
+        
+        // Account for padding/margins (40px on each side for padding)
+        const availableWidth = containerRect.width - 80;
+        const availableHeight = containerRect.height - 80;
+        
+        // Calculate zoom to fit with 10% padding
+        const scaleX = (availableWidth * 0.9) / width;
+        const scaleY = (availableHeight * 0.9) / height;
+        const optimalZoom = Math.min(scaleX, scaleY, 1); // Don't zoom in beyond 100%
+        
+        // Apply the zoom
+        canvasStore.setZoom(Math.max(0.1, optimalZoom));
+        
+        // Center the canvas in the viewport
+        const scaledWidth = width * optimalZoom;
+        const scaledHeight = height * optimalZoom;
+        const panX = (availableWidth - scaledWidth) / 2;
+        const panY = (availableHeight - scaledHeight) / 2;
+        
+        canvasStore.setPan(panX, panY);
+      }
+    }, 100); // Small delay to ensure DOM is updated
   };
+
+  const openCreateDialog = () => {
+    setShowCreateDialog(true);
+  };
+
+  const handleFitToScreen = useCallback(() => {
+    if (!config) return;
+    
+    const canvasStore = useCanvasStore.getState();
+    const { width, height } = config.dimensions;
+    
+    // Get the canvas container element to determine available space
+    const canvasContainer = document.querySelector('.canvas-container');
+    if (canvasContainer) {
+      const containerRect = canvasContainer.getBoundingClientRect();
+      
+      // Account for padding/margins (40px on each side for padding)
+      const availableWidth = containerRect.width - 80;
+      const availableHeight = containerRect.height - 80;
+      
+      // Calculate zoom to fit with 10% padding
+      const scaleX = (availableWidth * 0.9) / width;
+      const scaleY = (availableHeight * 0.9) / height;
+      const optimalZoom = Math.min(scaleX, scaleY, 1); // Don't zoom in beyond 100%
+      
+      // Apply the zoom
+      canvasStore.setZoom(Math.max(0.1, optimalZoom));
+      
+      // Center the canvas in the viewport
+      const scaledWidth = width * optimalZoom;
+      const scaledHeight = height * optimalZoom;
+      const panX = (availableWidth - scaledWidth) / 2;
+      const panY = (availableHeight - scaledHeight) / 2;
+      
+      canvasStore.setPan(panX, panY);
+    }
+  }, [config]);
+
+  // Auto-fit canvas when window resizes
+  useEffect(() => {
+    const handleResize = () => {
+      if (config) {
+        // Small delay to ensure layout has updated
+        setTimeout(() => {
+          handleFitToScreen();
+        }, 100);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [config, handleFitToScreen]);
 
   const handleAddComponent = (type: ComponentType) => {
     if (!config) return;
@@ -115,6 +203,16 @@ function App() {
         </div>
         
         <div className="flex items-center space-x-2">
+          {config && (
+            <button
+              onClick={handleFitToScreen}
+              className="px-3 py-1 text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 
+                         hover:bg-blue-200 dark:hover:bg-blue-800 rounded transition-colors"
+              title="Fit scoreboard to screen"
+            >
+              📐 Fit to Screen
+            </button>
+          )}
           <span className="text-xs text-muted-foreground">
             Monitors: {monitors.length}
           </span>
@@ -269,7 +367,7 @@ function App() {
                   Create a new scoreboard or open an existing one to get started.
                 </p>
                 <button 
-                  onClick={handleCreateNewScoreboard}
+                  onClick={openCreateDialog}
                   className="px-6 py-3 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
                 >
                   Create New Scoreboard
@@ -370,6 +468,13 @@ function App() {
           <span>Theme: {theme}</span>
         </div>
       </footer>
+
+      {/* Create Scoreboard Dialog */}
+      <CreateScoreboardDialog
+        isOpen={showCreateDialog}
+        onClose={() => setShowCreateDialog(false)}
+        onCreateScoreboard={handleCreateNewScoreboard}
+      />
     </div>
   );
 }
