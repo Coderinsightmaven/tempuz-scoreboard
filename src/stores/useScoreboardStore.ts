@@ -142,6 +142,94 @@ const createDefaultComponent = (
         size: { width: 60, height: 60 },
         style: { ...baseComponent.style, borderRadius: 50, backgroundColor: '#f0f0f0' },
       };
+
+    // Tennis-specific components
+    case ComponentType.TENNIS_SET_SCORE:
+      return {
+        ...baseComponent,
+        size: { width: 80, height: 40 },
+        style: { ...baseComponent.style, fontSize: 20, fontWeight: 'bold' },
+        data: { 
+          text: '0 - 0',
+          tennisData: { player1SetScore: 0, player2SetScore: 0 }
+        },
+      };
+
+    case ComponentType.TENNIS_GAME_SCORE:
+      return {
+        ...baseComponent,
+        size: { width: 100, height: 50 },
+        style: { ...baseComponent.style, fontSize: 24, fontWeight: 'bold' },
+        data: { 
+          text: '0 - 0',
+          tennisData: { player1GameScore: '0', player2GameScore: '0' }
+        },
+      };
+
+    case ComponentType.TENNIS_CURRENT_GAME:
+      return {
+        ...baseComponent,
+        size: { width: 80, height: 40 },
+        style: { ...baseComponent.style, fontSize: 18, fontWeight: 'bold' },
+        data: { 
+          text: '0 - 0',
+          tennisData: { player1CurrentGame: 0, player2CurrentGame: 0 }
+        },
+      };
+
+    case ComponentType.TENNIS_SERVER_INDICATOR:
+      return {
+        ...baseComponent,
+        size: { width: 20, height: 20 },
+        style: { ...baseComponent.style, borderRadius: 50, backgroundColor: '#fbbf24' },
+        data: { 
+          text: '●',
+          tennisData: { servingPlayer: 1 }
+        },
+      };
+
+    case ComponentType.TENNIS_PLAYER_NAME:
+      return {
+        ...baseComponent,
+        size: { width: 150, height: 35 },
+        style: { ...baseComponent.style, fontSize: 16, fontWeight: 'bold' },
+        data: { text: 'Player Name' },
+      };
+
+    case ComponentType.TENNIS_MATCH_STATUS:
+      return {
+        ...baseComponent,
+        size: { width: 120, height: 30 },
+        style: { ...baseComponent.style, fontSize: 14 },
+        data: { text: 'In Progress' },
+      };
+
+    case ComponentType.TENNIS_TIEBREAK_SCORE:
+      return {
+        ...baseComponent,
+        size: { width: 80, height: 40 },
+        style: { ...baseComponent.style, fontSize: 18, fontWeight: 'bold', backgroundColor: '#ef4444', textColor: '#ffffff' },
+        data: { 
+          text: '0 - 0',
+          tennisData: { 
+            isTiebreak: true,
+            tiebreakScore: { player1: 0, player2: 0 }
+          }
+        },
+      };
+
+    case ComponentType.BACKGROUND_COLOR:
+      return {
+        ...baseComponent,
+        size: { width: 200, height: 100 },
+        style: { 
+          ...baseComponent.style, 
+          backgroundColor: '#3b82f6',
+          rgbColor: { r: 59, g: 130, b: 246, a: 1 },
+          borderWidth: 0
+        },
+        data: { text: '' },
+      };
     
     default:
       return baseComponent;

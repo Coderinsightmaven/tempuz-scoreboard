@@ -48,6 +48,29 @@ export const DraggableComponent: React.FC<DraggableComponentProps> = ({
         return '';
       case ComponentType.CIRCLE:
         return '';
+      
+      // Tennis components
+      case ComponentType.TENNIS_SET_SCORE:
+        const setData = component.data.tennisData;
+        return `${setData?.player1SetScore || 0} - ${setData?.player2SetScore || 0}`;
+      case ComponentType.TENNIS_GAME_SCORE:
+        const gameData = component.data.tennisData;
+        return `${gameData?.player1GameScore || '0'} - ${gameData?.player2GameScore || '0'}`;
+      case ComponentType.TENNIS_CURRENT_GAME:
+        const currentData = component.data.tennisData;
+        return `${currentData?.player1CurrentGame || 0} - ${currentData?.player2CurrentGame || 0}`;
+      case ComponentType.TENNIS_SERVER_INDICATOR:
+        return '●';
+      case ComponentType.TENNIS_PLAYER_NAME:
+        return component.data.text || 'Player Name';
+      case ComponentType.TENNIS_MATCH_STATUS:
+        return component.data.text || 'In Progress';
+      case ComponentType.TENNIS_TIEBREAK_SCORE:
+        const tieData = component.data.tennisData?.tiebreakScore;
+        return `${tieData?.player1 || 0} - ${tieData?.player2 || 0}`;
+      case ComponentType.BACKGROUND_COLOR:
+        return '';
+      
       default:
         return 'Component';
     }
@@ -64,6 +87,50 @@ export const DraggableComponent: React.FC<DraggableComponentProps> = ({
     transform: CSS.Translate.toString(transform),
   } : {};
 
+  // Calculate background color from RGB if available
+  const getBackgroundColor = () => {
+    if (component.style.rgbColor) {
+      const { r, g, b, a = 1 } = component.style.rgbColor;
+      return `rgba(${r}, ${g}, ${b}, ${a})`;
+    }
+    return component.style.backgroundColor || '#ffffff';
+  };
+
+  // Special styling for tennis components
+  const getComponentSpecificStyles = () => {
+    const baseStyles = {
+      fontSize: component.style.fontSize || 16,
+      fontFamily: component.style.fontFamily || 'Arial, sans-serif',
+      fontWeight: component.style.fontWeight || 'normal',
+      color: component.style.textColor || '#000000',
+    };
+
+    switch (component.type) {
+      case ComponentType.TENNIS_SERVER_INDICATOR:
+        return {
+          ...baseStyles,
+          borderRadius: '50%',
+          fontSize: 12,
+          backgroundColor: component.data.tennisData?.servingPlayer === 1 ? '#fbbf24' : '#6b7280',
+        };
+      case ComponentType.TENNIS_TIEBREAK_SCORE:
+        return {
+          ...baseStyles,
+          backgroundColor: '#ef4444',
+          color: '#ffffff',
+          fontWeight: 'bold',
+        };
+      case ComponentType.BACKGROUND_COLOR:
+        return {
+          ...baseStyles,
+          backgroundColor: getBackgroundColor(),
+          border: 'none',
+        };
+      default:
+        return baseStyles;
+    }
+  };
+
   return (
     <div
       ref={setNodeRef}
@@ -74,21 +141,18 @@ export const DraggableComponent: React.FC<DraggableComponentProps> = ({
         top: component.position.y,
         width: component.size.width,
         height: component.size.height,
-        backgroundColor: component.style.backgroundColor || '#ffffff',
-        border: '1px solid #000000',
-        borderRadius: component.type === ComponentType.CIRCLE ? '50%' : '0px',
-        fontSize: 16,
-        fontFamily: 'Arial, sans-serif',
-        fontWeight: 'normal',
-        color: '#000000',
+        backgroundColor: getBackgroundColor(),
+        border: component.type === ComponentType.BACKGROUND_COLOR ? 'none' : '1px solid #000000',
+        borderRadius: component.type === ComponentType.CIRCLE || component.type === ComponentType.TENNIS_SERVER_INDICATOR ? '50%' : `${component.style.borderRadius || 0}px`,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         textAlign: 'center',
-        opacity: isDragging ? 0.5 : 1,
+        opacity: isDragging ? 0.5 : (component.style.opacity || 1),
         zIndex: component.zIndex || 1,
         userSelect: 'none',
         cursor: isDragging ? 'grabbing' : 'grab',
+        ...getComponentSpecificStyles(),
         ...transformStyle,
       }}
       onClick={handleClick}

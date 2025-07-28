@@ -24,6 +24,16 @@ export const enum ComponentType {
   RECTANGLE = 'rectangle',
   CIRCLE = 'circle',
   CUSTOM_SHAPE = 'custom-shape',
+  // Tennis-specific components
+  TENNIS_SET_SCORE = 'tennis-set-score',
+  TENNIS_GAME_SCORE = 'tennis-game-score',
+  TENNIS_CURRENT_GAME = 'tennis-current-game',
+  TENNIS_SERVER_INDICATOR = 'tennis-server-indicator',
+  TENNIS_PLAYER_NAME = 'tennis-player-name',
+  TENNIS_MATCH_STATUS = 'tennis-match-status',
+  TENNIS_TIEBREAK_SCORE = 'tennis-tiebreak-score',
+  // Background component with RGB
+  BACKGROUND_COLOR = 'background-color',
 }
 
 export interface Position {
@@ -69,6 +79,13 @@ export interface ComponentStyle {
     blur: number;
     color: string;
   };
+  // RGB color settings
+  rgbColor?: {
+    r: number;
+    g: number;
+    b: number;
+    a?: number; // alpha for transparency
+  };
 }
 
 export interface ComponentData {
@@ -77,6 +94,22 @@ export interface ComponentData {
   imageUrl?: string;
   teamId?: string;
   format?: string;
+  // Tennis-specific data
+  tennisData?: {
+    player1SetScore?: number;
+    player2SetScore?: number;
+    player1GameScore?: string; // "0", "15", "30", "40", "A", "D"
+    player2GameScore?: string;
+    player1CurrentGame?: number;
+    player2CurrentGame?: number;
+    servingPlayer?: 1 | 2;
+    matchFormat?: 'best-of-3' | 'best-of-5';
+    isTiebreak?: boolean;
+    tiebreakScore?: {
+      player1: number;
+      player2: number;
+    };
+  };
   [key: string]: any;
 }
 

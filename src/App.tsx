@@ -4,6 +4,7 @@ import { useScoreboardStore } from './stores/useScoreboardStore';
 import { useCanvasStore } from './stores/useCanvasStore';
 import { SportType, ComponentType } from './types/scoreboard';
 import { DesignCanvas } from './components/Designer/Canvas/DesignCanvas';
+import { ColorPicker } from './components/ui/ColorPicker';
 import './App.css';
 
 function App() {
@@ -20,7 +21,8 @@ function App() {
     config, 
     components, 
     createNewScoreboard, 
-    addComponent
+    addComponent,
+    updateComponentStyle
   } = useScoreboardStore();
   
   const { canvasSize, zoom, selectedComponents: canvasSelection } = useCanvasStore();
@@ -41,7 +43,7 @@ function App() {
   }, [theme]);
 
   const handleCreateNewScoreboard = () => {
-    createNewScoreboard('New Scoreboard', 1920, 1080, SportType.BASKETBALL);
+    createNewScoreboard('New Tennis Scoreboard', 1920, 1080, SportType.TENNIS);
   };
 
   const handleAddComponent = (type: ComponentType) => {
@@ -52,6 +54,21 @@ function App() {
     const centerY = canvasSize.height / 2 + (Math.random() - 0.5) * 100;
     
     addComponent(type, { x: centerX, y: centerY });
+  };
+
+  const handleColorChange = (componentId: string, color: { r: number; g: number; b: number; a?: number }) => {
+    updateComponentStyle(componentId, { 
+      rgbColor: color,
+      backgroundColor: `rgba(${color.r}, ${color.g}, ${color.b}, ${color.a || 1})`
+    });
+  };
+
+  const getSelectedComponent = () => {
+    if (canvasSelection.size === 1) {
+      const selectedId = Array.from(canvasSelection)[0];
+      return components.find(c => c.id === selectedId);
+    }
+    return null;
   };
 
 
@@ -118,6 +135,8 @@ function App() {
           </div>
           <div className="panel-content">
             <div className="space-y-2">
+              {/* General Components */}
+              <div className="text-xs font-semibold text-muted-foreground mb-2">General</div>
               <button 
                 onClick={() => handleAddComponent(ComponentType.SCORE)}
                 className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
@@ -159,6 +178,68 @@ function App() {
                 disabled={!config}
               >
                 🔢 Period
+              </button>
+
+              {/* Tennis Components */}
+              <div className="text-xs font-semibold text-muted-foreground mb-2 mt-4">Tennis</div>
+              <button 
+                onClick={() => handleAddComponent(ComponentType.TENNIS_SET_SCORE)}
+                className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
+                disabled={!config}
+              >
+                🎾 Set Score
+              </button>
+              <button 
+                onClick={() => handleAddComponent(ComponentType.TENNIS_GAME_SCORE)}
+                className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
+                disabled={!config}
+              >
+                🎾 Game Score
+              </button>
+              <button 
+                onClick={() => handleAddComponent(ComponentType.TENNIS_CURRENT_GAME)}
+                className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
+                disabled={!config}
+              >
+                🎾 Games
+              </button>
+              <button 
+                onClick={() => handleAddComponent(ComponentType.TENNIS_PLAYER_NAME)}
+                className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
+                disabled={!config}
+              >
+                🎾 Player Name
+              </button>
+              <button 
+                onClick={() => handleAddComponent(ComponentType.TENNIS_SERVER_INDICATOR)}
+                className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
+                disabled={!config}
+              >
+                🎾 Server
+              </button>
+              <button 
+                onClick={() => handleAddComponent(ComponentType.TENNIS_TIEBREAK_SCORE)}
+                className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
+                disabled={!config}
+              >
+                🎾 Tiebreak
+              </button>
+              <button 
+                onClick={() => handleAddComponent(ComponentType.TENNIS_MATCH_STATUS)}
+                className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
+                disabled={!config}
+              >
+                🎾 Match Status
+              </button>
+
+              {/* Shapes & Background */}
+              <div className="text-xs font-semibold text-muted-foreground mb-2 mt-4">Shapes</div>
+              <button 
+                onClick={() => handleAddComponent(ComponentType.BACKGROUND_COLOR)}
+                className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
+                disabled={!config}
+              >
+                🎨 Background Color
               </button>
               <button 
                 onClick={() => handleAddComponent(ComponentType.RECTANGLE)}
@@ -211,9 +292,59 @@ function App() {
                 <div className="text-sm font-medium">
                   {canvasSelection.size} component(s) selected
                 </div>
-                <div className="text-xs text-muted-foreground">
-                  Component editing coming soon...
-                </div>
+                
+                {canvasSelection.size === 1 && (() => {
+                  const selectedComponent = getSelectedComponent();
+                  if (!selectedComponent) return null;
+                  
+                  return (
+                    <div className="space-y-4">
+                      {/* Component Type */}
+                      <div>
+                        <label className="form-label">Type</label>
+                        <div className="text-sm text-muted-foreground">
+                          {selectedComponent.type.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                        </div>
+                      </div>
+
+                      {/* RGB Color Picker for Background Color and other components */}
+                      {(selectedComponent.type === ComponentType.BACKGROUND_COLOR || 
+                        selectedComponent.style.rgbColor) && (
+                        <ColorPicker
+                          color={selectedComponent.style.rgbColor || { r: 59, g: 130, b: 246, a: 1 }}
+                          onChange={(color) => handleColorChange(selectedComponent.id, color)}
+                          label="Background Color"
+                        />
+                      )}
+
+                      {/* Tennis Component Controls */}
+                      {selectedComponent.type.startsWith('tennis-') && (
+                        <div>
+                          <label className="form-label">Tennis Settings</label>
+                          <div className="text-xs text-muted-foreground">
+                            Tennis-specific controls coming soon...
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Position */}
+                      <div>
+                        <label className="form-label">Position</label>
+                        <div className="text-xs text-muted-foreground">
+                          X: {Math.round(selectedComponent.position.x)}, Y: {Math.round(selectedComponent.position.y)}
+                        </div>
+                      </div>
+
+                      {/* Size */}
+                      <div>
+                        <label className="form-label">Size</label>
+                        <div className="text-xs text-muted-foreground">
+                          W: {selectedComponent.size.width}, H: {selectedComponent.size.height}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             ) : (
               <div className="text-sm text-muted-foreground">
