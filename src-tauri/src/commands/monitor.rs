@@ -40,25 +40,27 @@ pub async fn get_available_monitors(app: AppHandle) -> Result<Vec<MonitorInfo>, 
 #[tauri::command]
 pub async fn create_scoreboard_window(
     app: AppHandle,
+    window_id: String,
     _monitor_id: u32,
     width: u32,
     height: u32,
     x: i32,
     y: i32,
+    offset_x: i32,
+    offset_y: i32,
 ) -> Result<(), String> {
-    // Close existing scoreboard window if it exists
-    if let Some(window) = app.get_webview_window("scoreboard") {
-        window.close().map_err(|e| e.to_string())?;
-    }
+    // Calculate final position with offset
+    let final_x = x + offset_x;
+    let final_y = y + offset_y;
 
     let _window = WebviewWindowBuilder::new(
         &app,
-        "scoreboard",
+        window_id,
         WebviewUrl::App("scoreboard.html".into()),
     )
     .title("Scoreboard Display")
     .inner_size(width as f64, height as f64)
-    .position(x as f64, y as f64)
+    .position(final_x as f64, final_y as f64)
     .resizable(true)
     .decorations(false)
     .always_on_top(true)
@@ -70,9 +72,21 @@ pub async fn create_scoreboard_window(
 }
 
 #[tauri::command]
-pub async fn close_scoreboard_window(app: AppHandle) -> Result<(), String> {
-    if let Some(window) = app.get_webview_window("scoreboard") {
+pub async fn close_scoreboard_window(app: AppHandle, window_id: String) -> Result<(), String> {
+    if let Some(window) = app.get_webview_window(&window_id) {
         window.close().map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn close_all_scoreboard_windows(app: AppHandle) -> Result<(), String> {
+    // Get all windows and close those that start with "scoreboard_"
+    let windows = app.webview_windows();
+    for (label, window) in windows {
+        if label.starts_with("scoreboard_") {
+            window.close().map_err(|e| e.to_string())?;
+        }
     }
     Ok(())
 }
@@ -80,11 +94,19 @@ pub async fn close_scoreboard_window(app: AppHandle) -> Result<(), String> {
 #[tauri::command]
 pub async fn update_scoreboard_window_position(
     app: AppHandle,
+    window_id: String,
     x: i32,
     y: i32,
+    offset_x: i32,
+    offset_y: i32,
 ) -> Result<(), String> {
-    if let Some(window) = app.get_webview_window("scoreboard") {
-        window.set_position(tauri::Position::Physical(tauri::PhysicalPosition { x, y }))
+    if let Some(window) = app.get_webview_window(&window_id) {
+        let final_x = x + offset_x;
+        let final_y = y + offset_y;
+        window.set_position(tauri::Position::Physical(tauri::PhysicalPosition { 
+            x: final_x, 
+            y: final_y 
+        }))
             .map_err(|e| e.to_string())?;
     }
     Ok(())
@@ -93,10 +115,11 @@ pub async fn update_scoreboard_window_position(
 #[tauri::command]
 pub async fn update_scoreboard_window_size(
     app: AppHandle,
+    window_id: String,
     width: u32,
     height: u32,
 ) -> Result<(), String> {
-    if let Some(window) = app.get_webview_window("scoreboard") {
+    if let Some(window) = app.get_webview_window(&window_id) {
         window.set_size(tauri::Size::Physical(tauri::PhysicalSize { width, height }))
             .map_err(|e| e.to_string())?;
     }
@@ -110,4 +133,25 @@ pub async fn toggle_scoreboard_fullscreen(app: AppHandle) -> Result<(), String> 
         window.set_fullscreen(!is_fullscreen).map_err(|e| e.to_string())?;
     }
     Ok(())
+} 
+
+#[tauri::command]
+pub async fn list_scoreboard_windows(app: AppHandle) -> Result<Vec<String>, String> {
+    let windows = app.webview_windows();
+    let scoreboard_windows: Vec<String> = windows
+        .keys()
+        .filter(|label| label.starts_with("scoreboard_"))
+        .cloned()
+        .collect();
+    Ok(scoreboard_windows)
+} 
+
+#[tauri::command]
+pub async fn get_scoreboard_instance_data(
+    _app: AppHandle,
+    _window_id: String,
+) -> Result<Option<serde_json::Value>, String> {
+    // For now, return None since we need to implement scoreboard instance storage
+    // This would typically query the stored instance data
+    Ok(None)
 } 

@@ -8,6 +8,8 @@ use std::fs;
 pub struct ScoreboardConfig {
     pub id: String,
     pub name: String,
+    #[serde(default)]
+    pub filename: String,
     pub data: serde_json::Value,
     pub created_at: String,
     pub updated_at: String,
@@ -35,6 +37,7 @@ pub async fn save_scoreboard(
     let scoreboard_config = ScoreboardConfig {
         id: id.clone(),
         name,
+        filename: filename.clone(),
         data: config,
         created_at: now.clone(),
         updated_at: now,
@@ -92,7 +95,13 @@ pub async fn list_scoreboards(app: AppHandle) -> Result<Vec<ScoreboardConfig>, S
             match fs::read_to_string(&path) {
                 Ok(json_data) => {
                     match serde_json::from_str::<ScoreboardConfig>(&json_data) {
-                        Ok(config) => scoreboards.push(config),
+                        Ok(mut config) => {
+                            // Handle legacy configs that might not have filename field
+                            if config.filename.is_empty() {
+                                config.filename = format!("{}.json", sanitize_filename(&config.name));
+                            }
+                            scoreboards.push(config);
+                        },
                         Err(_) => continue, // Skip invalid files
                     }
                 }

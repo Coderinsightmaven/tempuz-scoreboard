@@ -52,7 +52,7 @@ interface CanvasActions {
 export const useCanvasStore = create<CanvasState & CanvasActions>()(
   subscribeWithSelector((set) => ({
     // Initial state
-    canvasSize: { width: 1920, height: 1080 },
+    canvasSize: { width: 800, height: 600 },
     zoom: 1,
     pan: { x: 0, y: 0 },
     grid: {

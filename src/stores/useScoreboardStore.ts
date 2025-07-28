@@ -133,7 +133,7 @@ const createDefaultComponent = (
       return {
         ...baseComponent,
         size: { width: 100, height: 100 },
-        data: { imageId: null, imageUrl: null, text: 'No Image' },
+        data: { imageId: undefined, imageUrl: undefined, text: 'No Image' },
       };
     
     case ComponentType.RECTANGLE:

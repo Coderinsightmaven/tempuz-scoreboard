@@ -7,6 +7,7 @@ import { GameState } from '../types/scoreboard';
 export interface TauriScoreboardConfig {
   id: string;
   name: string;
+  filename: string;
   data: any;
   created_at: string;
   updated_at: string;
@@ -23,19 +24,25 @@ export class TauriAPI {
   }
 
   static async createScoreboardWindow(
+    windowId: string,
     monitorId: number,
     width: number,
     height: number,
     x: number,
-    y: number
+    y: number,
+    offsetX: number = 0,
+    offsetY: number = 0
   ): Promise<void> {
     try {
       await invoke('create_scoreboard_window', {
+        windowId,
         monitorId,
         width,
         height,
         x,
         y,
+        offsetX,
+        offsetY,
       });
     } catch (error) {
       console.error('Failed to create scoreboard window:', error);
@@ -43,30 +50,64 @@ export class TauriAPI {
     }
   }
 
-  static async closeScoreboardWindow(): Promise<void> {
+  static async closeScoreboardWindow(windowId: string): Promise<void> {
     try {
-      await invoke('close_scoreboard_window');
+      await invoke('close_scoreboard_window', { windowId });
     } catch (error) {
       console.error('Failed to close scoreboard window:', error);
       throw error;
     }
   }
 
-  static async updateScoreboardWindowPosition(x: number, y: number): Promise<void> {
+  static async closeAllScoreboardWindows(): Promise<void> {
     try {
-      await invoke('update_scoreboard_window_position', { x, y });
+      await invoke('close_all_scoreboard_windows');
+    } catch (error) {
+      console.error('Failed to close all scoreboard windows:', error);
+      throw error;
+    }
+  }
+
+  static async updateScoreboardWindowPosition(
+    windowId: string,
+    x: number,
+    y: number,
+    offsetX: number = 0,
+    offsetY: number = 0
+  ): Promise<void> {
+    try {
+      await invoke('update_scoreboard_window_position', { 
+        windowId, 
+        x, 
+        y, 
+        offsetX, 
+        offsetY 
+      });
     } catch (error) {
       console.error('Failed to update scoreboard window position:', error);
       throw error;
     }
   }
 
-  static async updateScoreboardWindowSize(width: number, height: number): Promise<void> {
+  static async updateScoreboardWindowSize(
+    windowId: string,
+    width: number,
+    height: number
+  ): Promise<void> {
     try {
-      await invoke('update_scoreboard_window_size', { width, height });
+      await invoke('update_scoreboard_window_size', { windowId, width, height });
     } catch (error) {
       console.error('Failed to update scoreboard window size:', error);
       throw error;
+    }
+  }
+
+  static async listScoreboardWindows(): Promise<string[]> {
+    try {
+      return await invoke('list_scoreboard_windows');
+    } catch (error) {
+      console.error('Failed to list scoreboard windows:', error);
+      return [];
     }
   }
 

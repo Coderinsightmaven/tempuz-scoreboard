@@ -2,7 +2,9 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { MonitorInfo } from '../types/tauri';
+import { ScoreboardInstance } from '../types/scoreboard';
 import { TauriAPI } from '../lib/tauri';
+import { v4 as uuidv4 } from 'uuid';
 
 type Theme = 'light' | 'dark' | 'system';
 
@@ -16,7 +18,7 @@ interface AppState {
   // Monitor Management
   monitors: MonitorInfo[];
   selectedMonitor: MonitorInfo | null;
-  scoreboardWindowOpen: boolean;
+  scoreboardInstances: ScoreboardInstance[];
   
   // Loading States
   isLoadingMonitors: boolean;
@@ -52,8 +54,29 @@ interface AppActions {
   // Monitor Management
   loadMonitors: () => Promise<void>;
   selectMonitor: (monitor: MonitorInfo | null) => void;
-  createScoreboardWindow: (width: number, height: number) => Promise<void>;
-  closeScoreboardWindow: () => Promise<void>;
+  
+  // Multiple Scoreboard Management
+  createScoreboardInstance: (
+    name: string,
+    width: number,
+    height: number,
+    offsetX?: number,
+    offsetY?: number,
+    savedScoreboardId?: string
+  ) => Promise<string | null>;
+  closeScoreboardInstance: (instanceId: string) => Promise<void>;
+  closeAllScoreboardInstances: () => Promise<void>;
+  updateScoreboardInstancePosition: (
+    instanceId: string,
+    offsetX: number,
+    offsetY: number
+  ) => Promise<void>;
+  updateScoreboardInstanceSize: (
+    instanceId: string,
+    width: number,
+    height: number
+  ) => Promise<void>;
+  getScoreboardInstance: (instanceId: string) => ScoreboardInstance | undefined;
   
   // Error Handling
   setError: (error: string | null) => void;
@@ -78,7 +101,7 @@ export const useAppStore = create<AppState & AppActions>()(
     
     monitors: [],
     selectedMonitor: null,
-    scoreboardWindowOpen: false,
+    scoreboardInstances: [],
     
     isLoadingMonitors: false,
     isCreatingScoreboardWindow: false,
@@ -89,7 +112,7 @@ export const useAppStore = create<AppState & AppActions>()(
       autoSave: true,
       autoSaveInterval: 300000, // 5 minutes
       recentFiles: [],
-      defaultCanvasSize: { width: 1920, height: 1080 },
+      defaultCanvasSize: { width: 800, height: 600 },
       defaultGridSize: 20,
       showWelcomeScreen: true,
       enableHotkeys: true,
@@ -142,45 +165,192 @@ export const useAppStore = create<AppState & AppActions>()(
     selectMonitor: (monitor: MonitorInfo | null) =>
       set(() => ({ selectedMonitor: monitor })),
 
-    createScoreboardWindow: async (width: number, height: number) => {
+    // Multiple Scoreboard Management
+    createScoreboardInstance: async (
+      name: string,
+      width: number,
+      height: number,
+      offsetX: number = 0,
+      offsetY: number = 0,
+      savedScoreboardId?: string
+    ) => {
       const state = get();
       if (!state.selectedMonitor) {
         set(() => ({ lastError: 'No monitor selected' }));
-        return;
+        return null;
       }
 
       set(() => ({ isCreatingScoreboardWindow: true, lastError: null }));
 
       try {
+        const instanceId = uuidv4();
+        const windowId = `scoreboard_${instanceId}`;
+        
+        // Load saved scoreboard data if provided
+        let scoreboardData = null;
+        if (savedScoreboardId) {
+          try {
+            const savedScoreboards = await TauriAPI.listScoreboards();
+            const savedScoreboard = savedScoreboards.find(sb => sb.id === savedScoreboardId);
+            if (savedScoreboard) {
+              scoreboardData = savedScoreboard.data;
+              // Use the saved scoreboard's name if no custom name provided
+              if (!name || name === savedScoreboard.name) {
+                name = `${savedScoreboard.name} Display`;
+              }
+            }
+          } catch (error) {
+            console.warn('Failed to load saved scoreboard data:', error);
+          }
+        }
+        
         await TauriAPI.createScoreboardWindow(
+          windowId,
           state.selectedMonitor.id,
           width,
           height,
           state.selectedMonitor.x,
-          state.selectedMonitor.y
+          state.selectedMonitor.y,
+          offsetX,
+          offsetY
         );
+
+        const newInstance: ScoreboardInstance = {
+          id: instanceId,
+          windowId,
+          name,
+          monitorId: state.selectedMonitor.id,
+          position: {
+            x: state.selectedMonitor.x,
+            y: state.selectedMonitor.y,
+            offsetX,
+            offsetY,
+          },
+          size: { width, height },
+          isActive: true,
+          createdAt: new Date(),
+          scoreboardData, // Store the saved scoreboard data with the instance
+        };
         
-        set(() => ({
-          scoreboardWindowOpen: true,
+        set((state) => ({
+          scoreboardInstances: [...state.scoreboardInstances, newInstance],
           isCreatingScoreboardWindow: false,
         }));
+
+        return instanceId;
       } catch (error) {
         set(() => ({
           isCreatingScoreboardWindow: false,
           lastError: error instanceof Error ? error.message : 'Failed to create scoreboard window',
         }));
+        return null;
       }
     },
 
-    closeScoreboardWindow: async () => {
+    closeScoreboardInstance: async (instanceId: string) => {
+      const state = get();
+      const instance = state.scoreboardInstances.find(inst => inst.id === instanceId);
+      
+      if (!instance) {
+        set(() => ({ lastError: 'Scoreboard instance not found' }));
+        return;
+      }
+
       try {
-        await TauriAPI.closeScoreboardWindow();
-        set(() => ({ scoreboardWindowOpen: false }));
+        await TauriAPI.closeScoreboardWindow(instance.windowId);
+        set((state) => ({
+          scoreboardInstances: state.scoreboardInstances.filter(inst => inst.id !== instanceId),
+        }));
       } catch (error) {
         set(() => ({
           lastError: error instanceof Error ? error.message : 'Failed to close scoreboard window',
         }));
       }
+    },
+
+    closeAllScoreboardInstances: async () => {
+      try {
+        await TauriAPI.closeAllScoreboardWindows();
+        set(() => ({ scoreboardInstances: [] }));
+      } catch (error) {
+        set(() => ({
+          lastError: error instanceof Error ? error.message : 'Failed to close all scoreboard windows',
+        }));
+      }
+    },
+
+    updateScoreboardInstancePosition: async (
+      instanceId: string,
+      offsetX: number,
+      offsetY: number
+    ) => {
+      const state = get();
+      const instance = state.scoreboardInstances.find(inst => inst.id === instanceId);
+      
+      if (!instance) {
+        set(() => ({ lastError: 'Scoreboard instance not found' }));
+        return;
+      }
+
+      try {
+        await TauriAPI.updateScoreboardWindowPosition(
+          instance.windowId,
+          instance.position.x,
+          instance.position.y,
+          offsetX,
+          offsetY
+        );
+
+        set((state) => ({
+          scoreboardInstances: state.scoreboardInstances.map(inst =>
+            inst.id === instanceId
+              ? {
+                  ...inst,
+                  position: { ...inst.position, offsetX, offsetY }
+                }
+              : inst
+          ),
+        }));
+      } catch (error) {
+        set(() => ({
+          lastError: error instanceof Error ? error.message : 'Failed to update scoreboard position',
+        }));
+      }
+    },
+
+    updateScoreboardInstanceSize: async (
+      instanceId: string,
+      width: number,
+      height: number
+    ) => {
+      const state = get();
+      const instance = state.scoreboardInstances.find(inst => inst.id === instanceId);
+      
+      if (!instance) {
+        set(() => ({ lastError: 'Scoreboard instance not found' }));
+        return;
+      }
+
+      try {
+        await TauriAPI.updateScoreboardWindowSize(instance.windowId, width, height);
+
+        set((state) => ({
+          scoreboardInstances: state.scoreboardInstances.map(inst =>
+            inst.id === instanceId
+              ? { ...inst, size: { width, height } }
+              : inst
+          ),
+        }));
+      } catch (error) {
+        set(() => ({
+          lastError: error instanceof Error ? error.message : 'Failed to update scoreboard size',
+        }));
+      }
+    },
+
+    getScoreboardInstance: (instanceId: string) => {
+      const state = get();
+      return state.scoreboardInstances.find(inst => inst.id === instanceId);
     },
 
     // Error handling

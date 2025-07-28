@@ -14,8 +14,8 @@ export const CreateScoreboardDialog: React.FC<CreateScoreboardDialogProps> = ({
   onCreateScoreboard,
 }) => {
   const [name, setName] = useState('New Tennis Scoreboard');
-  const [width, setWidth] = useState(1920);
-  const [height, setHeight] = useState(1080);
+  const [width, setWidth] = useState(800);
+  const [height, setHeight] = useState(600);
   const [sport, setSport] = useState<SportType>(SportType.TENNIS);
 
   const presetSizes = [
