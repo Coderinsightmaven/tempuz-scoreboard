@@ -128,6 +128,13 @@ const createDefaultComponent = (
         size: { width: 80, height: 80 },
         data: { imageUrl: '', teamId: 'home' },
       };
+
+    case ComponentType.IMAGE:
+      return {
+        ...baseComponent,
+        size: { width: 100, height: 100 },
+        data: { imageId: null, imageUrl: null, text: 'No Image' },
+      };
     
     case ComponentType.RECTANGLE:
       return {
@@ -222,6 +229,7 @@ const createDefaultComponent = (
       return {
         ...baseComponent,
         size: { width: 200, height: 100 },
+        zIndex: -1, // Always behind other components
         style: { 
           ...baseComponent.style, 
           backgroundColor: '#3b82f6',

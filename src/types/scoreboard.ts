@@ -92,6 +92,7 @@ export interface ComponentData {
   text?: string;
   value?: number | string;
   imageUrl?: string;
+  imageId?: string;
   teamId?: string;
   format?: string;
   // Tennis-specific data

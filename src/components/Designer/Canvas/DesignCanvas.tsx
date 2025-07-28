@@ -16,6 +16,7 @@ import { AlignmentGuides } from './AlignmentGuides';
 import { snapToGrid } from '../../../utils/canvas';
 import { detectAlignments } from '../../../utils/alignment';
 import { ResizeHandle } from '../../../types/canvas';
+import { ComponentType } from '../../../types/scoreboard';
 
 export const DesignCanvas: React.FC = () => {
   const {
@@ -320,14 +321,26 @@ export const DesignCanvas: React.FC = () => {
           onClick={handleCanvasClick}
         >
           {/* Render Components */}
-          {components.map((component) => (
-            <DraggableComponent
-              key={component.id}
-              component={component}
-              onSelect={handleComponentSelect}
-              onResizeStart={handleResizeStart}
-            />
-          ))}
+          {components
+            .slice() // Create a copy to avoid mutating original array
+            .sort((a, b) => {
+              // Background color components always go to the back
+              if (a.type === ComponentType.BACKGROUND_COLOR && b.type !== ComponentType.BACKGROUND_COLOR) return -1;
+              if (b.type === ComponentType.BACKGROUND_COLOR && a.type !== ComponentType.BACKGROUND_COLOR) return 1;
+              
+              // Otherwise sort by z-index
+              const aZ = a.zIndex || 1;
+              const bZ = b.zIndex || 1;
+              return aZ - bZ;
+            })
+            .map((component) => (
+              <DraggableComponent
+                key={component.id}
+                component={component}
+                onSelect={handleComponentSelect}
+                onResizeStart={handleResizeStart}
+              />
+            ))}
 
           {/* Alignment Guides */}
           <AlignmentGuides

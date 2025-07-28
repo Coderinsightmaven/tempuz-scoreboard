@@ -4,6 +4,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { ScoreboardComponent, ComponentType } from '../../../types/scoreboard';
 import { ResizeHandle } from '../../../types/canvas';
 import { ResizeHandles } from './ResizeHandles';
+import { ImageComponent } from './ImageComponent';
 import { useCanvasStore } from '../../../stores/useCanvasStore';
 
 interface DraggableComponentProps {
@@ -54,6 +55,13 @@ export const DraggableComponent: React.FC<DraggableComponentProps> = ({
         return `Period ${component.data.value || 1}`;
       case ComponentType.LOGO:
         return '🏀';
+      case ComponentType.IMAGE:
+        return component.data.imageId ? (
+          <ImageComponent
+            imageId={component.data.imageId}
+            alt={component.data.text || 'Image'}
+          />
+        ) : 'No Image';
       case ComponentType.RECTANGLE:
         return '';
       case ComponentType.CIRCLE:
@@ -152,14 +160,18 @@ export const DraggableComponent: React.FC<DraggableComponentProps> = ({
         width: component.size.width,
         height: component.size.height,
         backgroundColor: getBackgroundColor(),
-        border: component.type === ComponentType.BACKGROUND_COLOR ? 'none' : '1px solid #000000',
+        border: 'none',
         borderRadius: component.type === ComponentType.CIRCLE || component.type === ComponentType.TENNIS_SERVER_INDICATOR ? '50%' : `${component.style.borderRadius || 0}px`,
         display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
+        alignItems: component.type === ComponentType.IMAGE && component.data.imageId ? 'stretch' : 'center',
+        justifyContent: component.type === ComponentType.IMAGE && component.data.imageId ? 'stretch' : 'center',
         textAlign: 'center',
-        opacity: isDragging ? 0.5 : (component.style.opacity || 1),
-        zIndex: component.zIndex || 1,
+        padding: component.type === ComponentType.IMAGE && component.data.imageId ? 0 : undefined,
+        overflow: component.type === ComponentType.IMAGE && component.data.imageId ? 'hidden' : undefined,
+        opacity: isDragging ? 0.5 : 1, // Only reduce opacity when dragging, background transparency is handled via RGBA
+        zIndex: component.type === ComponentType.BACKGROUND_COLOR 
+          ? Math.min(component.zIndex || -1, -1) // Always behind other components
+          : component.zIndex || 1,
         userSelect: 'none',
         cursor: isDragging ? 'grabbing' : (isResizing ? 'default' : 'grab'),
         ...getComponentSpecificStyles(),
