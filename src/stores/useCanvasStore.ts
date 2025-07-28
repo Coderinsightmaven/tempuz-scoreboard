@@ -2,6 +2,7 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { AlignmentGuide } from '../utils/alignment';
+import { ResizeHandle } from '../types/canvas';
 
 interface CanvasState {
   canvasSize: { width: number; height: number };
@@ -18,7 +19,8 @@ interface CanvasState {
   isDragging: boolean;
   dragOffset: { x: number; y: number };
   isResizing: boolean;
-  resizeHandle: string | null;
+  resizeHandle: ResizeHandle | null;
+  resizedComponentId: string | null;
   viewportBounds: DOMRect | null;
   alignmentGuides: AlignmentGuide[];
 }
@@ -36,7 +38,7 @@ interface CanvasActions {
   setHoveredComponent: (id: string | null) => void;
   startDrag: (offset: { x: number; y: number }) => void;
   endDrag: () => void;
-  startResize: (handle: string) => void;
+  startResize: (componentId: string, handle: ResizeHandle) => void;
   endResize: () => void;
   setViewportBounds: (bounds: DOMRect) => void;
   zoomIn: () => void;
@@ -65,6 +67,7 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()(
     dragOffset: { x: 0, y: 0 },
     isResizing: false,
     resizeHandle: null,
+    resizedComponentId: null,
     viewportBounds: null,
     alignmentGuides: [],
 
@@ -142,16 +145,18 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()(
         dragOffset: { x: 0, y: 0 }
       })),
     
-    startResize: (handle: string) => 
+    startResize: (componentId: string, handle: ResizeHandle) => 
       set(() => ({
         isResizing: true,
-        resizeHandle: handle
+        resizeHandle: handle,
+        resizedComponentId: componentId
       })),
     
     endResize: () => 
       set(() => ({
         isResizing: false,
-        resizeHandle: null
+        resizeHandle: null,
+        resizedComponentId: null
       })),
     
     setViewportBounds: (bounds: DOMRect) =>

@@ -37,6 +37,11 @@ pub fn run() {
             toggle_game_active,
             reset_game,
             update_team_info,
+            // Image commands
+            upload_image,
+            get_stored_images,
+            delete_image,
+            get_image_data,
         ])
         .setup(|app| {
             #[cfg(debug_assertions)]

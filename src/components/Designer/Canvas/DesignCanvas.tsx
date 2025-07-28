@@ -15,6 +15,8 @@ import { DraggableComponent } from './DraggableComponent';
 import { AlignmentGuides } from './AlignmentGuides';
 import { snapToGrid } from '../../../utils/canvas';
 import { detectAlignments } from '../../../utils/alignment';
+import { ResizeHandle } from '../../../types/canvas';
+import { ComponentType } from '../../../types/scoreboard';
 
 export const DesignCanvas: React.FC = () => {
   const {
@@ -35,9 +37,17 @@ export const DesignCanvas: React.FC = () => {
   const {
     components,
     updateComponentPosition,
+    updateComponentSize,
   } = useScoreboardStore();
 
   const [draggedComponentId, setDraggedComponentId] = useState<string | null>(null);
+  const [resizeState, setResizeState] = useState<{
+    componentId: string;
+    handle: ResizeHandle;
+    startMousePos: { x: number; y: number };
+    startSize: { width: number; height: number };
+    startPosition: { x: number; y: number };
+  } | null>(null);
 
   // Modern sensor setup for @dnd-kit
   const sensors = useSensors(
@@ -137,6 +147,153 @@ export const DesignCanvas: React.FC = () => {
     selectComponent(id, false);
   }, [selectComponent]);
 
+  const handleResizeStart = useCallback((componentId: string, handle: ResizeHandle, event: React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    const component = components.find(c => c.id === componentId);
+    if (!component) return;
+
+    setResizeState({
+      componentId,
+      handle,
+      startMousePos: { x: event.clientX, y: event.clientY },
+      startSize: { ...component.size },
+      startPosition: { ...component.position },
+    });
+  }, [components]);
+
+  const handleResizeMove = useCallback((event: MouseEvent) => {
+    if (!resizeState) return;
+
+    const deltaX = event.clientX - resizeState.startMousePos.x;
+    const deltaY = event.clientY - resizeState.startMousePos.y;
+
+    // Calculate the fixed anchor points (opposite corners/edges)
+    const startLeft = resizeState.startPosition.x;
+    const startTop = resizeState.startPosition.y;
+    const startRight = startLeft + resizeState.startSize.width;
+    const startBottom = startTop + resizeState.startSize.height;
+
+    let newLeft = startLeft;
+    let newTop = startTop;
+    let newRight = startRight;
+    let newBottom = startBottom;
+
+    // Move only the specific edge/corner being dragged
+    switch (resizeState.handle) {
+      case ResizeHandle.TOP_LEFT:
+        // Move top-left corner, keep bottom-right fixed
+        newLeft = startLeft + deltaX;
+        newTop = startTop + deltaY;
+        break;
+      case ResizeHandle.TOP_CENTER:
+        // Move top edge, keep bottom edge fixed
+        newTop = startTop + deltaY;
+        break;
+      case ResizeHandle.TOP_RIGHT:
+        // Move top-right corner, keep bottom-left fixed
+        newRight = startRight + deltaX;
+        newTop = startTop + deltaY;
+        break;
+      case ResizeHandle.MIDDLE_LEFT:
+        // Move left edge, keep right edge fixed
+        newLeft = startLeft + deltaX;
+        break;
+      case ResizeHandle.MIDDLE_RIGHT:
+        // Move right edge, keep left edge fixed
+        newRight = startRight + deltaX;
+        break;
+      case ResizeHandle.BOTTOM_LEFT:
+        // Move bottom-left corner, keep top-right fixed
+        newLeft = startLeft + deltaX;
+        newBottom = startBottom + deltaY;
+        break;
+      case ResizeHandle.BOTTOM_CENTER:
+        // Move bottom edge, keep top edge fixed
+        newBottom = startBottom + deltaY;
+        break;
+      case ResizeHandle.BOTTOM_RIGHT:
+        // Move bottom-right corner, keep top-left fixed
+        newRight = startRight + deltaX;
+        newBottom = startBottom + deltaY;
+        break;
+    }
+
+    // Calculate new dimensions from the edge positions
+    let newWidth = newRight - newLeft;
+    let newHeight = newBottom - newTop;
+
+    // Enforce minimum size
+    const minSize = 20;
+    if (newWidth < minSize) {
+      if (resizeState.handle === ResizeHandle.TOP_LEFT || 
+          resizeState.handle === ResizeHandle.MIDDLE_LEFT || 
+          resizeState.handle === ResizeHandle.BOTTOM_LEFT) {
+        newLeft = newRight - minSize;
+      } else if (resizeState.handle === ResizeHandle.TOP_RIGHT || 
+                 resizeState.handle === ResizeHandle.MIDDLE_RIGHT || 
+                 resizeState.handle === ResizeHandle.BOTTOM_RIGHT) {
+        newRight = newLeft + minSize;
+      }
+      newWidth = minSize;
+    }
+    
+    if (newHeight < minSize) {
+      if (resizeState.handle === ResizeHandle.TOP_LEFT || 
+          resizeState.handle === ResizeHandle.TOP_CENTER || 
+          resizeState.handle === ResizeHandle.TOP_RIGHT) {
+        newTop = newBottom - minSize;
+      } else if (resizeState.handle === ResizeHandle.BOTTOM_LEFT || 
+                 resizeState.handle === ResizeHandle.BOTTOM_CENTER || 
+                 resizeState.handle === ResizeHandle.BOTTOM_RIGHT) {
+        newBottom = newTop + minSize;
+      }
+      newHeight = minSize;
+    }
+
+    // Constrain to canvas bounds
+    if (newLeft < 0) {
+      newLeft = 0;
+      newWidth = newRight - newLeft;
+    }
+    if (newTop < 0) {
+      newTop = 0;
+      newHeight = newBottom - newTop;
+    }
+    if (newRight > canvasSize.width) {
+      newRight = canvasSize.width;
+      newWidth = newRight - newLeft;
+    }
+    if (newBottom > canvasSize.height) {
+      newBottom = canvasSize.height;
+      newHeight = newBottom - newTop;
+    }
+
+    // Update component with new position and size
+    updateComponentSize(resizeState.componentId, { width: newWidth, height: newHeight });
+    updateComponentPosition(resizeState.componentId, { x: newLeft, y: newTop });
+  }, [resizeState, canvasSize, updateComponentSize, updateComponentPosition]);
+
+  const handleResizeEnd = useCallback(() => {
+    setResizeState(null);
+  }, []);
+
+  // Add mouse event listeners for resize
+  React.useEffect(() => {
+    if (resizeState) {
+      document.addEventListener('mousemove', handleResizeMove);
+      document.addEventListener('mouseup', handleResizeEnd);
+      document.body.classList.add('resizing');
+      
+      return () => {
+        document.removeEventListener('mousemove', handleResizeMove);
+        document.removeEventListener('mouseup', handleResizeEnd);
+        document.body.classList.remove('resizing');
+      };
+    }
+  }, [resizeState, handleResizeMove, handleResizeEnd]);
+
   return (
     <div className="flex-1 canvas-container relative overflow-hidden">
       <DndContext
@@ -164,13 +321,26 @@ export const DesignCanvas: React.FC = () => {
           onClick={handleCanvasClick}
         >
           {/* Render Components */}
-          {components.map((component) => (
-            <DraggableComponent
-              key={component.id}
-              component={component}
-              onSelect={handleComponentSelect}
-            />
-          ))}
+          {components
+            .slice() // Create a copy to avoid mutating original array
+            .sort((a, b) => {
+              // Background color components always go to the back
+              if (a.type === ComponentType.BACKGROUND_COLOR && b.type !== ComponentType.BACKGROUND_COLOR) return -1;
+              if (b.type === ComponentType.BACKGROUND_COLOR && a.type !== ComponentType.BACKGROUND_COLOR) return 1;
+              
+              // Otherwise sort by z-index
+              const aZ = a.zIndex || 1;
+              const bZ = b.zIndex || 1;
+              return aZ - bZ;
+            })
+            .map((component) => (
+              <DraggableComponent
+                key={component.id}
+                component={component}
+                onSelect={handleComponentSelect}
+                onResizeStart={handleResizeStart}
+              />
+            ))}
 
           {/* Alignment Guides */}
           <AlignmentGuides

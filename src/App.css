@@ -98,10 +98,21 @@
   
   .resize-handle {
     @apply absolute w-2 h-2 bg-primary border border-background rounded-sm;
+    z-index: 1001;
   }
   
   .resize-handle:hover {
-    @apply bg-primary/80;
+    @apply bg-primary/80 scale-110;
+    transition: all 0.1s ease;
+  }
+  
+  /* Disable text selection during resize */
+  .resizing {
+    user-select: none !important;
+  }
+  
+  .resizing * {
+    user-select: none !important;
   }
   
   .grid-overlay {
