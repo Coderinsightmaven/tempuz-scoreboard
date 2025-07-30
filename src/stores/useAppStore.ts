@@ -186,8 +186,13 @@ export const useAppStore = create<AppState & AppActions>()(
         const instanceId = uuidv4();
         const windowId = `scoreboard_${instanceId}`;
         
-        // Load saved scoreboard data if provided
+        // Get current scoreboard data from the store, or load saved scoreboard data if provided
         let scoreboardData = null;
+        
+        // Import the scoreboard store
+        const { useScoreboardStore } = await import('./useScoreboardStore');
+        const scoreboardStoreState = useScoreboardStore.getState();
+        
         if (savedScoreboardId) {
           try {
             const savedScoreboards = await TauriAPI.listScoreboards();
@@ -202,6 +207,13 @@ export const useAppStore = create<AppState & AppActions>()(
           } catch (error) {
             console.warn('Failed to load saved scoreboard data:', error);
           }
+        } else if (scoreboardStoreState.config) {
+          // Use current scoreboard data
+          scoreboardData = {
+            config: scoreboardStoreState.config,
+            components: scoreboardStoreState.components,
+            gameState: scoreboardStoreState.gameState
+          };
         }
         
         await TauriAPI.createScoreboardWindow(
@@ -212,7 +224,8 @@ export const useAppStore = create<AppState & AppActions>()(
           state.selectedMonitor.x,
           state.selectedMonitor.y,
           offsetX,
-          offsetY
+          offsetY,
+          scoreboardData
         );
 
         const newInstance: ScoreboardInstance = {

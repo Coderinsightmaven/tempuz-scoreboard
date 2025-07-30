@@ -31,7 +31,8 @@ export class TauriAPI {
     x: number,
     y: number,
     offsetX: number = 0,
-    offsetY: number = 0
+    offsetY: number = 0,
+    scoreboardData?: any
   ): Promise<void> {
     try {
       await invoke('create_scoreboard_window', {
@@ -43,6 +44,7 @@ export class TauriAPI {
         y,
         offsetX,
         offsetY,
+        scoreboardData,
       });
     } catch (error) {
       console.error('Failed to create scoreboard window:', error);
@@ -123,7 +125,7 @@ export class TauriAPI {
   // Storage Commands
   static async saveScoreboard(name: string, config: any): Promise<string> {
     try {
-      return await invoke('save_scoreboard', { name, config });
+      return await invoke('save_scoreboard', { name, data: config });
     } catch (error) {
       console.error('Failed to save scoreboard:', error);
       throw error;

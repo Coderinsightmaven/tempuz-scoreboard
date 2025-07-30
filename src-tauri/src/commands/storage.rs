@@ -19,36 +19,36 @@ pub struct ScoreboardConfig {
 pub async fn save_scoreboard(
     app: AppHandle,
     name: String,
-    config: serde_json::Value,
+    data: serde_json::Value,
 ) -> Result<String, String> {
     let app_data_dir = app.path().app_data_dir()
         .map_err(|e| e.to_string())?;
     
-    // Ensure the scoreboards directory exists
     let scoreboards_dir = app_data_dir.join("scoreboards");
-    fs::create_dir_all(&scoreboards_dir).map_err(|e| e.to_string())?;
     
-    // Generate unique ID and file path
-    let id = uuid::Uuid::new_v4().to_string();
+    // Create directory if it doesn't exist
+    if !scoreboards_dir.exists() {
+        fs::create_dir_all(&scoreboards_dir).map_err(|e| e.to_string())?;
+    }
+    
     let filename = format!("{}.json", sanitize_filename(&name));
     let file_path = scoreboards_dir.join(&filename);
     
-    let now = chrono::Utc::now().to_rfc3339();
-    let scoreboard_config = ScoreboardConfig {
-        id: id.clone(),
-        name,
-        filename: filename.clone(),
-        data: config,
-        created_at: now.clone(),
-        updated_at: now,
+    let config = ScoreboardConfig {
+        id: uuid::Uuid::new_v4().to_string(),
+        name: name.clone(),
+        filename: filename.clone(), // Store the actual filename used
+        data,
+        created_at: chrono::Utc::now().to_rfc3339(),
+        updated_at: chrono::Utc::now().to_rfc3339(),
     };
     
-    let json_data = serde_json::to_string_pretty(&scoreboard_config)
+    let json_data = serde_json::to_string_pretty(&config)
         .map_err(|e| e.to_string())?;
     
     fs::write(&file_path, json_data).map_err(|e| e.to_string())?;
     
-    Ok(id)
+    Ok(filename)
 }
 
 #[tauri::command]
@@ -91,28 +91,51 @@ pub async fn list_scoreboards(app: AppHandle) -> Result<Vec<ScoreboardConfig>, S
         let entry = entry.map_err(|e| e.to_string())?;
         let path = entry.path();
         
+        // Only process .json files
         if path.extension().and_then(|s| s.to_str()) == Some("json") {
+            // Verify the file actually exists and is readable
+            if !path.exists() {
+                println!("Warning: Skipping non-existent file: {:?}", path);
+                continue;
+            }
+            
             match fs::read_to_string(&path) {
                 Ok(json_data) => {
                     match serde_json::from_str::<ScoreboardConfig>(&json_data) {
                         Ok(mut config) => {
                             // Handle legacy configs that might not have filename field
                             if config.filename.is_empty() {
-                                config.filename = format!("{}.json", sanitize_filename(&config.name));
+                                if let Some(filename) = path.file_name().and_then(|s| s.to_str()) {
+                                    config.filename = filename.to_string();
+                                } else {
+                                    println!("Warning: Could not determine filename for config");
+                                    continue;
+                                }
                             }
-                            scoreboards.push(config);
+                            
+                            // Double-check that the referenced file actually exists
+                            let config_file_path = scoreboards_dir.join(&config.filename);
+                            if config_file_path.exists() {
+                                scoreboards.push(config);
+                            } else {
+                                println!("Warning: Config references non-existent file: {}", config.filename);
+                            }
                         },
-                        Err(_) => continue, // Skip invalid files
+                        Err(e) => {
+                            println!("Warning: Skipping invalid JSON file {:?}: {}", path, e);
+                            continue;
+                        }
                     }
                 }
-                Err(_) => continue, // Skip unreadable files
+                Err(e) => {
+                    println!("Warning: Could not read file {:?}: {}", path, e);
+                    continue;
+                }
             }
         }
     }
     
-    // Sort by updated_at descending (most recent first)
-    scoreboards.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
-    
+    println!("Returning {} valid scoreboards", scoreboards.len());
     Ok(scoreboards)
 }
 
@@ -126,9 +149,11 @@ pub async fn delete_scoreboard(
     
     let file_path = app_data_dir.join("scoreboards").join(&filename);
     
-    if file_path.exists() {
-        fs::remove_file(&file_path).map_err(|e| e.to_string())?;
+    if !file_path.exists() {
+        return Err("Scoreboard file not found".to_string());
     }
+    
+    fs::remove_file(&file_path).map_err(|e| e.to_string())?;
     
     Ok(())
 }
@@ -195,8 +220,8 @@ pub async fn import_scoreboard(
 fn sanitize_filename(name: &str) -> String {
     name.chars()
         .map(|c| match c {
-            '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|' => '_',
-            _ => c,
+            'a'..='z' | 'A'..='Z' | '0'..='9' | '-' | '_' => c,
+            _ => '_',
         })
         .collect()
 } 

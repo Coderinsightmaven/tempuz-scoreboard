@@ -1,16 +1,16 @@
 import { useState, useEffect } from 'react';
-import { DesignCanvas } from './components/Designer/Canvas/DesignCanvas';
-import { CreateScoreboardDialog } from './components/ui/CreateScoreboardDialog';
-import { LoadScoreboardDialog } from './components/ui/LoadScoreboardDialog';
-import { ImageManager } from './components/ui/ImageManager';
-import { MultipleScoreboardManager } from './components/ui/MultipleScoreboardManager';
-import { PropertyPanel } from './components/Designer/PropertyPanel';
+import './App.css';
 import { useAppStore } from './stores/useAppStore';
 import { useScoreboardStore } from './stores/useScoreboardStore';
 import { useCanvasStore } from './stores/useCanvasStore';
-import { ComponentType } from './types/scoreboard';
+import { DesignCanvas } from './components/Designer/Canvas/DesignCanvas';
+import { PropertyPanel } from './components/Designer/PropertyPanel';
+import { CreateScoreboardDialog } from './components/ui/CreateScoreboardDialog';
+import { LoadScoreboardDialog } from './components/ui/LoadScoreboardDialog';
+import { MultipleScoreboardManager } from './components/ui/MultipleScoreboardManager';
+import { ScoreboardManager } from './components/ui/ScoreboardManager';
 import { TauriAPI } from './lib/tauri';
-import './App.css';
+import { ComponentType } from './types/scoreboard';
 
 function App() {
   const {
@@ -31,12 +31,13 @@ function App() {
 
   const { setCanvasSize } = useCanvasStore();
 
+  // UI state
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showLoadDialog, setShowLoadDialog] = useState(false);
-  const [showImageManager, setShowImageManager] = useState(false);
-  const [showMultipleScoreboardManager, setShowMultipleScoreboardManager] = useState(false);
-  const [selectedComponentForImage, setSelectedComponentForImage] = useState<string | null>(null);
+  const [showMultipleManager, setShowMultipleManager] = useState(false);
+  const [showScoreboardManager, setShowScoreboardManager] = useState(false);
   const [showPropertyPanel, setShowPropertyPanel] = useState(true);
+  const [selectedComponentForImage, setSelectedComponentForImage] = useState<string | null>(null);
 
   useEffect(() => {
     // Initialize the app on mount
@@ -200,7 +201,7 @@ function App() {
 
             {/* Multiple Scoreboard Manager Button */}
             <button
-              onClick={() => setShowMultipleScoreboardManager(true)}
+              onClick={() => setShowMultipleManager(true)}
               className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center space-x-2"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -227,10 +228,13 @@ function App() {
             </button>
             
             <button
-              onClick={() => setShowImageManager(true)}
-              className="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
+              onClick={() => setShowScoreboardManager(true)}
+              className="bg-orange-600 hover:bg-orange-700 text-white px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center space-x-2"
             >
-              Manage Images
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              <span>Manage Scoreboards</span>
             </button>
 
             <button
@@ -249,52 +253,39 @@ function App() {
 
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Sidebar */}
-        <aside className="w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 overflow-y-auto">
-          <div className="p-4">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Components</h2>
-            
-            {/* Monitor Status */}
-            <div className="mb-6 p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
-              <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Monitor Status</h3>
-              {isLoadingMonitors ? (
-                <p className="text-xs text-gray-500">Loading monitors...</p>
-              ) : (
-                <div className="space-y-1">
-                  <p className="text-xs text-gray-600 dark:text-gray-400">
-                    {monitors.length} monitor(s) detected
-                  </p>
-                  <p className="text-xs text-green-600 dark:text-green-400">
-                    {scoreboardInstances.length} active scoreboard(s)
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* Component Library */}
-            <div className="space-y-2">
-              {[
-                'SCORE', 'TIMER', 'TEAM_NAME', 'TEXT', 'IMAGE', 'PERIOD', 'LOGO',
-                'RECTANGLE', 'CIRCLE', 'TENNIS_SET_SCORE', 'TENNIS_GAME_SCORE',
-                'TENNIS_CURRENT_GAME', 'TENNIS_SERVER_INDICATOR', 'TENNIS_PLAYER_NAME',
-                'TENNIS_MATCH_STATUS', 'TENNIS_TIEBREAK_SCORE', 'BACKGROUND_COLOR'
-              ].map((componentType) => (
-                <button
-                  key={componentType}
-                  onClick={() => {
-                    if (config) {
-                      addComponent(componentType as ComponentType, { x: 100, y: 100 });
-                    }
-                  }}
-                  className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
-                  disabled={!config}
-                >
-                  {componentType.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())}
-                </button>
-              ))}
-            </div>
+        {/* Left Sidebar - Component Types */}
+        <div className="w-64 bg-gray-100 border-r border-gray-200 p-4">
+          <h3 className="font-medium mb-4">Components</h3>
+          <div className="space-y-2">
+            <button
+              onClick={() => addComponent(ComponentType.BACKGROUND, { x: 100, y: 100 })}
+              className="w-full text-left p-3 bg-white border border-gray-200 rounded hover:bg-gray-50 transition-colors"
+            >
+              <div className="font-medium">BACKGROUND</div>
+              <div className="text-sm text-gray-600">
+                Add a background image (behind all components)
+              </div>
+            </button>
+            <button
+              onClick={() => addComponent(ComponentType.LOGO, { x: 100, y: 100 })}
+              className="w-full text-left p-3 bg-white border border-gray-200 rounded hover:bg-gray-50 transition-colors"
+            >
+              <div className="font-medium">LOGO</div>
+              <div className="text-sm text-gray-600">
+                Add a logo image (scalable and resizable)
+              </div>
+            </button>
+            <button
+              onClick={() => addComponent(ComponentType.TEXT, { x: 100, y: 100 })}
+              className="w-full text-left p-3 bg-white border border-gray-200 rounded hover:bg-gray-50 transition-colors"
+            >
+              <div className="font-medium">TEXT</div>
+              <div className="text-sm text-gray-600">
+                Add a text overlay
+              </div>
+            </button>
           </div>
-        </aside>
+        </div>
 
         {/* Canvas Area */}
         <main className="flex-1 overflow-hidden flex">
@@ -322,7 +313,7 @@ function App() {
           
           {/* Property Panel */}
           {showPropertyPanel && config && (
-            <PropertyPanel isOpen={true} />
+            <PropertyPanel />
           )}
         </main>
       </div>
@@ -346,26 +337,14 @@ function App() {
         onClose={() => setShowLoadDialog(false)}
       />
 
-      <ImageManager
-        isOpen={showImageManager}
-        onClose={() => setShowImageManager(false)}
-        onSelectImage={(image: any) => { // Changed StoredImage to any
-          if (selectedComponentForImage) {
-            const { updateComponentData } = useScoreboardStore.getState();
-            updateComponentData(selectedComponentForImage, {
-              imageId: image.id,
-              imageUrl: image.path,
-              text: image.name
-            });
-            setSelectedComponentForImage(null);
-          }
-          setShowImageManager(false);
-        }}
+      <MultipleScoreboardManager
+        isOpen={showMultipleManager}
+        onClose={() => setShowMultipleManager(false)}
       />
 
-      <MultipleScoreboardManager
-        isOpen={showMultipleScoreboardManager}
-        onClose={() => setShowMultipleScoreboardManager(false)}
+      <ScoreboardManager
+        isOpen={showScoreboardManager}
+        onClose={() => setShowScoreboardManager(false)}
       />
 
       {/* Error Toast */}

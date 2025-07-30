@@ -56,16 +56,39 @@ const createDefaultComponent = (
   type: ComponentType,
   position: { x: number; y: number }
 ): ScoreboardComponent => {
+  // Set default size based on component type
+  let defaultSize = { width: 100, height: 100 };
+  let defaultData = { imageId: undefined, imageUrl: undefined, text: 'Sample Text' };
+  let defaultZIndex = 1;
+  
+  switch (type) {
+    case ComponentType.BACKGROUND:
+      defaultSize = { width: 800, height: 600 }; // Larger default for background
+      defaultData = { imageId: undefined, imageUrl: undefined, text: 'Background' };
+      defaultZIndex = 0; // Background should be behind everything
+      break;
+    case ComponentType.LOGO:
+      defaultSize = { width: 150, height: 150 }; // Medium size for logos
+      defaultData = { imageId: undefined, imageUrl: undefined, text: 'Logo' };
+      defaultZIndex = 10; // Logo should be above background but can be layered
+      break;
+    case ComponentType.TEXT:
+      defaultSize = { width: 200, height: 50 }; // Rectangle for text
+      defaultData = { text: 'Sample Text' };
+      defaultZIndex = 5; // Text in middle layer
+      break;
+  }
+
   const baseComponent: ScoreboardComponent = {
     id: uuidv4(),
     type,
     position,
-    size: { width: 100, height: 50 },
+    size: defaultSize,
     rotation: 0,
     style: {
-      backgroundColor: '#ffffff',
+      backgroundColor: (type === ComponentType.BACKGROUND || type === ComponentType.TEXT) ? 'transparent' : '#ffffff',
       borderColor: '#000000',
-      borderWidth: 1,
+      borderWidth: type === ComponentType.BACKGROUND ? 0 : 1,
       borderRadius: 0,
       opacity: 1,
       fontSize: 16,
@@ -75,173 +98,13 @@ const createDefaultComponent = (
       textAlign: 'center',
       verticalAlign: 'middle',
     },
-    data: {},
+    data: defaultData,
     locked: false,
     visible: true,
-    zIndex: 1,
+    zIndex: defaultZIndex,
   };
 
-  // Customize based on component type
-  switch (type) {
-    case ComponentType.SCORE:
-      return {
-        ...baseComponent,
-        size: { width: 80, height: 60 },
-        style: { ...baseComponent.style, fontSize: 24, fontWeight: 'bold' },
-        data: { value: 0, teamId: 'home' },
-      };
-    
-    case ComponentType.TEAM_NAME:
-      return {
-        ...baseComponent,
-        size: { width: 150, height: 40 },
-        style: { ...baseComponent.style, fontSize: 18, fontWeight: 'bold' },
-        data: { text: 'Team Name', teamId: 'home' },
-      };
-    
-    case ComponentType.TIMER:
-      return {
-        ...baseComponent,
-        size: { width: 120, height: 50 },
-        style: { ...baseComponent.style, fontSize: 20, fontWeight: 'bold' },
-        data: { value: '00:00', format: 'mm:ss' },
-      };
-    
-    case ComponentType.PERIOD:
-      return {
-        ...baseComponent,
-        size: { width: 60, height: 40 },
-        style: { ...baseComponent.style, fontSize: 16 },
-        data: { value: 1 },
-      };
-    
-    case ComponentType.TEXT:
-      return {
-        ...baseComponent,
-        size: { width: 100, height: 30 },
-        data: { text: 'Text' },
-      };
-    
-    case ComponentType.LOGO:
-      return {
-        ...baseComponent,
-        size: { width: 80, height: 80 },
-        data: { imageUrl: '', teamId: 'home' },
-      };
-
-    case ComponentType.IMAGE:
-      return {
-        ...baseComponent,
-        size: { width: 100, height: 100 },
-        data: { imageId: undefined, imageUrl: undefined, text: 'No Image' },
-      };
-    
-    case ComponentType.RECTANGLE:
-      return {
-        ...baseComponent,
-        size: { width: 100, height: 50 },
-        style: { ...baseComponent.style, backgroundColor: '#f0f0f0' },
-      };
-    
-    case ComponentType.CIRCLE:
-      return {
-        ...baseComponent,
-        size: { width: 60, height: 60 },
-        style: { ...baseComponent.style, borderRadius: 50, backgroundColor: '#f0f0f0' },
-      };
-
-    // Tennis-specific components
-    case ComponentType.TENNIS_SET_SCORE:
-      return {
-        ...baseComponent,
-        size: { width: 80, height: 40 },
-        style: { ...baseComponent.style, fontSize: 20, fontWeight: 'bold' },
-        data: { 
-          text: '0 - 0',
-          tennisData: { player1SetScore: 0, player2SetScore: 0 }
-        },
-      };
-
-    case ComponentType.TENNIS_GAME_SCORE:
-      return {
-        ...baseComponent,
-        size: { width: 100, height: 50 },
-        style: { ...baseComponent.style, fontSize: 24, fontWeight: 'bold' },
-        data: { 
-          text: '0 - 0',
-          tennisData: { player1GameScore: '0', player2GameScore: '0' }
-        },
-      };
-
-    case ComponentType.TENNIS_CURRENT_GAME:
-      return {
-        ...baseComponent,
-        size: { width: 80, height: 40 },
-        style: { ...baseComponent.style, fontSize: 18, fontWeight: 'bold' },
-        data: { 
-          text: '0 - 0',
-          tennisData: { player1CurrentGame: 0, player2CurrentGame: 0 }
-        },
-      };
-
-    case ComponentType.TENNIS_SERVER_INDICATOR:
-      return {
-        ...baseComponent,
-        size: { width: 20, height: 20 },
-        style: { ...baseComponent.style, borderRadius: 50, backgroundColor: '#fbbf24' },
-        data: { 
-          text: '●',
-          tennisData: { servingPlayer: 1 }
-        },
-      };
-
-    case ComponentType.TENNIS_PLAYER_NAME:
-      return {
-        ...baseComponent,
-        size: { width: 150, height: 35 },
-        style: { ...baseComponent.style, fontSize: 16, fontWeight: 'bold' },
-        data: { text: 'Player Name' },
-      };
-
-    case ComponentType.TENNIS_MATCH_STATUS:
-      return {
-        ...baseComponent,
-        size: { width: 120, height: 30 },
-        style: { ...baseComponent.style, fontSize: 14 },
-        data: { text: 'In Progress' },
-      };
-
-    case ComponentType.TENNIS_TIEBREAK_SCORE:
-      return {
-        ...baseComponent,
-        size: { width: 80, height: 40 },
-        style: { ...baseComponent.style, fontSize: 18, fontWeight: 'bold', backgroundColor: '#ef4444', textColor: '#ffffff' },
-        data: { 
-          text: '0 - 0',
-          tennisData: { 
-            isTiebreak: true,
-            tiebreakScore: { player1: 0, player2: 0 }
-          }
-        },
-      };
-
-    case ComponentType.BACKGROUND_COLOR:
-      return {
-        ...baseComponent,
-        size: { width: 200, height: 100 },
-        zIndex: -1, // Always behind other components
-        style: { 
-          ...baseComponent.style, 
-          backgroundColor: '#3b82f6',
-          rgbColor: { r: 59, g: 130, b: 246, a: 1 },
-          borderWidth: 0
-        },
-        data: { text: '' },
-      };
-    
-    default:
-      return baseComponent;
-  }
+  return baseComponent;
 };
 
 export const useScoreboardStore = create<ScoreboardState & ScoreboardActions>()(

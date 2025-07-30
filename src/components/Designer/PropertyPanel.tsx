@@ -1,52 +1,55 @@
-import React from 'react';
-import { useCanvasStore } from '../../stores/useCanvasStore';
+import React, { useState } from 'react';
 import { useScoreboardStore } from '../../stores/useScoreboardStore';
+import { useCanvasStore } from '../../stores/useCanvasStore';
+import { useImageStore } from '../../stores/useImageStore';
 import { ComponentType } from '../../types/scoreboard';
+import { ImageManager } from '../ui/ImageManager';
 import { ColorPicker } from '../ui/ColorPicker';
 
-interface PropertyPanelProps {
-  isOpen: boolean;
-}
+export const PropertyPanel: React.FC = () => {
+  const { components, updateComponentData, updateComponentStyle, removeComponent } = useScoreboardStore();
+  const { selectedComponents } = useCanvasStore();
+  const [isImageManagerOpen, setIsImageManagerOpen] = useState(false);
 
-export const PropertyPanel: React.FC<PropertyPanelProps> = ({ isOpen }) => {
-  const { selectedComponents, clearSelection } = useCanvasStore();
-  const { components, updateComponentData, updateComponentPosition, updateComponentSize, updateComponentStyle, removeComponent } = useScoreboardStore();
-  
   // Get the selected component (only show properties if exactly one is selected)
   const selectedComponent = selectedComponents.size === 1 
     ? components.find(c => c.id === Array.from(selectedComponents)[0])
     : null;
 
-  if (!isOpen || !selectedComponent) {
-    return null;
+  if (!selectedComponent) {
+    return (
+      <div className="w-80 bg-white border-l border-gray-200 p-4">
+        <div className="text-center text-gray-500 py-8">
+          Select a component to edit its properties
+        </div>
+      </div>
+    );
   }
 
   const handlePositionChange = (axis: 'x' | 'y', value: number) => {
-    updateComponentPosition(selectedComponent.id, {
-      ...selectedComponent.position,
-      [axis]: value
+    updateComponentData(selectedComponent.id, {
+      position: {
+        ...selectedComponent.position,
+        [axis]: value
+      }
     });
   };
 
   const handleSizeChange = (dimension: 'width' | 'height', value: number) => {
-    updateComponentSize(selectedComponent.id, {
-      ...selectedComponent.size,
-      [dimension]: Math.max(10, value) // Minimum size of 10px
+    updateComponentData(selectedComponent.id, {
+      size: {
+        ...selectedComponent.size,
+        [dimension]: Math.max(10, value) // Minimum size of 10px
+      }
     });
   };
 
   const handleStyleChange = (property: string, value: any) => {
-    updateComponentStyle(selectedComponent.id, {
-      ...selectedComponent.style,
-      [property]: value
-    });
+    updateComponentStyle(selectedComponent.id, { [property]: value });
   };
 
   const handleDataChange = (property: string, value: any) => {
-    updateComponentData(selectedComponent.id, {
-      ...selectedComponent.data,
-      [property]: value
-    });
+    updateComponentData(selectedComponent.id, { [property]: value });
   };
 
   // Helper function to convert hex to RGB
@@ -79,278 +82,125 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = ({ isOpen }) => {
   const handleDelete = () => {
     if (window.confirm('Are you sure you want to delete this component?')) {
       removeComponent(selectedComponent.id);
-      clearSelection();
-    }
-  };
-
-  const renderDataProperties = () => {
-    switch (selectedComponent.type) {
-      case ComponentType.TEXT:
-      case ComponentType.TEAM_NAME:
-        return (
-          <div className="form-group">
-            <label className="form-label">Text Content</label>
-            <input
-              type="text"
-              value={selectedComponent.data.text || ''}
-              onChange={(e) => handleDataChange('text', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-            />
-          </div>
-        );
-      
-      case ComponentType.SCORE:
-        return (
-          <div className="space-y-3">
-            <div className="form-group">
-              <label className="form-label">Score Value</label>
-              <input
-                type="number"
-                value={selectedComponent.data.value || 0}
-                onChange={(e) => handleDataChange('value', parseInt(e.target.value) || 0)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Team</label>
-              <select
-                value={selectedComponent.data.teamId || 'home'}
-                onChange={(e) => handleDataChange('teamId', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              >
-                <option value="home">Home</option>
-                <option value="away">Away</option>
-              </select>
-            </div>
-          </div>
-        );
-      
-      case ComponentType.TIMER:
-        return (
-          <div className="space-y-3">
-            <div className="form-group">
-              <label className="form-label">Time Value</label>
-              <input
-                type="text"
-                value={selectedComponent.data.value || '00:00'}
-                onChange={(e) => handleDataChange('value', e.target.value)}
-                placeholder="MM:SS"
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Format</label>
-              <select
-                value={selectedComponent.data.format || 'mm:ss'}
-                onChange={(e) => handleDataChange('format', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              >
-                <option value="mm:ss">MM:SS</option>
-                <option value="hh:mm:ss">HH:MM:SS</option>
-                <option value="ss">Seconds</option>
-              </select>
-            </div>
-          </div>
-        );
-      
-      case ComponentType.PERIOD:
-        return (
-          <div className="form-group">
-            <label className="form-label">Period/Quarter</label>
-            <input
-              type="number"
-              value={selectedComponent.data.value || 1}
-              onChange={(e) => handleDataChange('value', parseInt(e.target.value) || 1)}
-              min="1"
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-            />
-          </div>
-        );
-      
-      case ComponentType.IMAGE:
-        return (
-          <div className="form-group">
-            <label className="form-label">Image ID</label>
-            <input
-              type="text"
-              value={selectedComponent.data.imageId || ''}
-              onChange={(e) => handleDataChange('imageId', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-            />
-          </div>
-        );
-      
-      default:
-        return null;
     }
   };
 
   return (
-    <aside className="property-panel w-80 overflow-y-auto">
-      <div className="panel-header">
-        <h3>Properties</h3>
-        <span className="text-xs text-gray-500">
-          {selectedComponent.type.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())}
-        </span>
-      </div>
-      
-      <div className="panel-content">
-        {/* Component Data Properties */}
-        {renderDataProperties()}
-        
-        {/* Position Properties */}
+    <div className="w-80 bg-white border-l border-gray-200 p-4 overflow-y-auto">
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-gray-200 pb-3">
+          <h3 className="text-lg font-medium text-gray-900">
+            {selectedComponent.type 
+              ? selectedComponent.type.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (l: string) => l.toUpperCase()) 
+              : 'Component'} Properties
+          </h3>
+          <button
+            onClick={handleDelete}
+            className="text-red-600 hover:text-red-800 text-sm"
+          >
+            Delete
+          </button>
+        </div>
+
+        {/* Position */}
         <div className="space-y-3">
-          <h4 className="text-sm font-medium text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-600 pb-1">Position</h4>
+          <h4 className="text-sm font-medium text-gray-900">Position</h4>
           <div className="grid grid-cols-2 gap-3">
-            <div className="form-group">
-              <label className="form-label">X</label>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">X</label>
               <input
                 type="number"
                 value={Math.round(selectedComponent.position.x)}
                 onChange={(e) => handlePositionChange('x', parseInt(e.target.value) || 0)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
-            <div className="form-group">
-              <label className="form-label">Y</label>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Y</label>
               <input
                 type="number"
                 value={Math.round(selectedComponent.position.y)}
                 onChange={(e) => handlePositionChange('y', parseInt(e.target.value) || 0)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
           </div>
         </div>
-        
-        {/* Size Properties */}
+
+        {/* Size */}
         <div className="space-y-3">
-          <h4 className="text-sm font-medium text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-600 pb-1">Size</h4>
+          <h4 className="text-sm font-medium text-gray-900">Size</h4>
           <div className="grid grid-cols-2 gap-3">
-            <div className="form-group">
-              <label className="form-label">Width</label>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Width</label>
               <input
                 type="number"
                 value={Math.round(selectedComponent.size.width)}
-                onChange={(e) => handleSizeChange('width', parseInt(e.target.value) || 10)}
-                min="10"
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                onChange={(e) => handleSizeChange('width', parseInt(e.target.value) || 0)}
+                className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
-            <div className="form-group">
-              <label className="form-label">Height</label>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Height</label>
               <input
                 type="number"
                 value={Math.round(selectedComponent.size.height)}
-                onChange={(e) => handleSizeChange('height', parseInt(e.target.value) || 10)}
-                min="10"
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                onChange={(e) => handleSizeChange('height', parseInt(e.target.value) || 0)}
+                className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
           </div>
         </div>
-        
-        {/* Style Properties */}
+
+        {/* Style */}
         <div className="space-y-3">
-          <h4 className="text-sm font-medium text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-600 pb-1">Appearance</h4>
+          <h4 className="text-sm font-medium text-gray-900">Style</h4>
           
-          {/* Background Color */}
-          <div className="form-group">
-            <label className="form-label">Background Color</label>
-            <ColorPicker
-              color={hexToRgb(selectedComponent.style.backgroundColor || '#ffffff')}
-              onChange={(color) => handleColorChange('backgroundColor', color)}
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">Background Color</label>
+            <input
+              type="color"
+              value={selectedComponent.style.backgroundColor || '#ffffff'}
+              onChange={(e) => handleStyleChange('backgroundColor', e.target.value)}
+              className="w-full h-8 rounded border border-gray-300"
             />
           </div>
-          
-          {/* Text Color */}
-          <div className="form-group">
-            <label className="form-label">Text Color</label>
-            <ColorPicker
-              color={hexToRgb(selectedComponent.style.textColor || '#000000')}
-              onChange={(color) => handleColorChange('textColor', color)}
-            />
-          </div>
-          
-          {/* Font Size */}
-          <div className="form-group">
-            <label className="form-label">Font Size</label>
+
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">Border Width</label>
             <input
               type="number"
-              value={selectedComponent.style.fontSize || 16}
-              onChange={(e) => handleStyleChange('fontSize', parseInt(e.target.value) || 16)}
-              min="8"
-              max="72"
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-            />
-          </div>
-          
-          {/* Font Weight */}
-          <div className="form-group">
-            <label className="form-label">Font Weight</label>
-            <select
-              value={selectedComponent.style.fontWeight || 'normal'}
-              onChange={(e) => handleStyleChange('fontWeight', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-            >
-              <option value="normal">Normal</option>
-              <option value="bold">Bold</option>
-              <option value="lighter">Light</option>
-            </select>
-          </div>
-          
-          {/* Text Alignment */}
-          <div className="form-group">
-            <label className="form-label">Text Align</label>
-            <select
-              value={selectedComponent.style.textAlign || 'center'}
-              onChange={(e) => handleStyleChange('textAlign', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-            >
-              <option value="left">Left</option>
-              <option value="center">Center</option>
-              <option value="right">Right</option>
-            </select>
-          </div>
-          
-          {/* Border */}
-          <div className="form-group">
-            <label className="form-label">Border Width</label>
-            <input
-              type="number"
-              value={selectedComponent.style.borderWidth || 1}
-              onChange={(e) => handleStyleChange('borderWidth', parseInt(e.target.value) || 0)}
               min="0"
-              max="10"
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              value={selectedComponent.style.borderWidth || 0}
+              onChange={(e) => handleStyleChange('borderWidth', parseInt(e.target.value) || 0)}
+              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
-          
-          {/* Border Color */}
-          <div className="form-group">
-            <label className="form-label">Border Color</label>
-            <ColorPicker
-              color={hexToRgb(selectedComponent.style.borderColor || '#000000')}
-              onChange={(color) => handleColorChange('borderColor', color)}
+
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">Border Color</label>
+            <input
+              type="color"
+              value={selectedComponent.style.borderColor || '#000000'}
+              onChange={(e) => handleStyleChange('borderColor', e.target.value)}
+              className="w-full h-8 rounded border border-gray-300"
             />
           </div>
-          
-          {/* Border Radius */}
-          <div className="form-group">
-            <label className="form-label">Border Radius</label>
+
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">Border Radius</label>
             <input
               type="number"
+              min="0"
               value={selectedComponent.style.borderRadius || 0}
               onChange={(e) => handleStyleChange('borderRadius', parseInt(e.target.value) || 0)}
-              min="0"
-              max="50"
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
-          
-          {/* Opacity */}
-          <div className="form-group">
-            <label className="form-label">Opacity</label>
+
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">Opacity</label>
             <input
               type="range"
               min="0"
@@ -360,50 +210,257 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = ({ isOpen }) => {
               onChange={(e) => handleStyleChange('opacity', parseFloat(e.target.value))}
               className="w-full"
             />
-            <span className="text-xs text-gray-500">{Math.round((selectedComponent.style.opacity || 1) * 100)}%</span>
+            <div className="text-xs text-gray-500 text-center">{Math.round((selectedComponent.style.opacity || 1) * 100)}%</div>
           </div>
         </div>
-        
-        {/* Component Actions */}
-        <div className="space-y-3">
-          <h4 className="text-sm font-medium text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-600 pb-1">Actions</h4>
-          
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              onClick={() => handleStyleChange('visible', !selectedComponent.visible)}
-              className={`px-3 py-2 text-xs rounded-md transition-colors ${
-                selectedComponent.visible 
-                  ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
-                  : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-              }`}
-            >
-              {selectedComponent.visible ? 'Visible' : 'Hidden'}
-            </button>
-            
-            <button
-              onClick={() => handleStyleChange('locked', !selectedComponent.locked)}
-              className={`px-3 py-2 text-xs rounded-md transition-colors ${
-                selectedComponent.locked 
-                  ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' 
-                  : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
-              }`}
-            >
-              {selectedComponent.locked ? 'Locked' : 'Unlocked'}
-            </button>
-          </div>
 
-          {/* Delete Button */}
-          <button
-            onClick={handleDelete}
-            className="w-full px-3 py-2 text-sm bg-red-500 hover:bg-red-600 text-white rounded-md transition-colors flex items-center justify-center space-x-2"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-            </svg>
-            <span>Delete Component</span>
-          </button>
+        {/* Component Data Properties */}
+        <div className="space-y-3">
+          <h4 className="text-sm font-medium text-gray-900">Component Data</h4>
+          {renderDataProperties()}
         </div>
       </div>
-    </aside>
+
+      {isImageManagerOpen && (
+        <ImageManager
+          isOpen={isImageManagerOpen}
+          onClose={() => setIsImageManagerOpen(false)}
+          selectMode={true}
+          onSelectImage={(image) => {
+            updateComponentData(selectedComponent.id, { imageId: image.id });
+            setIsImageManagerOpen(false);
+          }}
+        />
+      )}
+    </div>
   );
+
+  function renderDataProperties() {
+    if (!selectedComponent) return null;
+
+    switch (selectedComponent.type) {
+      case ComponentType.BACKGROUND:
+        return <BackgroundComponentProperties />;
+      case ComponentType.LOGO:
+        return <LogoComponentProperties />;
+      case ComponentType.TEXT:
+        return <TextComponentProperties />;
+      default:
+        return <div className="text-sm text-gray-500">No properties available</div>;
+    }
+  }
+
+  function BackgroundComponentProperties() {
+    const { images } = useImageStore();
+    const selectedImage = images.find(img => img.id === selectedComponent?.data.imageId);
+
+    return (
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Background Image
+          </label>
+          {selectedImage ? (
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2">
+                <img 
+                  src={selectedImage.thumbnail} 
+                  alt={selectedImage.name}
+                  className="w-12 h-12 object-cover rounded border"
+                />
+                <div className="flex-1">
+                  <div className="text-sm font-medium">{selectedImage.name}</div>
+                  <div className="text-xs text-gray-500">Background Image</div>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsImageManagerOpen(true)}
+                className="w-full px-3 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+              >
+                Change Background
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setIsImageManagerOpen(true)}
+              className="w-full px-3 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+            >
+              Select Background
+            </button>
+          )}
+        </div>
+        
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Scale Mode
+          </label>
+          <select
+            value={selectedComponent?.data.scaleMode || 'cover'}
+            onChange={(e) => handleDataChange('scaleMode', e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="cover">Cover (Fill entire area)</option>
+            <option value="contain">Contain (Fit within area)</option>
+            <option value="stretch">Stretch (Fill ignoring aspect ratio)</option>
+            <option value="original">Original Size</option>
+          </select>
+        </div>
+      </div>
+    );
+  }
+
+  function LogoComponentProperties() {
+    const { images } = useImageStore();
+    const selectedImage = images.find(img => img.id === selectedComponent?.data.imageId);
+
+    return (
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Logo Image
+          </label>
+          {selectedImage ? (
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2">
+                <img 
+                  src={selectedImage.thumbnail} 
+                  alt={selectedImage.name}
+                  className="w-12 h-12 object-cover rounded border"
+                />
+                <div className="flex-1">
+                  <div className="text-sm font-medium">{selectedImage.name}</div>
+                  <div className="text-xs text-gray-500">Logo Image</div>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsImageManagerOpen(true)}
+                className="w-full px-3 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+              >
+                Change Logo
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setIsImageManagerOpen(true)}
+              className="w-full px-3 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+            >
+              Select Logo
+            </button>
+          )}
+        </div>
+        
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Scale Mode
+          </label>
+          <select
+            value={selectedComponent?.data.scaleMode || 'contain'}
+            onChange={(e) => handleDataChange('scaleMode', e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="cover">Cover (Fill entire area)</option>
+            <option value="contain">Contain (Fit within area)</option>
+            <option value="stretch">Stretch (Fill ignoring aspect ratio)</option>
+            <option value="original">Original Size</option>
+          </select>
+        </div>
+      </div>
+    );
+  }
+
+  function TextComponentProperties() {
+    const [localText, setLocalText] = useState(selectedComponent?.data.text || '');
+
+    // Update local state when selected component changes
+    React.useEffect(() => {
+      setLocalText(selectedComponent?.data.text || '');
+    }, [selectedComponent?.id, selectedComponent?.data.text]);
+
+    const handleTextBlur = () => {
+      if (localText !== selectedComponent?.data.text) {
+        handleDataChange('text', localText);
+      }
+    };
+
+    const handleTextKeyDown = (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter' && e.ctrlKey) {
+        handleTextBlur();
+      }
+    };
+
+    return (
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Text Content
+          </label>
+          <textarea
+            value={localText}
+            onChange={(e) => setLocalText(e.target.value)}
+            onBlur={handleTextBlur}
+            onKeyDown={handleTextKeyDown}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            rows={3}
+            placeholder="Enter text... (Ctrl+Enter to apply immediately)"
+          />
+        </div>
+        
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Font Size: {selectedComponent?.style.fontSize || 16}px
+          </label>
+          <input
+            type="range"
+            min="8"
+            max="72"
+            value={selectedComponent?.style.fontSize || 16}
+            onChange={(e) => handleStyleChange('fontSize', parseInt(e.target.value))}
+            className="w-full"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Text Color
+          </label>
+          <input
+            type="color"
+            value={selectedComponent?.style.textColor || '#ffffff'}
+            onChange={(e) => handleStyleChange('textColor', e.target.value)}
+            className="w-full h-10 rounded border border-gray-300"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Text Align
+          </label>
+          <select
+            value={selectedComponent?.style.textAlign || 'center'}
+            onChange={(e) => handleStyleChange('textAlign', e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="left">Left</option>
+            <option value="center">Center</option>
+            <option value="right">Right</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Font Weight
+          </label>
+          <select
+            value={selectedComponent?.style.fontWeight || 'normal'}
+            onChange={(e) => handleStyleChange('fontWeight', e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="normal">Normal</option>
+            <option value="bold">Bold</option>
+            <option value="lighter">Light</option>
+          </select>
+        </div>
+      </div>
+    );
+  }
 };

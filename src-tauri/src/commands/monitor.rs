@@ -1,6 +1,8 @@
 // src-tauri/src/commands/monitor.rs
-use tauri::{Manager, WebviewUrl, WebviewWindowBuilder, AppHandle};
+use tauri::{Manager, WebviewUrl, WebviewWindowBuilder, AppHandle, State};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MonitorInfo {
@@ -12,6 +14,11 @@ pub struct MonitorInfo {
     pub y: i32,
     pub is_primary: bool,
     pub scale_factor: f64,
+}
+
+#[derive(Default)]
+pub struct ScoreboardInstanceStore {
+    pub instances: Arc<Mutex<HashMap<String, serde_json::Value>>>,
 }
 
 #[tauri::command]
@@ -40,6 +47,7 @@ pub async fn get_available_monitors(app: AppHandle) -> Result<Vec<MonitorInfo>, 
 #[tauri::command]
 pub async fn create_scoreboard_window(
     app: AppHandle,
+    store: State<'_, ScoreboardInstanceStore>,
     window_id: String,
     _monitor_id: u32,
     width: u32,
@@ -48,10 +56,17 @@ pub async fn create_scoreboard_window(
     y: i32,
     offset_x: i32,
     offset_y: i32,
+    scoreboard_data: Option<serde_json::Value>,
 ) -> Result<(), String> {
     // Calculate final position with offset
     let final_x = x + offset_x;
     let final_y = y + offset_y;
+
+    // Store the scoreboard data for this window
+    if let Some(data) = scoreboard_data {
+        let mut instances = store.instances.lock().map_err(|e| e.to_string())?;
+        instances.insert(window_id.clone(), data);
+    }
 
     let _window = WebviewWindowBuilder::new(
         &app,
@@ -148,10 +163,9 @@ pub async fn list_scoreboard_windows(app: AppHandle) -> Result<Vec<String>, Stri
 
 #[tauri::command]
 pub async fn get_scoreboard_instance_data(
-    _app: AppHandle,
-    _window_id: String,
+    store: State<'_, ScoreboardInstanceStore>,
+    window_id: String,
 ) -> Result<Option<serde_json::Value>, String> {
-    // For now, return None since we need to implement scoreboard instance storage
-    // This would typically query the stored instance data
-    Ok(None)
+    let instances = store.instances.lock().map_err(|e| e.to_string())?;
+    Ok(instances.get(&window_id).cloned())
 } 

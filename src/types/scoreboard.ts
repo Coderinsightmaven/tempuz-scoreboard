@@ -14,26 +14,9 @@ export interface ScoreboardComponent {
 }
 
 export const enum ComponentType {
-  SCORE = 'score',
-  TIMER = 'timer',
-  TEAM_NAME = 'team-name',
+  BACKGROUND = 'background',
+  LOGO = 'logo', 
   TEXT = 'text',
-  IMAGE = 'image',
-  PERIOD = 'period',
-  LOGO = 'logo',
-  RECTANGLE = 'rectangle',
-  CIRCLE = 'circle',
-  CUSTOM_SHAPE = 'custom-shape',
-  // Tennis-specific components
-  TENNIS_SET_SCORE = 'tennis-set-score',
-  TENNIS_GAME_SCORE = 'tennis-game-score',
-  TENNIS_CURRENT_GAME = 'tennis-current-game',
-  TENNIS_SERVER_INDICATOR = 'tennis-server-indicator',
-  TENNIS_PLAYER_NAME = 'tennis-player-name',
-  TENNIS_MATCH_STATUS = 'tennis-match-status',
-  TENNIS_TIEBREAK_SCORE = 'tennis-tiebreak-score',
-  // Background component with RGB
-  BACKGROUND_COLOR = 'background-color',
 }
 
 export interface Position {

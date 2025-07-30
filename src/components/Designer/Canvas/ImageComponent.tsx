@@ -6,6 +6,7 @@ interface ImageComponentProps {
   alt?: string;
   className?: string;
   style?: React.CSSProperties;
+  scaleMode?: 'cover' | 'contain' | 'stretch' | 'original';
 }
 
 export const ImageComponent: React.FC<ImageComponentProps> = ({
@@ -13,6 +14,7 @@ export const ImageComponent: React.FC<ImageComponentProps> = ({
   alt = 'Uploaded image',
   className = '',
   style = {},
+  scaleMode = 'cover',
 }) => {
   const [imageSrc, setImageSrc] = useState<string>('');
   const [loading, setLoading] = useState(true);
@@ -69,11 +71,26 @@ export const ImageComponent: React.FC<ImageComponentProps> = ({
     );
   }
 
+  const getObjectFit = () => {
+    switch (scaleMode) {
+      case 'cover':
+        return 'object-cover';
+      case 'contain':
+        return 'object-contain';
+      case 'stretch':
+        return 'object-fill';
+      case 'original':
+        return 'object-none';
+      default:
+        return 'object-cover';
+    }
+  };
+
   return (
     <img
       src={imageSrc}
       alt={alt}
-      className={`w-full h-full object-cover ${className}`}
+      className={`w-full h-full ${getObjectFit()} ${className}`}
       style={style}
       onError={() => setError(true)}
     />

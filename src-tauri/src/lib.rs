@@ -13,6 +13,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .manage(ScoreboardState::default())
+        .manage(monitor::ScoreboardInstanceStore::default())
         .invoke_handler(tauri::generate_handler![
             // Monitor commands
             get_available_monitors,

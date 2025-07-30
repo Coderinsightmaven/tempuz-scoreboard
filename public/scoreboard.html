@@ -13,158 +13,472 @@
             overflow: hidden; 
             height: 100vh; 
             width: 100vw; 
+            margin: 0;
+            padding: 0;
+            position: relative;
         }
         .scoreboard-container { 
-            width: 100%; 
-            height: 100%; 
-            position: relative; 
-            background: #000; 
-        }
-        .component { 
             position: absolute; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            font-weight: bold; 
-            user-select: none; 
+            background: #000; 
+            /* Dimensions, scaling and positioning will be set dynamically */
+        }
+        .image-component {
+            position: absolute;
+            overflow: hidden;
+        }
+        .image-component img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
         }
         .status-indicator { 
             position: absolute; 
-            top: 20px; 
-            right: 20px; 
-            padding: 8px 16px; 
+            top: 10px; 
+            right: 10px; 
+            padding: 4px 8px; 
             background: rgba(0,255,136,0.2); 
-            border: 2px solid #00ff88; 
-            border-radius: 20px; 
-            font-size: 0.9rem; 
+            border: 1px solid #00ff88; 
+            border-radius: 12px; 
+            font-size: 0.7rem; 
             font-weight: bold; 
             color: #00ff88; 
             z-index: 1000; 
         }
-        .default-scoreboard { 
+        .loading-message { 
             width: 100%; 
             height: 100%; 
             display: flex; 
-            flex-direction: column; 
+            flex-direction: column;
             align-items: center; 
             justify-content: center; 
-            background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460); 
+            font-size: 1.2rem; 
+            color: #888; 
+            text-align: center;
+            padding: 20px;
         }
-        .default-title { 
-            font-size: 2.5rem; 
-            margin-bottom: 2rem; 
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.5); 
+        .debug-info {
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 10px;
+            max-width: 80%;
+            word-wrap: break-word;
         }
-        .default-scores { 
+        .placeholder-text {
             display: flex; 
             align-items: center; 
-            gap: 4rem; 
-            margin: 2rem 0; 
+            justify-content: center; 
+            width: 100%; 
+            height: 100%; 
+            background: #333; 
+            color: #fff; 
+            font-size: 12px;
+            text-align: center;
+            padding: 10px;
         }
-        .default-team { 
-            text-align: center; 
-            min-width: 200px; 
-        }
-        .default-team-name { 
-            font-size: 1.8rem; 
-            margin-bottom: 1rem; 
-        }
-        .default-score { 
-            font-size: 4rem; 
-            color: #00ff88; 
-            text-shadow: 2px 2px 8px rgba(0,255,136,0.3); 
-        }
-        .default-vs { 
-            font-size: 2rem; 
-            color: #888; 
-        }
-        .default-time { 
-            font-size: 2.5rem; 
-            color: #ffaa00; 
-            text-shadow: 2px 2px 8px rgba(255,170,0,0.3); 
-            margin-top: 2rem; 
+        .text-component {
+            position: absolute;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            word-wrap: break-word;
+            overflow: hidden;
+            padding: 4px;
         }
     </style>
 </head>
 <body>
     <div class="scoreboard-container" id="scoreboardContainer">
-        <div class="status-indicator" id="status">LIVE</div>
-        <div class="default-scoreboard">
-            <div class="default-title">Scoreboard Display</div>
-            <div class="default-scores">
-                <div class="default-team">
-                    <div class="default-team-name" id="home-team">Home Team</div>
-                    <div class="default-score" id="home-score">0</div>
-                </div>
-                <div class="default-vs">VS</div>
-                <div class="default-team">
-                    <div class="default-team-name" id="away-team">Away Team</div>
-                    <div class="default-score" id="away-score">0</div>
-                </div>
-            </div>
-            <div class="default-time" id="game-time">00:00</div>
+        <div class="status-indicator">LIVE</div>
+        <div class="loading-message" id="loadingMessage">
+            <div>Loading Scoreboard...</div>
+            <div class="debug-info" id="debugInfo">Initializing...</div>
         </div>
     </div>
 
     <script>
-        let gameState = null;
+        let currentWindow = null;
+        let scoreboardData = null;
+        let debugInfo = document.getElementById('debugInfo');
+        let initAttempts = 0;
+        const maxInitAttempts = 30; // 30 seconds
 
-        // Listen for game state updates
-        if (window.__TAURI__) {
-            window.__TAURI__.event.listen('game_state_updated', (event) => {
-                gameState = event.payload;
-                updateDisplay();
-            });
-        }
-
-        // Update display with current game state
-        function updateDisplay() {
-            if (!gameState) return;
-            
-            const homeTeamEl = document.getElementById('home-team');
-            const awayTeamEl = document.getElementById('away-team');
-            const homeScoreEl = document.getElementById('home-score');
-            const awayScoreEl = document.getElementById('away-score');
-            const gameTimeEl = document.getElementById('game-time');
-            const statusEl = document.getElementById('status');
-            
-            if (homeTeamEl) homeTeamEl.textContent = gameState.homeTeam?.name || 'Home Team';
-            if (awayTeamEl) awayTeamEl.textContent = gameState.awayTeam?.name || 'Away Team';
-            if (homeScoreEl) homeScoreEl.textContent = gameState.homeScore || 0;
-            if (awayScoreEl) awayScoreEl.textContent = gameState.awayScore || 0;
-            if (gameTimeEl) gameTimeEl.textContent = gameState.timeRemaining || '00:00';
-            
-            if (statusEl) {
-                const status = gameState.isGameActive ? 'LIVE' : 'PAUSED';
-                statusEl.textContent = status;
-                statusEl.style.background = gameState.isGameActive ? 
-                    'rgba(0,255,136,0.2)' : 'rgba(255,170,0,0.2)';
-                statusEl.style.borderColor = gameState.isGameActive ? 
-                    '#00ff88' : '#ffaa00';
-                statusEl.style.color = gameState.isGameActive ? 
-                    '#00ff88' : '#ffaa00';
+        function updateDebug(message) {
+            console.log(message);
+            if (debugInfo) {
+                debugInfo.textContent = message;
             }
         }
 
-        // Load initial game state
-        async function loadInitialGameState() {
+        // Try to get window label from URL or other sources
+        function getWindowId() {
+            // Try to extract from URL parameters
+            const urlParams = new URLSearchParams(window.location.search);
+            const windowId = urlParams.get('windowId');
+            if (windowId) return windowId;
+            
+            // Try to get from hash
+            const hash = window.location.hash;
+            if (hash && hash.startsWith('#')) {
+                return hash.substring(1);
+            }
+            
+            // Return null if not found
+            return null;
+        }
+
+        async function initializeScoreboard() {
             try {
-                if (window.__TAURI__) {
-                    const state = await window.__TAURI__.core.invoke('get_game_state');
-                    if (state) {
-                        gameState = state;
-                        updateDisplay();
+                initAttempts++;
+                updateDebug(`Initialization attempt ${initAttempts}/${maxInitAttempts}`);
+                
+                // First try to use Tauri API if available
+                if (window.__TAURI__ && window.__TAURI__.core && window.__TAURI__.webviewWindow) {
+                    updateDebug('Using Tauri API...');
+                    await initializeWithTauri();
+                    return;
+                }
+                
+                // Fallback: Try to get window ID from URL or other sources
+                const windowId = getWindowId();
+                if (windowId) {
+                    updateDebug(`Found window ID: ${windowId}`);
+                    // For now, render default scoreboard - we'll improve this
+                    renderDefaultScoreboard(`Window: ${windowId}`);
+                    return;
+                }
+                
+                // If we still don't have a way to get data, retry or show default
+                if (initAttempts < maxInitAttempts) {
+                    updateDebug(`Retrying in 1 second... (${initAttempts}/${maxInitAttempts})`);
+                    setTimeout(initializeScoreboard, 1000);
+                } else {
+                    updateDebug('Max attempts reached, showing default');
+                    renderDefaultScoreboard();
+                }
+                
+            } catch (error) {
+                console.error('Initialization error:', error);
+                updateDebug(`Error: ${error.message}`);
+                
+                if (initAttempts < maxInitAttempts) {
+                    setTimeout(initializeScoreboard, 1000);
+                } else {
+                    showMessage('Failed to initialize: ' + error.message);
+                }
+            }
+        }
+
+        async function initializeWithTauri() {
+            const { invoke } = window.__TAURI__.core;
+            const { getCurrentWebviewWindow } = window.__TAURI__.webviewWindow;
+            
+            currentWindow = getCurrentWebviewWindow();
+            const windowLabel = currentWindow.label;
+            
+            updateDebug(`Getting data for window: ${windowLabel}`);
+            
+            // Get the scoreboard instance data
+            const instanceData = await invoke('get_scoreboard_instance_data', { 
+                windowId: windowLabel 
+            });
+            
+            console.log('Received instance data:', instanceData);
+            
+            if (instanceData) {
+                scoreboardData = instanceData.scoreboardData || instanceData;
+                updateDebug(`Found ${scoreboardData.components ? scoreboardData.components.length : 0} components`);
+                await renderScoreboard(scoreboardData);
+            } else {
+                updateDebug('No data found, using default');
+                renderDefaultScoreboard();
+            }
+        }
+
+        let originalDimensions = { width: 800, height: 600 };
+        let currentScale = 1;
+
+        async function renderScoreboard(data) {
+            const container = document.getElementById('scoreboardContainer');
+            const loadingMessage = document.getElementById('loadingMessage');
+            
+            updateDebug('Rendering custom scoreboard...');
+            loadingMessage.style.display = 'none';
+            
+            // Store original design dimensions with better detection
+            if (data.config && data.config.dimensions) {
+                originalDimensions = {
+                    width: data.config.dimensions.width || 800,
+                    height: data.config.dimensions.height || 600
+                };
+                console.log('Found dimensions in data.config:', originalDimensions);
+            } else if (data.dimensions) {
+                originalDimensions = {
+                    width: data.dimensions.width || 800,
+                    height: data.dimensions.height || 600
+                };
+                console.log('Found dimensions in data.dimensions:', originalDimensions);
+            } else {
+                console.log('No dimensions found, using default:', originalDimensions);
+            }
+            
+            // Set background
+            if (data.background) {
+                container.style.backgroundColor = data.background.color || '#000';
+            }
+            
+            // Render components
+            if (data.components && data.components.length > 0) {
+                for (const component of data.components) {
+                    if (component.type === 'background' || component.type === 'logo') {
+                        await renderImageComponent(component);
+                    } else if (component.type === 'text') {
+                        renderTextComponent(component);
                     }
                 }
-            } catch (error) {
-                console.warn('Failed to load initial game state:', error);
+            } else {
+                showMessage('No components in design');
             }
+            
+            // Initial scale calculation
+            calculateAndApplyScale();
+            
+            // Add window resize listener for responsive scaling
+            window.addEventListener('resize', calculateAndApplyScale);
         }
 
-        // Initialize when page loads
-        document.addEventListener('DOMContentLoaded', loadInitialGameState);
-        
-        console.log('Scoreboard display initialized');
+        function calculateAndApplyScale() {
+            const container = document.getElementById('scoreboardContainer');
+            if (!container) return;
+            
+            const windowWidth = window.innerWidth;
+            const windowHeight = window.innerHeight;
+            
+            // Minimal padding to maximize space usage
+            const padding = 2;
+            const availableWidth = Math.max(100, windowWidth - (padding * 2));
+            const availableHeight = Math.max(100, windowHeight - (padding * 2));
+            
+            // Calculate scale factor to fit content in available space while maintaining aspect ratio
+            const scaleX = availableWidth / originalDimensions.width;
+            const scaleY = availableHeight / originalDimensions.height;
+            currentScale = Math.min(scaleX, scaleY);
+            
+            // Ensure minimum scale for very small windows
+            currentScale = Math.max(currentScale, 0.1);
+            
+            // Set the container to original dimensions
+            container.style.width = originalDimensions.width + 'px';
+            container.style.height = originalDimensions.height + 'px';
+            
+            // Apply scaling with top-left origin first
+            container.style.transform = `scale(${currentScale})`;
+            container.style.transformOrigin = 'top left';
+            
+            // Calculate the actual size after scaling
+            const scaledWidth = originalDimensions.width * currentScale;
+            const scaledHeight = originalDimensions.height * currentScale;
+            
+            // Position the container to center the scaled content
+            const leftOffset = (windowWidth - scaledWidth) / 2;
+            const topOffset = (windowHeight - scaledHeight) / 2;
+            
+            container.style.left = Math.max(0, leftOffset) + 'px';
+            container.style.top = Math.max(0, topOffset) + 'px';
+            
+            console.log(`Scaling Details:
+                Original: ${originalDimensions.width}x${originalDimensions.height}
+                Window: ${windowWidth}x${windowHeight}
+                Available: ${availableWidth}x${availableHeight}
+                Scale: ${currentScale.toFixed(3)}x
+                Final size: ${scaledWidth.toFixed(0)}x${scaledHeight.toFixed(0)}
+                Position: ${leftOffset.toFixed(0)}, ${topOffset.toFixed(0)}`);
+        }
+
+        async function renderImageComponent(component) {
+            const container = document.getElementById('scoreboardContainer');
+            
+            const element = document.createElement('div');
+            element.className = 'image-component';
+            element.style.left = component.position.x + 'px';
+            element.style.top = component.position.y + 'px';
+            element.style.width = component.size.width + 'px';
+            element.style.height = component.size.height + 'px';
+            element.style.zIndex = component.zIndex || 1;
+            
+            // Apply styling
+            if (component.style) {
+                if (component.style.backgroundColor) {
+                    element.style.backgroundColor = component.style.backgroundColor;
+                }
+                if (component.style.borderWidth) {
+                    element.style.border = `${component.style.borderWidth}px solid ${component.style.borderColor || '#000'}`;
+                }
+                if (component.style.borderRadius) {
+                    element.style.borderRadius = component.style.borderRadius + 'px';
+                }
+                if (component.style.opacity) {
+                    element.style.opacity = component.style.opacity;
+                }
+            }
+            
+            // Load image if available
+            if (component.data && component.data.imageId) {
+                try {
+                    if (window.__TAURI__ && window.__TAURI__.core) {
+                        const { invoke } = window.__TAURI__.core;
+                        const imageData = await invoke('get_image_data', { 
+                            imageId: component.data.imageId 
+                        });
+                        
+                        const img = document.createElement('img');
+                        img.src = imageData;
+                        img.alt = component.data.text || 'Scoreboard Image';
+                        img.style.width = '100%';
+                        img.style.height = '100%';
+                        
+                        // Apply scale mode
+                        const scaleMode = component.data.scaleMode || (component.type === 'background' ? 'cover' : 'contain');
+                        switch (scaleMode) {
+                            case 'cover':
+                                img.style.objectFit = 'cover';
+                                break;
+                            case 'contain':
+                                img.style.objectFit = 'contain';
+                                break;
+                            case 'stretch':
+                                img.style.objectFit = 'fill';
+                                break;
+                            case 'original':
+                                img.style.objectFit = 'none';
+                                break;
+                            default:
+                                img.style.objectFit = 'cover';
+                        }
+                        
+                        element.appendChild(img);
+                        
+                        console.log(`Loaded ${component.type} image for component:`, component.id, 'Scale mode:', scaleMode);
+                    } else {
+                        // Fallback: show placeholder
+                        element.innerHTML = `<div class="placeholder-text">Image (Tauri API not available)</div>`;
+                    }
+                } catch (error) {
+                    console.error('Failed to load image:', error);
+                    element.innerHTML = `<div class="placeholder-text">${component.data.text || 'Image not found'}</div>`;
+                }
+            } else {
+                element.innerHTML = `<div class="placeholder-text">No Image</div>`;
+            }
+            
+            container.appendChild(element);
+        }
+
+        function renderTextComponent(component) {
+            const container = document.getElementById('scoreboardContainer');
+            
+            const element = document.createElement('div');
+            element.className = 'text-component';
+            element.style.left = component.position.x + 'px';
+            element.style.top = component.position.y + 'px';
+            element.style.width = component.size.width + 'px';
+            element.style.height = component.size.height + 'px';
+            element.style.zIndex = component.zIndex || 1000; // Text always on top
+            
+            // Apply flexbox layout (matching design canvas)
+            element.style.display = 'flex';
+            element.style.alignItems = 'center';
+            element.style.paddingLeft = '8px';
+            element.style.paddingRight = '8px';
+            element.style.wordWrap = 'break-word';
+            element.style.overflow = 'hidden';
+            
+            // Apply text alignment
+            const textAlign = component.style ? component.style.textAlign || 'center' : 'center';
+            switch (textAlign) {
+                case 'left':
+                    element.style.justifyContent = 'flex-start';
+                    element.style.textAlign = 'left';
+                    break;
+                case 'right':
+                    element.style.justifyContent = 'flex-end';
+                    element.style.textAlign = 'right';
+                    break;
+                case 'center':
+                default:
+                    element.style.justifyContent = 'center';
+                    element.style.textAlign = 'center';
+                    break;
+            }
+            
+            // Apply text styling
+            if (component.style) {
+                element.style.fontSize = (component.style.fontSize || 16) + 'px';
+                element.style.color = component.style.textColor || '#ffffff';
+                element.style.fontWeight = component.style.fontWeight || 'normal';
+                element.style.fontFamily = component.style.fontFamily || 'Arial, sans-serif';
+                
+                if (component.style.backgroundColor && component.style.backgroundColor !== 'transparent') {
+                    element.style.backgroundColor = component.style.backgroundColor;
+                }
+                if (component.style.borderWidth) {
+                    element.style.border = `${component.style.borderWidth}px solid ${component.style.borderColor || '#000'}`;
+                }
+                if (component.style.borderRadius) {
+                    element.style.borderRadius = component.style.borderRadius + 'px';
+                }
+                if (component.style.opacity !== undefined) {
+                    element.style.opacity = component.style.opacity;
+                }
+            }
+            
+            // Set text content
+            element.textContent = component.data.text || 'Sample Text';
+            
+            container.appendChild(element);
+        }
+
+        function renderDefaultScoreboard(extraInfo = '') {
+            const loadingMessage = document.getElementById('loadingMessage');
+            
+            loadingMessage.innerHTML = `
+                <div style="text-align: center;">
+                    <h1 style="font-size: 2rem; margin-bottom: 1rem;">Scoreboard Display</h1>
+                    <p style="font-size: 1rem; color: #888;">No custom design loaded</p>
+                    <p style="font-size: 0.8rem; color: #666; margin-top: 0.5rem;">Create a design with image components to see it here</p>
+                    ${extraInfo ? `<p style="font-size: 0.7rem; color: #555; margin-top: 1rem;">${extraInfo}</p>` : ''}
+                </div>
+            `;
+        }
+
+        function showMessage(message) {
+            const loadingMessage = document.getElementById('loadingMessage');
+            loadingMessage.innerHTML = `<div>${message}</div><div class="debug-info">${debugInfo ? debugInfo.textContent : ''}</div>`;
+            loadingMessage.style.display = 'flex';
+        }
+
+        // Start initialization
+        document.addEventListener('DOMContentLoaded', () => {
+            updateDebug('DOM ready, starting...');
+            initializeScoreboard();
+        });
+
+        // Also try on window load
+        window.addEventListener('load', () => {
+            if (initAttempts === 0) {
+                updateDebug('Window loaded, starting...');
+                initializeScoreboard();
+            }
+        });
+
+        // Listen for messages from parent window (if any)
+        window.addEventListener('message', (event) => {
+            if (event.data && event.data.type === 'scoreboardData') {
+                console.log('Received scoreboard data via postMessage:', event.data.data);
+                scoreboardData = event.data.data;
+                renderScoreboard(scoreboardData);
+            }
+        });
     </script>
 </body>
 </html>

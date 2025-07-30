@@ -1,22 +1,12 @@
-import React, { useCallback, useState } from 'react';
-import {
-  DndContext,
-  DragEndEvent,
-  DragMoveEvent,
-  DragStartEvent,
-  useSensor,
-  useSensors,
-  PointerSensor,
-  KeyboardSensor,
-} from '@dnd-kit/core';
-import { useCanvasStore } from '../../../stores/useCanvasStore';
+import React, { useState, useCallback } from 'react';
+import { DndContext, DragEndEvent, DragStartEvent, DragMoveEvent, useSensor, useSensors, PointerSensor, KeyboardSensor } from '@dnd-kit/core';
 import { useScoreboardStore } from '../../../stores/useScoreboardStore';
+import { useCanvasStore } from '../../../stores/useCanvasStore';
 import { DraggableComponent } from './DraggableComponent';
 import { AlignmentGuides } from './AlignmentGuides';
-import { snapToGrid } from '../../../utils/canvas';
 import { detectAlignments } from '../../../utils/alignment';
+import { snapToGrid } from '../../../utils/canvas';
 import { ResizeHandle } from '../../../types/canvas';
-import { ComponentType } from '../../../types/scoreboard';
 
 export const DesignCanvas: React.FC = () => {
   const {
@@ -30,6 +20,8 @@ export const DesignCanvas: React.FC = () => {
     clearSelection,
     startDrag,
     endDrag,
+    startResize,
+    endResize,
     setAlignmentGuides,
     clearAlignmentGuides,
   } = useCanvasStore();
@@ -161,7 +153,10 @@ export const DesignCanvas: React.FC = () => {
       startSize: { ...component.size },
       startPosition: { ...component.position },
     });
-  }, [components]);
+    
+    // Update canvas store resize state
+    startResize(componentId, handle);
+  }, [components, startResize]);
 
   const handleResizeMove = useCallback((event: MouseEvent) => {
     if (!resizeState) return;
@@ -277,7 +272,8 @@ export const DesignCanvas: React.FC = () => {
 
   const handleResizeEnd = useCallback(() => {
     setResizeState(null);
-  }, []);
+    endResize();
+  }, [endResize]);
 
   // Add mouse event listeners for resize
   React.useEffect(() => {
@@ -323,15 +319,14 @@ export const DesignCanvas: React.FC = () => {
           {/* Render Components */}
           {components
             .slice() // Create a copy to avoid mutating original array
+            // Sort components by zIndex, with background components first
             .sort((a, b) => {
-              // Background color components always go to the back
-              if (a.type === ComponentType.BACKGROUND_COLOR && b.type !== ComponentType.BACKGROUND_COLOR) return -1;
-              if (b.type === ComponentType.BACKGROUND_COLOR && a.type !== ComponentType.BACKGROUND_COLOR) return 1;
+              // First by zIndex
+              const zIndexDiff = (a.zIndex || 0) - (b.zIndex || 0);
+              if (zIndexDiff !== 0) return zIndexDiff;
               
-              // Otherwise sort by z-index
-              const aZ = a.zIndex || 1;
-              const bZ = b.zIndex || 1;
-              return aZ - bZ;
+              // Then by creation order (id)
+              return a.id.localeCompare(b.id);
             })
             .map((component) => (
               <DraggableComponent
