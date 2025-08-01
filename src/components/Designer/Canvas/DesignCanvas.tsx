@@ -16,6 +16,7 @@ export const DesignCanvas: React.FC = () => {
     grid,
     selectedComponents,
     alignmentGuides,
+    alignmentSnapping,
     selectComponent,
     clearSelection,
     startDrag,
@@ -72,19 +73,25 @@ export const DesignCanvas: React.FC = () => {
     const draggedComponent = components.find(c => c.id === draggedComponentId);
     if (!draggedComponent) return;
     
-    // Calculate new position based on drag delta
-    const newPosition = {
-      x: draggedComponent.position.x + delta.x,
-      y: draggedComponent.position.y + delta.y
-    };
-    
-    // Detect alignments with other components
-    const otherComponents = components.filter(c => c.id !== draggedComponentId);
-    const alignmentResult = detectAlignments(draggedComponent, newPosition, otherComponents);
-    
-    // Update alignment guides
-    setAlignmentGuides(alignmentResult.guides);
-  }, [draggedComponentId, components, setAlignmentGuides]);
+    // Only show alignment guides if alignment snapping is enabled
+    if (alignmentSnapping) {
+      // Calculate new position based on drag delta
+      const newPosition = {
+        x: draggedComponent.position.x + delta.x,
+        y: draggedComponent.position.y + delta.y
+      };
+      
+      // Detect alignments with other components
+      const otherComponents = components.filter(c => c.id !== draggedComponentId);
+      const alignmentResult = detectAlignments(draggedComponent, newPosition, otherComponents);
+      
+      // Update alignment guides
+      setAlignmentGuides(alignmentResult.guides);
+    } else {
+      // Clear alignment guides if alignment snapping is disabled
+      clearAlignmentGuides();
+    }
+  }, [draggedComponentId, components, alignmentSnapping, setAlignmentGuides, clearAlignmentGuides]);
 
   const handleDragEnd = useCallback((event: DragEndEvent) => {
     const { active, delta } = event;
@@ -100,20 +107,27 @@ export const DesignCanvas: React.FC = () => {
     let newX = component.position.x + delta.x;
     let newY = component.position.y + delta.y;
 
-    // Check for alignment snapping first
-    const newPosition = { x: newX, y: newY };
-    const otherComponents = components.filter(c => c.id !== active.id);
-    const alignmentResult = detectAlignments(component, newPosition, otherComponents);
+    // Check for alignment snapping first (only if enabled)
+    let alignmentSnapped = false;
+    if (alignmentSnapping) {
+      const newPosition = { x: newX, y: newY };
+      const otherComponents = components.filter(c => c.id !== active.id);
+      const alignmentResult = detectAlignments(component, newPosition, otherComponents);
+      
+      if (alignmentResult.snapPosition) {
+        if (alignmentResult.snapPosition.x !== undefined) {
+          newX = alignmentResult.snapPosition.x;
+          alignmentSnapped = true;
+        }
+        if (alignmentResult.snapPosition.y !== undefined) {
+          newY = alignmentResult.snapPosition.y;
+          alignmentSnapped = true;
+        }
+      }
+    }
     
-    if (alignmentResult.snapPosition) {
-      if (alignmentResult.snapPosition.x !== undefined) {
-        newX = alignmentResult.snapPosition.x;
-      }
-      if (alignmentResult.snapPosition.y !== undefined) {
-        newY = alignmentResult.snapPosition.y;
-      }
-    } else if (grid.snapToGrid && grid.enabled) {
-      // Apply grid snapping only if no alignment snapping occurred
+    // Apply grid snapping only if no alignment snapping occurred and grid snapping is enabled
+    if (!alignmentSnapped && grid.snapToGrid && grid.enabled) {
       const gridSettings = { ...grid, color: '#000000', opacity: 0.1 };
       const snapped = snapToGrid({ x: newX, y: newY }, gridSettings);
       newX = snapped.x;
@@ -126,7 +140,7 @@ export const DesignCanvas: React.FC = () => {
 
     // Update component position
     updateComponentPosition(active.id as string, { x: newX, y: newY });
-  }, [components, grid, canvasSize, updateComponentPosition, endDrag, clearAlignmentGuides, detectAlignments]);
+  }, [components, grid, canvasSize, alignmentSnapping, updateComponentPosition, endDrag, clearAlignmentGuides, detectAlignments]);
 
   const handleCanvasClick = useCallback((e: React.MouseEvent) => {
     // Clear selection when clicking on empty canvas
@@ -337,12 +351,14 @@ export const DesignCanvas: React.FC = () => {
               />
             ))}
 
-          {/* Alignment Guides */}
-          <AlignmentGuides
-            guides={alignmentGuides}
-            components={components}
-            canvasSize={canvasSize}
-          />
+          {/* Alignment Guides - only show if alignment snapping is enabled */}
+          {alignmentSnapping && (
+            <AlignmentGuides
+              guides={alignmentGuides}
+              components={components}
+              canvasSize={canvasSize}
+            />
+          )}
 
           {/* Canvas Info Overlay */}
           {components.length === 0 && (

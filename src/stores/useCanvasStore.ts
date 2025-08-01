@@ -3,6 +3,7 @@ import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { AlignmentGuide } from '../utils/alignment';
 import { ResizeHandle } from '../types/canvas';
+import { ScoreboardComponent } from '../types/scoreboard';
 
 interface CanvasState {
   canvasSize: { width: number; height: number };
@@ -23,6 +24,10 @@ interface CanvasState {
   resizedComponentId: string | null;
   viewportBounds: DOMRect | null;
   alignmentGuides: AlignmentGuide[];
+  // Clipboard state
+  clipboard: ScoreboardComponent[];
+  // Alignment snapping control
+  alignmentSnapping: boolean;
 }
 
 interface CanvasActions {
@@ -32,6 +37,7 @@ interface CanvasActions {
   toggleGrid: () => void;
   setGridSize: (size: number) => void;
   toggleSnapToGrid: () => void;
+  toggleAlignmentSnapping: () => void;
   selectComponent: (id: string, multiSelect?: boolean) => void;
   selectMultipleComponents: (ids: string[]) => void;
   clearSelection: () => void;
@@ -47,6 +53,9 @@ interface CanvasActions {
   resetView: () => void;
   setAlignmentGuides: (guides: AlignmentGuide[]) => void;
   clearAlignmentGuides: () => void;
+  // Clipboard actions
+  setClipboard: (components: ScoreboardComponent[]) => void;
+  clearClipboard: () => void;
 }
 
 export const useCanvasStore = create<CanvasState & CanvasActions>()(
@@ -70,6 +79,10 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()(
     resizedComponentId: null,
     viewportBounds: null,
     alignmentGuides: [],
+    // Clipboard initial state
+    clipboard: [],
+    // Alignment snapping control
+    alignmentSnapping: true,
 
     // Actions
     setCanvasSize: (width: number, height: number) => 
@@ -101,6 +114,16 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()(
       set((state) => ({
         grid: { ...state.grid, snapToGrid: !state.grid.snapToGrid }
       })),
+    
+    toggleAlignmentSnapping: () => 
+      set((state) => {
+        const newAlignmentSnapping = !state.alignmentSnapping;
+        return {
+          alignmentSnapping: newAlignmentSnapping,
+          // Clear alignment guides when disabling alignment snapping
+          alignmentGuides: newAlignmentSnapping ? state.alignmentGuides : []
+        };
+      }),
     
     selectComponent: (id: string, multiSelect = false) => 
       set((state) => {
@@ -205,6 +228,17 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()(
       clearAlignmentGuides: () =>
         set(() => ({
           alignmentGuides: []
+        })),
+
+      // Clipboard actions
+      setClipboard: (components: ScoreboardComponent[]) =>
+        set(() => ({
+          clipboard: components
+        })),
+
+      clearClipboard: () =>
+        set(() => ({
+          clipboard: []
         })),
   }))
 ); 

@@ -146,7 +146,7 @@ export const DraggableComponent: React.FC<DraggableComponentProps> = ({
         width: component.size.width,
         height: component.size.height,
         backgroundColor: getBackgroundColor(),
-        border: `${component.style.borderWidth || 1}px solid ${component.style.borderColor || '#000000'}`,
+        border: `${component.style.borderWidth || 0}px solid ${component.style.borderColor || '#000000'}`,
         borderRadius: `${component.style.borderRadius || 0}px`,
         display: 'flex',
         alignItems: (component.type === ComponentType.BACKGROUND || component.type === ComponentType.LOGO) && component.data.imageId ? 'stretch' : 'center',

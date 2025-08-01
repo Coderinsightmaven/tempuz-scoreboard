@@ -159,12 +159,27 @@ export const PropertyPanel: React.FC = () => {
           
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">Background Color</label>
-            <input
-              type="color"
-              value={selectedComponent.style.backgroundColor || '#ffffff'}
-              onChange={(e) => handleStyleChange('backgroundColor', e.target.value)}
-              className="w-full h-8 rounded border border-gray-300"
-            />
+            <div className="flex items-center space-x-2">
+              <input
+                type="color"
+                value={selectedComponent.style.backgroundColor === 'transparent' ? '#ffffff' : (selectedComponent.style.backgroundColor || '#ffffff')}
+                onChange={(e) => handleStyleChange('backgroundColor', e.target.value)}
+                className="w-16 h-8 rounded border border-gray-300"
+              />
+              <button
+                onClick={() => handleStyleChange('backgroundColor', 'transparent')}
+                className={`px-3 py-1 text-xs rounded border ${
+                  selectedComponent.style.backgroundColor === 'transparent' 
+                    ? 'bg-blue-100 text-blue-800 border-blue-300' 
+                    : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200'
+                }`}
+              >
+                Transparent
+              </button>
+            </div>
+            {selectedComponent.style.backgroundColor === 'transparent' && (
+              <div className="text-xs text-gray-500 mt-1">Background is transparent</div>
+            )}
           </div>
 
           <div>

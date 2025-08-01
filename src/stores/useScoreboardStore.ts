@@ -31,6 +31,8 @@ interface ScoreboardActions {
   updateComponentStyle: (id: string, style: Partial<ScoreboardComponent['style']>) => void;
   updateComponentData: (id: string, data: Partial<ScoreboardComponent['data']>) => void;
   duplicateComponent: (id: string) => string | null;
+  copyComponents: (componentIds: string[]) => ScoreboardComponent[];
+  pasteComponents: (components: ScoreboardComponent[], position?: { x: number; y: number }) => string[];
   bringToFront: (id: string) => void;
   sendToBack: (id: string) => void;
   lockComponent: (id: string, locked: boolean) => void;
@@ -74,7 +76,7 @@ const createDefaultComponent = (
       break;
     case ComponentType.TEXT:
       defaultSize = { width: 200, height: 50 }; // Rectangle for text
-      defaultData = { text: 'Sample Text' };
+      defaultData = { imageId: undefined, imageUrl: undefined, text: 'Sample Text' };
       defaultZIndex = 5; // Text in middle layer
       break;
   }
@@ -88,7 +90,7 @@ const createDefaultComponent = (
     style: {
       backgroundColor: (type === ComponentType.BACKGROUND || type === ComponentType.TEXT) ? 'transparent' : '#ffffff',
       borderColor: '#000000',
-      borderWidth: type === ComponentType.BACKGROUND ? 0 : 1,
+      borderWidth: (type === ComponentType.BACKGROUND || type === ComponentType.TEXT) ? 0 : 1,
       borderRadius: 0,
       opacity: 1,
       fontSize: 16,
@@ -261,6 +263,45 @@ export const useScoreboardStore = create<ScoreboardState & ScoreboardActions>()(
       }));
       
       return duplicate.id;
+    },
+
+    copyComponents: (componentIds: string[]) => {
+      const state = get();
+      const componentsToCopy = state.components.filter(c => componentIds.includes(c.id));
+      return componentsToCopy;
+    },
+
+    pasteComponents: (components: ScoreboardComponent[], position?: { x: number; y: number }) => {
+      if (components.length === 0) return [];
+      
+      const state = get();
+      const newComponentIds: string[] = [];
+      const maxZIndex = state.components.length > 0 ? Math.max(...state.components.map(c => c.zIndex)) : 0;
+      
+      const newComponents = components.map((component, index) => {
+        const offset = position ? 
+          { x: position.x - components[0].position.x, y: position.y - components[0].position.y } :
+          { x: 20, y: 20 }; // Default offset for paste
+        
+        const newComponent = {
+          ...component,
+          id: uuidv4(),
+          position: { 
+            x: component.position.x + offset.x, 
+            y: component.position.y + offset.y 
+          },
+          zIndex: maxZIndex + index + 1,
+        };
+        newComponentIds.push(newComponent.id);
+        return newComponent;
+      });
+      
+      set((state) => ({
+        components: [...state.components, ...newComponents],
+        isDirty: true,
+      }));
+      
+      return newComponentIds;
     },
 
     bringToFront: (id: string) =>
