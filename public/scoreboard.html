@@ -354,47 +354,31 @@
             const windowWidth = window.innerWidth;
             const windowHeight = window.innerHeight;
             
-            // Minimal padding to maximize space usage
-            const padding = 2;
-            const availableWidth = Math.max(100, windowWidth - (padding * 2));
-            const availableHeight = Math.max(100, windowHeight - (padding * 2));
+            // Calculate scale factors to fill the entire window
+            const scaleX = windowWidth / originalDimensions.width;
+            const scaleY = windowHeight / originalDimensions.height;
             
-            // Calculate scale factor to fit content in available space while maintaining aspect ratio
-            // Account for the 40px margin we added (20px on each side)
-            const scaleX = availableWidth / (originalDimensions.width + 40);
-            const scaleY = availableHeight / (originalDimensions.height + 40);
-            currentScale = Math.min(scaleX, scaleY);
+            // Use separate scales for X and Y to stretch and fill completely (no black bars)
+            container.style.width = originalDimensions.width + 'px';
+            container.style.height = originalDimensions.height + 'px';
             
-            // Ensure minimum scale for very small windows
-            currentScale = Math.max(currentScale, 0.1);
-            
-            // Set the container to original dimensions + margin offset
-            // Add 40px (20px on each side) to accommodate the component position offset
-            container.style.width = (originalDimensions.width + 40) + 'px';
-            container.style.height = (originalDimensions.height + 40) + 'px';
-            
-            // Apply scaling with top-left origin first
-            container.style.transform = `scale(${currentScale})`;
+            // Apply scaling to fill the entire window
+            container.style.transform = `scaleX(${scaleX}) scaleY(${scaleY})`;
             container.style.transformOrigin = 'top left';
             
-            // Calculate the actual size after scaling (including position offset)
-            const scaledWidth = (originalDimensions.width + 40) * currentScale;
-            const scaledHeight = (originalDimensions.height + 40) * currentScale;
+            // Position at top-left corner (no centering)
+            container.style.left = '0px';
+            container.style.top = '0px';
             
-            // Position the container to center the scaled content
-            const leftOffset = (windowWidth - scaledWidth) / 2;
-            const topOffset = (windowHeight - scaledHeight) / 2;
-            
-            container.style.left = Math.max(0, leftOffset) + 'px';
-            container.style.top = Math.max(0, topOffset) + 'px';
+            // Store the scale values for component positioning
+            currentScale = Math.min(scaleX, scaleY); // For compatibility with existing code
             
             console.log(`Scaling Details:
                 Original: ${originalDimensions.width}x${originalDimensions.height}
                 Window: ${windowWidth}x${windowHeight}
-                Available: ${availableWidth}x${availableHeight}
-                Scale: ${currentScale.toFixed(3)}x
-                Final size: ${scaledWidth.toFixed(0)}x${scaledHeight.toFixed(0)}
-                Position: ${leftOffset.toFixed(0)}, ${topOffset.toFixed(0)}`);
+                Scale X: ${scaleX.toFixed(3)}x
+                Scale Y: ${scaleY.toFixed(3)}x
+                Mode: Fill entire window (stretch)`);
         }
 
         // Live Data Management
@@ -569,9 +553,9 @@
             const element = document.createElement('div');
             element.className = 'image-component';
             element.style.position = 'absolute';
-            // Add 20px offset to match design canvas margin
-            element.style.left = (component.position.x + 20) + 'px';
-            element.style.top = (component.position.y + 20) + 'px';
+            // Position component exactly as designed (no offset needed)
+            element.style.left = component.position.x + 'px';
+            element.style.top = component.position.y + 'px';
             element.style.width = component.size.width + 'px';
             element.style.height = component.size.height + 'px';
             element.style.zIndex = component.zIndex || 1;
@@ -651,9 +635,9 @@
             const element = document.createElement('div');
             element.className = 'text-component';
             element.style.position = 'absolute';
-            // Add 20px offset to match design canvas margin
-            element.style.left = (component.position.x + 20) + 'px';
-            element.style.top = (component.position.y + 20) + 'px';
+            // Position component exactly as designed (no offset needed)
+            element.style.left = component.position.x + 'px';
+            element.style.top = component.position.y + 'px';
             element.style.width = component.size.width + 'px';
             element.style.height = component.size.height + 'px';
             element.style.zIndex = component.zIndex || 1000; // Text always on top
@@ -718,9 +702,9 @@
             const element = document.createElement('div');
             element.className = 'text-component tennis-component score-change-base';
             element.style.position = 'absolute';
-            // Add 20px offset to match design canvas margin
-            element.style.left = (component.position.x + 20) + 'px';
-            element.style.top = (component.position.y + 20) + 'px';
+            // Position component exactly as designed (no offset needed)
+            element.style.left = component.position.x + 'px';
+            element.style.top = component.position.y + 'px';
             element.style.width = component.size.width + 'px';
             element.style.height = component.size.height + 'px';
             element.style.zIndex = component.zIndex || 1000;

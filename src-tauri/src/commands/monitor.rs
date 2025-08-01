@@ -168,4 +168,6 @@ pub async fn get_scoreboard_instance_data(
 ) -> Result<Option<serde_json::Value>, String> {
     let instances = store.instances.lock().map_err(|e| e.to_string())?;
     Ok(instances.get(&window_id).cloned())
-} 
+}
+
+ 
