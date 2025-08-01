@@ -208,12 +208,41 @@ export const useAppStore = create<AppState & AppActions>()(
             console.warn('Failed to load saved scoreboard data:', error);
           }
         } else if (scoreboardStoreState.config) {
-          // Use current scoreboard data
-          scoreboardData = {
-            config: scoreboardStoreState.config,
-            components: scoreboardStoreState.components,
-            gameState: scoreboardStoreState.gameState
-          };
+          // Use current scoreboard data with live data bindings
+          try {
+            const liveDataStoreModule = await import('./useLiveDataStore');
+            const liveDataStoreState = liveDataStoreModule.useLiveDataStore.getState();
+            
+            // Enhance components with their live data bindings
+            const enhancedComponents = scoreboardStoreState.components.map(component => {
+              const binding = liveDataStoreState.componentBindings.find(b => b.componentId === component.id);
+              if (binding) {
+                console.log(`Adding live data binding to component ${component.id}:`, binding);
+                return {
+                  ...component,
+                  data: {
+                    ...component.data,
+                    liveDataBinding: binding
+                  }
+                };
+              }
+              return component;
+            });
+            
+            scoreboardData = {
+              config: scoreboardStoreState.config,
+              components: enhancedComponents,
+              gameState: scoreboardStoreState.gameState
+            };
+          } catch (error) {
+            console.warn('Failed to load live data bindings:', error);
+            // Fallback to regular data without live bindings
+            scoreboardData = {
+              config: scoreboardStoreState.config,
+              components: scoreboardStoreState.components,
+              gameState: scoreboardStoreState.gameState
+            };
+          }
         }
         
         await TauriAPI.createScoreboardWindow(

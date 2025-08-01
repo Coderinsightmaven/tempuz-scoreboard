@@ -19,7 +19,7 @@
         }
         .scoreboard-container { 
             position: absolute; 
-            background: #000; 
+            background: #000;
             /* Dimensions, scaling and positioning will be set dynamically */
         }
         .image-component {
@@ -85,11 +85,28 @@
             overflow: hidden;
             padding: 4px;
         }
+        .tennis-component {
+            /* Specific styling for tennis components */
+        }
+        .live-data-indicator {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            width: 8px;
+            height: 8px;
+            background: #00ff00;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
     </style>
 </head>
 <body>
     <div class="scoreboard-container" id="scoreboardContainer">
-        <div class="status-indicator">LIVE</div>
         <div class="loading-message" id="loadingMessage">
             <div>Loading Scoreboard...</div>
             <div class="debug-info" id="debugInfo">Initializing...</div>
@@ -189,6 +206,8 @@
                 scoreboardData = instanceData.scoreboardData || instanceData;
                 updateDebug(`Found ${scoreboardData.components ? scoreboardData.components.length : 0} components`);
                 await renderScoreboard(scoreboardData);
+                // Initialize live data after rendering
+                loadLiveDataConnections();
             } else {
                 updateDebug('No data found, using default');
                 renderDefaultScoreboard();
@@ -234,6 +253,11 @@
                         await renderImageComponent(component);
                     } else if (component.type === 'text') {
                         renderTextComponent(component);
+                    } else if (component.type === 'tennis_player_name' || 
+                               component.type === 'tennis_game_score' || 
+                               component.type === 'tennis_set_score' || 
+                               component.type === 'tennis_match_score') {
+                        renderTennisComponent(component);
                     }
                 }
             } else {
@@ -260,24 +284,26 @@
             const availableHeight = Math.max(100, windowHeight - (padding * 2));
             
             // Calculate scale factor to fit content in available space while maintaining aspect ratio
-            const scaleX = availableWidth / originalDimensions.width;
-            const scaleY = availableHeight / originalDimensions.height;
+            // Account for the 40px margin we added (20px on each side)
+            const scaleX = availableWidth / (originalDimensions.width + 40);
+            const scaleY = availableHeight / (originalDimensions.height + 40);
             currentScale = Math.min(scaleX, scaleY);
             
             // Ensure minimum scale for very small windows
             currentScale = Math.max(currentScale, 0.1);
             
-            // Set the container to original dimensions
-            container.style.width = originalDimensions.width + 'px';
-            container.style.height = originalDimensions.height + 'px';
+            // Set the container to original dimensions + margin offset
+            // Add 40px (20px on each side) to accommodate the component position offset
+            container.style.width = (originalDimensions.width + 40) + 'px';
+            container.style.height = (originalDimensions.height + 40) + 'px';
             
             // Apply scaling with top-left origin first
             container.style.transform = `scale(${currentScale})`;
             container.style.transformOrigin = 'top left';
             
-            // Calculate the actual size after scaling
-            const scaledWidth = originalDimensions.width * currentScale;
-            const scaledHeight = originalDimensions.height * currentScale;
+            // Calculate the actual size after scaling (including position offset)
+            const scaledWidth = (originalDimensions.width + 40) * currentScale;
+            const scaledHeight = (originalDimensions.height + 40) * currentScale;
             
             // Position the container to center the scaled content
             const leftOffset = (windowWidth - scaledWidth) / 2;
@@ -295,13 +321,175 @@
                 Position: ${leftOffset.toFixed(0)}, ${topOffset.toFixed(0)}`);
         }
 
+        // Live Data Management
+        let liveDataConnections = [];
+        let activeDataSources = {};
+        let pollingIntervals = {};
+
+        async function loadLiveDataConnections() {
+            try {
+                if (!window.__TAURI__ || !window.__TAURI__.core) {
+                    console.log('Tauri not available, skipping live data setup');
+                    return;
+                }
+
+                // In a real implementation, we'd load connections from storage
+                // For now, we'll check if there are any active connections from the main app
+                console.log('Live data setup ready for scoreboard display');
+            } catch (error) {
+                console.error('Failed to load live data connections:', error);
+            }
+        }
+
+        async function setupLiveDataForComponent(element, component) {
+            // Check if this component has live data binding in its data
+            // The binding might be stored in different places depending on how it was saved
+            let binding = null;
+            
+            if (component.data && component.data.liveDataBinding) {
+                binding = component.data.liveDataBinding;
+            } else if (component.liveDataBinding) {
+                binding = component.liveDataBinding;
+            } else {
+                // Check if there's a mock binding for demo purposes (tennis components with mock data)
+                if (component.type.startsWith('tennis_') && component.data && component.data.playerNumber) {
+                    // Create a mock binding for demo
+                    const playerNumber = component.data.playerNumber || 1;
+                    let dataPath = '';
+                    
+                    switch (component.type) {
+                        case 'tennis_player_name':
+                            dataPath = `player${playerNumber}.name`;
+                            break;
+                        case 'tennis_game_score':
+                            dataPath = `score.player${playerNumber}Points`;
+                            break;
+                        case 'tennis_set_score':
+                            dataPath = `score.player${playerNumber}Games`;
+                            break;
+                        case 'tennis_match_score':
+                            dataPath = `score.player${playerNumber}Sets`;
+                            break;
+                    }
+                    
+                    if (dataPath) {
+                        binding = {
+                            connectionId: 'mock_connection',
+                            dataPath: dataPath
+                        };
+                    }
+                }
+            }
+
+            if (!binding) {
+                return; // No live data binding
+            }
+            
+            // Add live data indicator
+            const indicator = document.createElement('div');
+            indicator.className = 'live-data-indicator';
+            indicator.title = 'Live Data Active';
+            element.appendChild(indicator);
+
+            // Setup polling for this component's data
+            if (binding.connectionId && binding.dataPath) {
+                pollLiveDataForComponent(element, component, binding);
+            }
+        }
+
+        async function pollLiveDataForComponent(element, component, binding) {
+            if (!window.__TAURI__ || !window.__TAURI__.core) {
+                console.log('Tauri not available for live data polling');
+                return;
+            }
+
+            const pollData = async () => {
+                try {
+                    // This would need to be connected to the live data store
+                    // For now, we'll simulate with mock data
+                    if (binding.connectionId.includes('mock') || binding.connectionId === 'mock_connection') {
+                        const mockData = getMockTennisData();
+                        const value = getValueFromDataPath(mockData, binding.dataPath);
+                        if (value !== undefined) {
+                            // Update the text content directly (element contains the text)
+                            const textNodes = element.childNodes;
+                            if (textNodes.length > 0) {
+                                // Find the text node and update it
+                                for (let node of textNodes) {
+                                    if (node.nodeType === Node.TEXT_NODE) {
+                                        node.textContent = String(value);
+                                        break;
+                                    }
+                                }
+                            } else {
+                                element.textContent = String(value);
+                            }
+                            console.log(`Updated ${component.type} with live data:`, value);
+                        }
+                    }
+                } catch (error) {
+                    console.error('Failed to poll live data:', error);
+                }
+            };
+
+            // Initial fetch
+            pollData();
+            
+            // Set up polling interval (5 seconds for demo purposes)
+            const interval = setInterval(pollData, 5000);
+            pollingIntervals[component.id] = interval;
+        }
+
+        function getValueFromDataPath(data, path) {
+            return path.split('.').reduce((current, key) => {
+                return current && current[key] !== undefined ? current[key] : undefined;
+            }, data);
+        }
+
+        function getMockTennisData() {
+            return {
+                matchId: "live_match_001",
+                player1: {
+                    name: "Novak Djokovic",
+                    country: "SRB",
+                    seed: 1
+                },
+                player2: {
+                    name: "Rafael Nadal", 
+                    country: "ESP",
+                    seed: 2
+                },
+                score: {
+                    player1Sets: 2,
+                    player2Sets: 1,
+                    player1Games: Math.floor(Math.random() * 7), // Randomize for demo
+                    player2Games: Math.floor(Math.random() * 7),
+                    player1Points: ["0", "15", "30", "40"][Math.floor(Math.random() * 4)],
+                    player2Points: ["0", "15", "30", "40"][Math.floor(Math.random() * 4)]
+                },
+                matchStatus: "in_progress",
+                servingPlayer: Math.random() > 0.5 ? 1 : 2,
+                currentSet: 4,
+                isTiebreak: false
+            };
+        }
+
+        // Cleanup intervals when window is closed
+        window.addEventListener('beforeunload', () => {
+            Object.values(pollingIntervals).forEach(interval => {
+                clearInterval(interval);
+            });
+        });
+
         async function renderImageComponent(component) {
             const container = document.getElementById('scoreboardContainer');
             
             const element = document.createElement('div');
             element.className = 'image-component';
-            element.style.left = component.position.x + 'px';
-            element.style.top = component.position.y + 'px';
+            element.style.position = 'absolute';
+            // Add 20px offset to match design canvas margin
+            element.style.left = (component.position.x + 20) + 'px';
+            element.style.top = (component.position.y + 20) + 'px';
             element.style.width = component.size.width + 'px';
             element.style.height = component.size.height + 'px';
             element.style.zIndex = component.zIndex || 1;
@@ -379,8 +567,10 @@
             
             const element = document.createElement('div');
             element.className = 'text-component';
-            element.style.left = component.position.x + 'px';
-            element.style.top = component.position.y + 'px';
+            element.style.position = 'absolute';
+            // Add 20px offset to match design canvas margin
+            element.style.left = (component.position.x + 20) + 'px';
+            element.style.top = (component.position.y + 20) + 'px';
             element.style.width = component.size.width + 'px';
             element.style.height = component.size.height + 'px';
             element.style.zIndex = component.zIndex || 1000; // Text always on top
@@ -436,6 +626,98 @@
             element.textContent = component.data.text || 'Sample Text';
             
             container.appendChild(element);
+        }
+
+        function renderTennisComponent(component) {
+            const container = document.getElementById('scoreboardContainer');
+            
+            const element = document.createElement('div');
+            element.className = 'text-component tennis-component';
+            element.style.position = 'absolute';
+            // Add 20px offset to match design canvas margin
+            element.style.left = (component.position.x + 20) + 'px';
+            element.style.top = (component.position.y + 20) + 'px';
+            element.style.width = component.size.width + 'px';
+            element.style.height = component.size.height + 'px';
+            element.style.zIndex = component.zIndex || 1000;
+            
+            // Apply flexbox layout (matching design canvas)
+            element.style.display = 'flex';
+            element.style.alignItems = 'center';
+            element.style.paddingLeft = '8px';
+            element.style.paddingRight = '8px';
+            element.style.wordWrap = 'break-word';
+            element.style.overflow = 'hidden';
+            
+            // Apply text alignment
+            const textAlign = component.style ? component.style.textAlign || 'center' : 'center';
+            switch (textAlign) {
+                case 'left':
+                    element.style.justifyContent = 'flex-start';
+                    element.style.textAlign = 'left';
+                    break;
+                case 'right':
+                    element.style.justifyContent = 'flex-end';
+                    element.style.textAlign = 'right';
+                    break;
+                case 'center':
+                default:
+                    element.style.justifyContent = 'center';
+                    element.style.textAlign = 'center';
+                    break;
+            }
+            
+            // Apply text styling with tennis-specific defaults
+            if (component.style) {
+                element.style.fontSize = (component.style.fontSize || 16) + 'px';
+                element.style.color = component.style.textColor || '#ffffff';
+                element.style.fontWeight = component.style.fontWeight || 'bold'; // Bold by default for tennis
+                element.style.fontFamily = component.style.fontFamily || 'Arial, sans-serif';
+                
+                if (component.style.backgroundColor && component.style.backgroundColor !== 'transparent') {
+                    element.style.backgroundColor = component.style.backgroundColor;
+                }
+                if (component.style.borderWidth) {
+                    element.style.border = `${component.style.borderWidth}px solid ${component.style.borderColor || '#000'}`;
+                }
+                if (component.style.borderRadius) {
+                    element.style.borderRadius = component.style.borderRadius + 'px';
+                }
+                if (component.style.opacity !== undefined) {
+                    element.style.opacity = component.style.opacity;
+                }
+            }
+            
+            // Get fallback text based on component type
+            let fallbackText = component.data.text || getDefaultTennisText(component.type, component.data.playerNumber);
+            
+            // Set initial fallback text
+            element.textContent = fallbackText;
+            
+            // Setup live data if this component has a binding
+            setupLiveDataForComponent(element, component);
+            
+            // Add tennis component identifier for future live data updates
+            element.setAttribute('data-component-id', component.id);
+            element.setAttribute('data-component-type', component.type);
+            element.setAttribute('data-player-number', component.data.playerNumber || 1);
+            
+            container.appendChild(element);
+        }
+
+        function getDefaultTennisText(componentType, playerNumber) {
+            switch (componentType) {
+                case 'tennis_player_name':
+                    return `Player ${playerNumber || 1}`;
+                case 'tennis_game_score':
+                    return '0';
+                case 'tennis_set_score':
+                    return '0';
+                case 'tennis_match_score':
+                    return '0';
+                default:
+                    return 'Tennis Data';
+            }
         }
 
         function renderDefaultScoreboard(extraInfo = '') {

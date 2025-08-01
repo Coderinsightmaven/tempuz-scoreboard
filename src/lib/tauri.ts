@@ -253,4 +253,95 @@ export class TauriAPI {
   static async getCurrentWindow() {
     return getCurrentWebviewWindow();
   }
+
+  // Live Data Commands
+  static async fetchLiveData(apiUrl: string, apiKey: string): Promise<any> {
+    try {
+      return await invoke('fetch_live_data', { apiUrl, apiKey });
+    } catch (error) {
+      console.error('Failed to fetch live data:', error);
+      throw error;
+    }
+  }
+
+  static async testApiConnection(apiUrl: string, apiKey: string): Promise<boolean> {
+    try {
+      return await invoke('test_api_connection', { apiUrl, apiKey });
+    } catch (error) {
+      console.error('Failed to test API connection:', error);
+      throw error;
+    }
+  }
+
+  static async getAvailableMatches(apiUrl: string, apiKey: string): Promise<MatchInfo[]> {
+    try {
+      return await invoke('get_available_matches', { apiUrl, apiKey });
+    } catch (error) {
+      console.error('Failed to get available matches:', error);
+      throw error;
+    }
+  }
+
+  // Live Data Connection Storage
+  static async saveLiveDataConnections(connectionsData: LiveDataState): Promise<void> {
+    try {
+      return await invoke('save_live_data_connections', { connectionsData });
+    } catch (error) {
+      console.error('Failed to save live data connections:', error);
+      throw error;
+    }
+  }
+
+  static async loadLiveDataConnections(): Promise<LiveDataState> {
+    try {
+      return await invoke('load_live_data_connections');
+    } catch (error) {
+      console.error('Failed to load live data connections:', error);
+      throw error;
+    }
+  }
+
+  static async deleteLiveDataConnections(): Promise<void> {
+    try {
+      return await invoke('delete_live_data_connections');
+    } catch (error) {
+      console.error('Failed to delete live data connections:', error);
+      throw error;
+    }
+  }
+}
+
+export interface MatchInfo {
+  matchId: string;
+  player1Name: string;
+  player2Name: string;
+  tournament: string;
+  round: string;
+  status: string;
+}
+
+export interface LiveDataConnectionData {
+  id: string;
+  name: string;
+  provider: string;
+  apiUrl: string;
+  apiKey: string;
+  pollInterval: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt?: string;
+  lastUpdated?: string;
+  lastError?: string;
+}
+
+export interface LiveDataBinding {
+  componentId: string;
+  connectionId: string;
+  dataPath: string;
+  updateInterval?: number;
+}
+
+export interface LiveDataState {
+  connections: LiveDataConnectionData[];
+  componentBindings: LiveDataBinding[];
 } 

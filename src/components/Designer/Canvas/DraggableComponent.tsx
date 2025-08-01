@@ -6,6 +6,7 @@ import { ResizeHandle } from '../../../types/canvas';
 import { ResizeHandles } from './ResizeHandles';
 import { ImageComponent } from './ImageComponent';
 import { useCanvasStore } from '../../../stores/useCanvasStore';
+import { useLiveDataStore } from '../../../stores/useLiveDataStore';
 
 interface DraggableComponentProps {
   component: ScoreboardComponent;
@@ -19,6 +20,7 @@ export const DraggableComponent: React.FC<DraggableComponentProps> = ({
   onResizeStart,
 }) => {
   const { selectedComponents, isResizing } = useCanvasStore();
+  const { getComponentValue } = useLiveDataStore();
   const isSelected = selectedComponents.has(component.id);
 
   const {
@@ -106,12 +108,77 @@ export const DraggableComponent: React.FC<DraggableComponentProps> = ({
             {component.data.text || 'Sample Text'}
           </div>
         );
+      case ComponentType.TENNIS_PLAYER_NAME:
+      case ComponentType.TENNIS_GAME_SCORE:
+      case ComponentType.TENNIS_SET_SCORE:
+      case ComponentType.TENNIS_MATCH_SCORE:
+        return renderTennisComponent();
       default:
         return (
           <div className="w-full h-full flex items-center justify-center bg-red-200 text-red-700 text-sm">
             Unknown Component
           </div>
         );
+    }
+  };
+
+  const renderTennisComponent = () => {
+    // Get live data value for this component
+    const liveValue = getComponentValue(component.id);
+    
+    // Use live data if available, otherwise fallback to static text
+    const displayValue = liveValue !== undefined ? String(liveValue) : (component.data.text || getDefaultTennisText());
+    
+    const textAlign = component.style.textAlign || 'center';
+    const getJustifyClass = () => {
+      switch (textAlign) {
+        case 'left': return 'justify-start';
+        case 'right': return 'justify-end';
+        case 'center': return 'justify-center';
+        default: return 'justify-center';
+      }
+    };
+    const getTextAlignClass = () => {
+      switch (textAlign) {
+        case 'left': return 'text-left';
+        case 'right': return 'text-right';
+        case 'center': return 'text-center';
+        default: return 'text-center';
+      }
+    };
+
+    return (
+      <div 
+        className={`w-full h-full flex items-center ${getJustifyClass()} ${getTextAlignClass()} px-2 relative`}
+        style={{
+          fontSize: `${component.style.fontSize || 16}px`,
+          color: component.style.textColor || '#ffffff',
+          fontWeight: component.style.fontWeight || 'bold',
+          wordWrap: 'break-word',
+          overflow: 'hidden',
+        }}
+      >
+        {displayValue}
+        {/* Live data indicator */}
+        {liveValue !== undefined && (
+          <div className="absolute top-1 right-1 w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+        )}
+      </div>
+    );
+  };
+
+  const getDefaultTennisText = () => {
+    switch (component.type) {
+      case ComponentType.TENNIS_PLAYER_NAME:
+        return `Player ${component.data.playerNumber || 1}`;
+      case ComponentType.TENNIS_GAME_SCORE:
+        return '0';
+      case ComponentType.TENNIS_SET_SCORE:
+        return '0';
+      case ComponentType.TENNIS_MATCH_SCORE:
+        return '0';
+      default:
+        return 'Tennis Data';
     }
   };
 

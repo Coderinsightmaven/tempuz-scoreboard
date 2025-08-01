@@ -3,6 +3,7 @@ use tauri::{AppHandle, Manager};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::fs;
+use serde_json;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ScoreboardConfig {
@@ -224,4 +225,115 @@ fn sanitize_filename(name: &str) -> String {
             _ => '_',
         })
         .collect()
+}
+
+// Live Data Connection Storage
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct LiveDataConnectionData {
+    pub id: String,
+    pub name: String,
+    pub provider: String,
+    #[serde(rename = "apiUrl")]
+    pub api_url: String,
+    #[serde(rename = "apiKey")]
+    pub api_key: String,
+    #[serde(rename = "pollInterval")]
+    pub poll_interval: u32,
+    #[serde(rename = "isActive")]
+    pub is_active: bool,
+    #[serde(rename = "createdAt")]
+    pub created_at: String,
+    #[serde(rename = "updatedAt")]
+    pub updated_at: Option<String>,
+    #[serde(rename = "lastUpdated")]
+    pub last_updated: Option<String>,
+    #[serde(rename = "lastError")]
+    pub last_error: Option<String>,
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct LiveDataBinding {
+    #[serde(rename = "componentId")]
+    pub component_id: String,
+    #[serde(rename = "connectionId")]
+    pub connection_id: String,
+    #[serde(rename = "dataPath")]
+    pub data_path: String,
+    #[serde(rename = "updateInterval")]
+    pub update_interval: Option<u32>,
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct LiveDataState {
+    pub connections: Vec<LiveDataConnectionData>,
+    #[serde(rename = "componentBindings")]
+    pub component_bindings: Vec<LiveDataBinding>,
+}
+
+#[tauri::command]
+pub async fn save_live_data_connections(app: AppHandle, connections_data: LiveDataState) -> Result<(), String> {
+    use tauri::path::BaseDirectory;
+    
+    let app_data_dir = app.path().resolve("", BaseDirectory::AppData)
+        .map_err(|e| format!("Failed to get app data directory: {}", e))?;
+    let live_data_dir = app_data_dir.join("live_data");
+    
+    // Create live_data directory if it doesn't exist
+    if !live_data_dir.exists() {
+        fs::create_dir_all(&live_data_dir)
+            .map_err(|e| format!("Failed to create live_data directory: {}", e))?;
+    }
+    
+    let file_path = live_data_dir.join("connections.json");
+    let json_data = serde_json::to_string_pretty(&connections_data)
+        .map_err(|e| format!("Failed to serialize live data connections: {}", e))?;
+    
+    fs::write(&file_path, json_data)
+        .map_err(|e| format!("Failed to write live data connections file: {}", e))?;
+    
+    println!("Live data connections saved to: {:?}", file_path);
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn load_live_data_connections(app: AppHandle) -> Result<LiveDataState, String> {
+    use tauri::path::BaseDirectory;
+    
+    let app_data_dir = app.path().resolve("", BaseDirectory::AppData)
+        .map_err(|e| format!("Failed to get app data directory: {}", e))?;
+    let file_path = app_data_dir.join("live_data").join("connections.json");
+    
+    if !file_path.exists() {
+        // Return empty state if file doesn't exist
+        return Ok(LiveDataState {
+            connections: vec![],
+            component_bindings: vec![],
+        });
+    }
+    
+    let json_data = fs::read_to_string(&file_path)
+        .map_err(|e| format!("Failed to read live data connections file: {}", e))?;
+    
+    let connections_data: LiveDataState = serde_json::from_str(&json_data)
+        .map_err(|e| format!("Failed to parse live data connections: {}", e))?;
+    
+    println!("Live data connections loaded from: {:?}", file_path);
+    Ok(connections_data)
+}
+
+#[tauri::command]
+pub async fn delete_live_data_connections(app: AppHandle) -> Result<(), String> {
+    use tauri::path::BaseDirectory;
+    
+    let app_data_dir = app.path().resolve("", BaseDirectory::AppData)
+        .map_err(|e| format!("Failed to get app data directory: {}", e))?;
+    let file_path = app_data_dir.join("live_data").join("connections.json");
+    
+    if file_path.exists() {
+        fs::remove_file(&file_path)
+            .map_err(|e| format!("Failed to delete live data connections file: {}", e))?;
+        println!("Live data connections file deleted");
+    }
+    
+    Ok(())
 } 

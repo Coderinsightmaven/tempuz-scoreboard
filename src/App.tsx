@@ -9,8 +9,11 @@ import { CreateScoreboardDialog } from './components/ui/CreateScoreboardDialog';
 import { LoadScoreboardDialog } from './components/ui/LoadScoreboardDialog';
 import { MultipleScoreboardManager } from './components/ui/MultipleScoreboardManager';
 import { ScoreboardManager } from './components/ui/ScoreboardManager';
+import { LiveDataManager } from './components/ui/LiveDataManager';
 import { TauriAPI } from './lib/tauri';
 import { ComponentType } from './types/scoreboard';
+import { useImageStore } from './stores/useImageStore';
+import { useLiveDataStore } from './stores/useLiveDataStore';
 
 function App() {
   const {
@@ -30,19 +33,26 @@ function App() {
   } = useScoreboardStore();
 
   const { setCanvasSize } = useCanvasStore();
+  const { loadImages } = useImageStore();
+  const { loadConnections, isLoaded } = useLiveDataStore();
 
   // UI state
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showLoadDialog, setShowLoadDialog] = useState(false);
   const [showMultipleManager, setShowMultipleManager] = useState(false);
   const [showScoreboardManager, setShowScoreboardManager] = useState(false);
+  const [showLiveDataManager, setShowLiveDataManager] = useState(false);
   const [showPropertyPanel, setShowPropertyPanel] = useState(true);
   const [selectedComponentForImage, setSelectedComponentForImage] = useState<string | null>(null);
 
   useEffect(() => {
     // Initialize the app on mount
     loadMonitors();
-  }, [loadMonitors]);
+    loadImages();
+    if (!isLoaded) {
+      loadConnections();
+    }
+  }, [loadMonitors, loadImages, loadConnections, isLoaded]);
 
   // Theme handling
   useEffect(() => {
@@ -238,6 +248,16 @@ function App() {
             </button>
 
             <button
+              onClick={() => setShowLiveDataManager(true)}
+              className="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center space-x-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
+              </svg>
+              <span>Live Data</span>
+            </button>
+
+            <button
               onClick={() => setShowPropertyPanel(!showPropertyPanel)}
               className="bg-gray-600 hover:bg-gray-700 text-white px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center space-x-2"
               title={showPropertyPanel ? 'Hide Property Panel' : 'Show Property Panel'}
@@ -284,6 +304,47 @@ function App() {
                 Add a text overlay
               </div>
             </button>
+            
+            {/* Tennis Live Data Components */}
+            <div className="pt-4 border-t border-gray-300">
+              <h4 className="font-medium mb-2 text-sm text-gray-700">Tennis Live Data</h4>
+              <button
+                onClick={() => addComponent(ComponentType.TENNIS_PLAYER_NAME, { x: 100, y: 100 })}
+                className="w-full text-left p-3 bg-white border border-gray-200 rounded hover:bg-gray-50 transition-colors mb-2"
+              >
+                <div className="font-medium text-sm">PLAYER NAME</div>
+                <div className="text-xs text-gray-600">
+                  Live player name display
+                </div>
+              </button>
+              <button
+                onClick={() => addComponent(ComponentType.TENNIS_GAME_SCORE, { x: 100, y: 100 })}
+                className="w-full text-left p-3 bg-white border border-gray-200 rounded hover:bg-gray-50 transition-colors mb-2"
+              >
+                <div className="font-medium text-sm">GAME SCORE</div>
+                <div className="text-xs text-gray-600">
+                  Live game points (0, 15, 30, 40)
+                </div>
+              </button>
+              <button
+                onClick={() => addComponent(ComponentType.TENNIS_SET_SCORE, { x: 100, y: 100 })}
+                className="w-full text-left p-3 bg-white border border-gray-200 rounded hover:bg-gray-50 transition-colors mb-2"
+              >
+                <div className="font-medium text-sm">SET SCORE</div>
+                <div className="text-xs text-gray-600">
+                  Live set score (games won)
+                </div>
+              </button>
+              <button
+                onClick={() => addComponent(ComponentType.TENNIS_MATCH_SCORE, { x: 100, y: 100 })}
+                className="w-full text-left p-3 bg-white border border-gray-200 rounded hover:bg-gray-50 transition-colors"
+              >
+                <div className="font-medium text-sm">MATCH SCORE</div>
+                <div className="text-xs text-gray-600">
+                  Live match score (sets won)
+                </div>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -345,6 +406,11 @@ function App() {
       <ScoreboardManager
         isOpen={showScoreboardManager}
         onClose={() => setShowScoreboardManager(false)}
+      />
+
+      <LiveDataManager
+        isOpen={showLiveDataManager}
+        onClose={() => setShowLiveDataManager(false)}
       />
 
       {/* Error Toast */}

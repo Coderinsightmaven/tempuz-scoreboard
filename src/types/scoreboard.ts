@@ -17,6 +17,10 @@ export const enum ComponentType {
   BACKGROUND = 'background',
   LOGO = 'logo', 
   TEXT = 'text',
+  TENNIS_PLAYER_NAME = 'tennis_player_name',
+  TENNIS_GAME_SCORE = 'tennis_game_score',
+  TENNIS_SET_SCORE = 'tennis_set_score',
+  TENNIS_MATCH_SCORE = 'tennis_match_score',
 }
 
 export interface Position {
@@ -201,4 +205,56 @@ export interface ScoreboardInstance {
   isActive: boolean;
   createdAt: Date;
   scoreboardData?: any; // Saved scoreboard configuration and components
+}
+
+// Live Data API Types
+export interface LiveDataConnection {
+  id: string;
+  name: string;
+  provider: 'custom_api' | 'tennis_api' | 'mock';
+  apiUrl: string;
+  apiKey: string;
+  pollInterval: number; // in seconds
+  isActive: boolean;
+  lastUpdated?: Date;
+  lastError?: string;
+}
+
+export interface TennisLiveData {
+  matchId: string;
+  player1: {
+    name: string;
+    country?: string;
+    seed?: number;
+  };
+  player2: {
+    name: string;
+    country?: string;
+    seed?: number;
+  };
+  score: {
+    player1Sets: number;
+    player2Sets: number;
+    player1Games: number;
+    player2Games: number;
+    player1Points: string; // "0", "15", "30", "40", "A", "D"
+    player2Points: string;
+  };
+  matchStatus: 'scheduled' | 'in_progress' | 'completed' | 'suspended';
+  servingPlayer: 1 | 2 | null;
+  currentSet: number;
+  isTiebreak: boolean;
+  tiebreakScore?: {
+    player1: number;
+    player2: number;
+  };
+  tournament?: string;
+  round?: string;
+}
+
+export interface LiveDataComponentBinding {
+  componentId: string;
+  connectionId: string;
+  dataPath: string; // e.g., "player1.name", "score.player1Games"
+  updateInterval?: number; // component-specific override
 } 

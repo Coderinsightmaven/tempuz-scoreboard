@@ -79,6 +79,42 @@ const createDefaultComponent = (
       defaultData = { imageId: undefined, imageUrl: undefined, text: 'Sample Text' };
       defaultZIndex = 5; // Text in middle layer
       break;
+    case ComponentType.TENNIS_PLAYER_NAME:
+      defaultSize = { width: 300, height: 60 }; // Wide rectangle for player names
+      defaultData = { 
+        text: 'Player Name',
+        playerNumber: 1, // 1 or 2
+        liveDataBinding: undefined
+      };
+      defaultZIndex = 6; // Above text but below interactive elements
+      break;
+    case ComponentType.TENNIS_GAME_SCORE:
+      defaultSize = { width: 100, height: 80 }; // Square-ish for game scores
+      defaultData = { 
+        text: '0',
+        playerNumber: 1, // 1 or 2
+        liveDataBinding: undefined
+      };
+      defaultZIndex = 6;
+      break;
+    case ComponentType.TENNIS_SET_SCORE:
+      defaultSize = { width: 80, height: 60 }; // Medium for set scores
+      defaultData = { 
+        text: '0',
+        playerNumber: 1, // 1 or 2
+        liveDataBinding: undefined
+      };
+      defaultZIndex = 6;
+      break;
+    case ComponentType.TENNIS_MATCH_SCORE:
+      defaultSize = { width: 60, height: 50 }; // Small for match scores
+      defaultData = { 
+        text: '0',
+        playerNumber: 1, // 1 or 2
+        liveDataBinding: undefined
+      };
+      defaultZIndex = 6;
+      break;
   }
 
   const baseComponent: ScoreboardComponent = {
@@ -141,7 +177,13 @@ export const useScoreboardStore = create<ScoreboardState & ScoreboardActions>()(
     loadScoreboard: (config: ScoreboardConfig) =>
       set(() => ({
         config,
-        components: config.components,
+        components: config.components.map(component => {
+          // Ensure live data bindings are preserved when loading
+          if (component.data && component.data.liveDataBinding) {
+            console.log(`Loaded component ${component.id} with live data binding:`, component.data.liveDataBinding);
+          }
+          return component;
+        }),
         isDirty: false,
         lastSaved: new Date(),
       })),
