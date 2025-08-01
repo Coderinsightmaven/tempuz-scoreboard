@@ -115,6 +115,24 @@ const createDefaultComponent = (
       };
       defaultZIndex = 6;
       break;
+    case ComponentType.TENNIS_SERVE_SPEED:
+      defaultSize = { width: 120, height: 60 }; // Medium size for serve speed
+      defaultData = { 
+        text: '', // Empty until live data arrives
+        liveDataBinding: undefined
+      };
+      defaultZIndex = 6;
+      break;
+    case ComponentType.TENNIS_DETAILED_SET_SCORE:
+      defaultSize = { width: 60, height: 50 }; // Small for individual set scores
+      defaultData = { 
+        text: '0',
+        setNumber: 1, // 1, 2, or 3
+        playerNumber: 1, // 1 or 2
+        liveDataBinding: undefined
+      };
+      defaultZIndex = 6;
+      break;
   }
 
   const baseComponent: ScoreboardComponent = {

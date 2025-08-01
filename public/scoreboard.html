@@ -113,12 +113,14 @@
         }
         
         .score-flash {
-            animation: scoreFlash 0.5s ease-out;
+            animation: scoreFlash 0.6s ease-out;
         }
         
         .score-glow {
             animation: scoreGlow 1s ease-out;
         }
+        
+
         
         @keyframes pulse {
             0% { opacity: 1; }
@@ -174,9 +176,16 @@
             }
         }
         
+
+        
         /* Smooth transitions */
         .text-component, .tennis-component {
             transition: transform 0.2s ease;
+        }
+        
+        /* Ensure animations work well with existing styles */
+        .score-change-base, .tennis-component {
+            will-change: transform;
         }
     </style>
 </head>
@@ -332,7 +341,8 @@
                                component.type === 'tennis_game_score' || 
                                component.type === 'tennis_set_score' || 
                                component.type === 'tennis_match_score' ||
-                               component.type === 'tennis_sets_score') {
+                               component.type === 'tennis_serve_speed' ||
+                               component.type === 'tennis_detailed_set_score') {
                         renderTennisComponent(component);
                     }
                 }
@@ -412,24 +422,33 @@
                 binding = component.liveDataBinding;
             } else {
                 // Check if there's a mock binding for demo purposes (tennis components with mock data)
-                if (component.type.startsWith('tennis_') && component.data && component.data.playerNumber) {
+                if (component.type.startsWith('tennis_')) {
                     // Create a mock binding for demo
-                    const playerNumber = component.data.playerNumber || 1;
                     let dataPath = '';
                     
-                    switch (component.type) {
-                        case 'tennis_player_name':
-                            dataPath = `player${playerNumber}.name`;
-                            break;
-                        case 'tennis_game_score':
-                            dataPath = `score.player${playerNumber}Points`;
-                            break;
-                        case 'tennis_set_score':
-                            dataPath = `score.player${playerNumber}Games`;
-                            break;
-                        case 'tennis_match_score':
-                            dataPath = `score.player${playerNumber}Sets`;
-                            break;
+                    if (component.type === 'tennis_serve_speed') {
+                        dataPath = 'serve.speed';
+                    } else if (component.type === 'tennis_detailed_set_score') {
+                        const setNumber = component.data.setNumber || 1;
+                        const playerNumber = component.data.playerNumber || 1;
+                        dataPath = `sets.set${setNumber}.player${playerNumber}`;
+                    } else if (component.data && component.data.playerNumber) {
+                        const playerNumber = component.data.playerNumber || 1;
+                        
+                        switch (component.type) {
+                            case 'tennis_player_name':
+                                dataPath = `player${playerNumber}.name`;
+                                break;
+                            case 'tennis_game_score':
+                                dataPath = `score.player${playerNumber}Points`;
+                                break;
+                            case 'tennis_set_score':
+                                dataPath = `score.player${playerNumber}Games`;
+                                break;
+                            case 'tennis_match_score':
+                                dataPath = `score.player${playerNumber}Sets`;
+                                break;
+                        }
                     }
                     
                     if (dataPath) {
@@ -471,20 +490,30 @@
                         const mockData = getMockTennisData();
                         const value = getValueFromDataPath(mockData, binding.dataPath);
                         if (value !== undefined) {
-                            // Update the text content directly (element contains the text)
-                            const textNodes = element.childNodes;
-                            if (textNodes.length > 0) {
-                                // Find the text node and update it
-                                for (let node of textNodes) {
-                                    if (node.nodeType === Node.TEXT_NODE) {
-                                        node.textContent = String(value);
-                                        break;
+                            // Get current value for comparison
+                            const currentValue = element.textContent;
+                            const newValue = String(value);
+                            
+                            // Only update and animate if value actually changed
+                            if (currentValue !== newValue) {
+                                // Apply transition animation based on component type and change
+                                animateValueChange(element, component, currentValue, newValue);
+                                
+                                // Update the text content
+                                const textNodes = element.childNodes;
+                                if (textNodes.length > 0) {
+                                    // Find the text node and update it
+                                    for (let node of textNodes) {
+                                        if (node.nodeType === Node.TEXT_NODE) {
+                                            node.textContent = newValue;
+                                            break;
+                                        }
                                     }
+                                } else {
+                                    element.textContent = newValue;
                                 }
-                            } else {
-                                element.textContent = String(value);
+                                console.log(`Updated ${component.type} with animated transition: ${currentValue} → ${newValue}`);
                             }
-                            console.log(`Updated ${component.type} with live data:`, value);
                         }
                     }
                 } catch (error) {
@@ -495,8 +524,8 @@
             // Initial fetch
             pollData();
             
-            // Set up polling interval (5 seconds for demo purposes)
-            const interval = setInterval(pollData, 5000);
+            // Set up polling interval (2 seconds for demo purposes - faster for animation demo)
+            const interval = setInterval(pollData, 2000);
             pollingIntervals[component.id] = interval;
         }
 
@@ -506,7 +535,86 @@
             }, data);
         }
 
+        function animateValueChange(element, component, oldValue, newValue) {
+            // Remove any existing animation classes
+            element.classList.remove('score-increase', 'score-decrease', 'score-flash', 'score-glow');
+            
+            // Skip animations for name/player components
+            if (component.type.includes('name') || component.type.includes('player')) {
+                console.log(`⏭️  Skipping animation for ${component.type}: ${oldValue} → ${newValue}`);
+                return;
+            }
+            
+            // Determine animation type based on component type and value change
+            let animationClass = 'score-flash'; // Default animation
+            let duration = 800; // Default duration
+            
+            if (component.type.includes('score') || component.type.includes('game') || component.type.includes('set')) {
+                // For numeric scores, determine if increasing or decreasing
+                const oldNum = parseInt(oldValue) || 0;
+                const newNum = parseInt(newValue) || 0;
+                
+                if (newNum > oldNum) {
+                    animationClass = 'score-increase';
+                    duration = 800;
+                } else if (newNum < oldNum) {
+                    animationClass = 'score-decrease';
+                    duration = 800;
+                } else {
+                    animationClass = 'score-glow';
+                    duration = 1000;
+                }
+            } else if (component.type.includes('serve') || component.type.includes('speed')) {
+                // For serve speed, use flash animation
+                animationClass = 'score-flash';
+                duration = 600;
+            }
+            
+            // Apply the animation class
+            element.classList.add(animationClass);
+            console.log(`🎬 Animating ${component.type}: ${oldValue} → ${newValue} (${animationClass})`);
+            
+            // Remove animation class after animation completes
+            setTimeout(() => {
+                element.classList.remove(animationClass);
+            }, duration);
+        }
+
         function getMockTennisData() {
+            // Progressive match simulation - starts at set 1 and progresses over time
+            const now = Date.now();
+            const matchStartTime = window.mockMatchStartTime || (window.mockMatchStartTime = now);
+            const matchDuration = now - matchStartTime;
+            
+            // Progress through sets over time (each set takes ~30 seconds for demo)
+            let currentSet = 1;
+            let setsWon = { player1: 0, player2: 0 };
+            let setsData = {};
+            
+            // Determine current set based on time elapsed
+            if (matchDuration > 30000) currentSet = 2; // After 30 seconds, start set 2
+            if (matchDuration > 60000) currentSet = 3; // After 60 seconds, start set 3
+            
+            // Build sets data progressively
+            for (let setNum = 1; setNum <= currentSet; setNum++) {
+                if (setNum < currentSet) {
+                    // Completed sets
+                    const set1Won = setNum === 1 ? 1 : (setNum === 2 ? 2 : 1); // Alternate winners
+                    setsData[`set${setNum}`] = {
+                        player1: set1Won === 1 ? 6 : 4,
+                        player2: set1Won === 2 ? 6 : 4
+                    };
+                    if (set1Won === 1) setsWon.player1++;
+                    else setsWon.player2++;
+                } else {
+                    // Current set in progress
+                    setsData[`set${setNum}`] = {
+                        player1: Math.floor(Math.random() * 7),
+                        player2: Math.floor(Math.random() * 7)
+                    };
+                }
+            }
+
             return {
                 matchId: "live_match_001",
                 player1: {
@@ -520,22 +628,20 @@
                     seed: 2
                 },
                 score: {
-                    player1Sets: 2,
-                    player2Sets: 1,
-                    player1Games: Math.floor(Math.random() * 7), // Randomize for demo
-                    player2Games: Math.floor(Math.random() * 7),
+                    player1Sets: setsWon.player1,
+                    player2Sets: setsWon.player2,
+                    player1Games: setsData[`set${currentSet}`]?.player1 || 0,
+                    player2Games: setsData[`set${currentSet}`]?.player2 || 0,
                     player1Points: ["0", "15", "30", "40"][Math.floor(Math.random() * 4)],
                     player2Points: ["0", "15", "30", "40"][Math.floor(Math.random() * 4)]
                 },
-                sets: [
-                    { player1Games: 6, player2Games: 4, completed: true },
-                    { player1Games: 5, player2Games: 7, completed: true },
-                    { player1Games: 7, player2Games: 5, completed: true },
-                    { player1Games: Math.floor(Math.random() * 7), player2Games: Math.floor(Math.random() * 7), completed: false }
-                ],
-                matchStatus: "in_progress",
+                sets: setsData,
+                serve: {
+                    speed: Math.floor(Math.random() * 40) + 100 + " MPH" // 100-140 MPH
+                },
+                matchStatus: currentSet >= 3 && setsWon.player1 >= 2 || setsWon.player2 >= 2 ? "completed" : "in_progress",
                 servingPlayer: Math.random() > 0.5 ? 1 : 2,
-                currentSet: 4,
+                currentSet: currentSet,
                 isTiebreak: false
             };
         }
@@ -760,6 +866,11 @@
             // Get fallback text based on component type
             let fallbackText = component.data.text || getDefaultTennisText(component.type, component.data.playerNumber);
             
+            // For serve speed, show nothing until live data arrives
+            if (component.type === 'tennis_serve_speed' && !component.data.text) {
+                fallbackText = '';
+            }
+            
             // Set initial fallback text
             element.textContent = fallbackText;
             
@@ -784,8 +895,10 @@
                     return '0';
                 case 'tennis_match_score':
                     return '0';
-                case 'tennis_sets_score':
-                    return '6-4, 5-7';
+                case 'tennis_serve_speed':
+                    return ''; // Show nothing until data arrives
+                case 'tennis_detailed_set_score':
+                    return '0';
                 default:
                     return 'Tennis Data';
             }

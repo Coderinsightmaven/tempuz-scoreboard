@@ -21,6 +21,8 @@ export const enum ComponentType {
   TENNIS_GAME_SCORE = 'tennis_game_score',
   TENNIS_SET_SCORE = 'tennis_set_score',
   TENNIS_MATCH_SCORE = 'tennis_match_score',
+  TENNIS_SERVE_SPEED = 'tennis_serve_speed',
+  TENNIS_DETAILED_SET_SCORE = 'tennis_detailed_set_score',
 }
 
 export interface Position {
@@ -239,6 +241,15 @@ export interface TennisLiveData {
     player2Games: number;
     player1Points: string; // "0", "15", "30", "40", "A", "D"
     player2Points: string;
+  };
+  sets?: {
+    [key: string]: {
+      player1: number;
+      player2: number;
+    };
+  };
+  serve?: {
+    speed: string;
   };
   matchStatus: 'scheduled' | 'in_progress' | 'completed' | 'suspended';
   servingPlayer: 1 | 2 | null;

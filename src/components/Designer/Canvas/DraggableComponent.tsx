@@ -160,7 +160,8 @@ export const DraggableComponent: React.FC<DraggableComponentProps> = ({
       case ComponentType.TENNIS_GAME_SCORE:
       case ComponentType.TENNIS_SET_SCORE:
       case ComponentType.TENNIS_MATCH_SCORE:
-      case ComponentType.TENNIS_SETS_SCORE:
+      case ComponentType.TENNIS_SERVE_SPEED:
+      case ComponentType.TENNIS_DETAILED_SET_SCORE:
         return renderTennisComponent();
       default:
         return (
@@ -227,8 +228,10 @@ export const DraggableComponent: React.FC<DraggableComponentProps> = ({
         return '0';
       case ComponentType.TENNIS_MATCH_SCORE:
         return '0';
-      case ComponentType.TENNIS_SETS_SCORE:
-        return '6-4, 5-7';
+      case ComponentType.TENNIS_SERVE_SPEED:
+        return ''; // Show nothing until data arrives
+      case ComponentType.TENNIS_DETAILED_SET_SCORE:
+        return '0';
       default:
         return 'Tennis Data';
     }

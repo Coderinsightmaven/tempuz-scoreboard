@@ -55,6 +55,80 @@ const getValueFromPath = (obj: any, path: string): any => {
   }, obj);
 };
 
+// Progressive mock tennis data for demo purposes
+let mockMatchStartTime: number | null = null;
+
+function getMockTennisDataProgressive(): TennisLiveData {
+  // Progressive match simulation - starts at set 1 and progresses over time
+  const now = Date.now();
+  if (!mockMatchStartTime) mockMatchStartTime = now;
+  const matchDuration = now - mockMatchStartTime;
+  
+  // Progress through sets over time (each set takes ~30 seconds for demo)
+  let currentSet = 1;
+  let setsWon = { player1: 0, player2: 0 };
+  let setsData: any = {};
+  
+  // Determine current set based on time elapsed
+  if (matchDuration > 30000) currentSet = 2; // After 30 seconds, start set 2
+  if (matchDuration > 60000) currentSet = 3; // After 60 seconds, start set 3
+  
+  // Build sets data progressively
+  for (let setNum = 1; setNum <= currentSet; setNum++) {
+    if (setNum < currentSet) {
+      // Completed sets
+      const setWinner = setNum === 1 ? 1 : (setNum === 2 ? 2 : 1); // Alternate winners
+      setsData[`set${setNum}`] = {
+        player1: setWinner === 1 ? 6 : 4,
+        player2: setWinner === 2 ? 6 : 4
+      };
+      if (setWinner === 1) setsWon.player1++;
+      else setsWon.player2++;
+    } else {
+      // Current set in progress
+      setsData[`set${setNum}`] = {
+        player1: Math.floor(Math.random() * 7),
+        player2: Math.floor(Math.random() * 7)
+      };
+    }
+  }
+
+  return {
+    matchId: "live_match_001",
+    player1: {
+      name: "Novak Djokovic",
+      country: "SRB",
+      seed: 1
+    },
+    player2: {
+      name: "Rafael Nadal", 
+      country: "ESP",
+      seed: 2
+    },
+    score: {
+      player1Sets: setsWon.player1,
+      player2Sets: setsWon.player2,
+      player1Games: setsData[`set${currentSet}`]?.player1 || 0,
+      player2Games: setsData[`set${currentSet}`]?.player2 || 0,
+      player1Points: ["0", "15", "30", "40"][Math.floor(Math.random() * 4)],
+      player2Points: ["0", "15", "30", "40"][Math.floor(Math.random() * 4)]
+    },
+    sets: setsData,
+    serve: {
+      speed: Math.floor(Math.random() * 40) + 100 + " MPH" // 100-140 MPH
+    },
+    matchStatus: currentSet >= 3 && (setsWon.player1 >= 2 || setsWon.player2 >= 2) ? "completed" : "in_progress",
+    servingPlayer: Math.random() > 0.5 ? 1 : 2,
+    currentSet: currentSet,
+    isTiebreak: false
+  } as TennisLiveData;
+}
+
+// Reset mock data progression for testing
+function resetMockMatchProgression() {
+  mockMatchStartTime = Date.now();
+}
+
 export const useLiveDataStore = create<LiveDataStoreState & LiveDataActions>()(
   subscribeWithSelector((set, get) => ({
     // Initial state
@@ -228,9 +302,17 @@ export const useLiveDataStore = create<LiveDataStoreState & LiveDataActions>()(
       // Polling function
       const pollData = async () => {
         try {
-          // Import TauriAPI dynamically to avoid circular dependencies
-          const tauriModule = await import('../lib/tauri');
-          const data = await tauriModule.TauriAPI.fetchLiveData(connection.apiUrl, connection.apiKey);
+          let data;
+          
+          // Handle mock data locally for progressive simulation
+          if (connection.provider === 'mock') {
+            data = getMockTennisDataProgressive();
+          } else {
+            // Import TauriAPI dynamically to avoid circular dependencies
+            const tauriModule = await import('../lib/tauri');
+            data = await tauriModule.TauriAPI.fetchLiveData(connection.apiUrl, connection.apiKey);
+          }
+          
           get().updateLiveData(connectionId, data);
         } catch (error) {
           console.error('Failed to fetch live data:', error);

@@ -554,11 +554,29 @@ function App() {
               </button>
               <button
                 onClick={() => addComponent(ComponentType.TENNIS_MATCH_SCORE, { x: 100, y: 100 })}
-                className="w-full text-left p-3 bg-white border border-gray-200 rounded hover:bg-gray-50 transition-colors"
+                className="w-full text-left p-3 bg-white border border-gray-200 rounded hover:bg-gray-50 transition-colors mb-2"
               >
                 <div className="font-medium text-sm">MATCH SCORE</div>
                 <div className="text-xs text-gray-600">
                   Live match score (sets won)
+                </div>
+              </button>
+              <button
+                onClick={() => addComponent(ComponentType.TENNIS_SERVE_SPEED, { x: 100, y: 100 })}
+                className="w-full text-left p-3 bg-white border border-gray-200 rounded hover:bg-gray-50 transition-colors mb-2"
+              >
+                <div className="font-medium text-sm">SERVE SPEED</div>
+                <div className="text-xs text-gray-600">
+                  Live serve speed (MPH/KMH)
+                </div>
+              </button>
+              <button
+                onClick={() => addComponent(ComponentType.TENNIS_DETAILED_SET_SCORE, { x: 100, y: 100 })}
+                className="w-full text-left p-3 bg-white border border-gray-200 rounded hover:bg-gray-50 transition-colors"
+              >
+                <div className="font-medium text-sm">DETAILED SET SCORE</div>
+                <div className="text-xs text-gray-600">
+                  Individual set scores by player
                 </div>
               </button>
             </div>

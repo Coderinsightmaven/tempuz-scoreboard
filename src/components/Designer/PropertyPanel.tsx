@@ -112,6 +112,15 @@ export const PropertyPanel: React.FC = () => {
                 type="number"
                 value={Math.round(selectedComponent.position.x)}
                 onChange={(e) => handlePositionChange('x', parseInt(e.target.value) || 0)}
+                onKeyDown={(e) => {
+                  if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    handlePositionChange('x', selectedComponent.position.x + 1);
+                  } else if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    handlePositionChange('x', selectedComponent.position.x - 1);
+                  }
+                }}
                 className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -121,6 +130,15 @@ export const PropertyPanel: React.FC = () => {
                 type="number"
                 value={Math.round(selectedComponent.position.y)}
                 onChange={(e) => handlePositionChange('y', parseInt(e.target.value) || 0)}
+                onKeyDown={(e) => {
+                  if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    handlePositionChange('y', selectedComponent.position.y + 1);
+                  } else if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    handlePositionChange('y', selectedComponent.position.y - 1);
+                  }
+                }}
                 className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -137,6 +155,15 @@ export const PropertyPanel: React.FC = () => {
                 type="number"
                 value={Math.round(selectedComponent.size.width)}
                 onChange={(e) => handleSizeChange('width', parseInt(e.target.value) || 0)}
+                onKeyDown={(e) => {
+                  if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    handleSizeChange('width', selectedComponent.size.width + 1);
+                  } else if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    handleSizeChange('width', Math.max(10, selectedComponent.size.width - 1));
+                  }
+                }}
                 className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -146,6 +173,15 @@ export const PropertyPanel: React.FC = () => {
                 type="number"
                 value={Math.round(selectedComponent.size.height)}
                 onChange={(e) => handleSizeChange('height', parseInt(e.target.value) || 0)}
+                onKeyDown={(e) => {
+                  if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    handleSizeChange('height', selectedComponent.size.height + 1);
+                  } else if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    handleSizeChange('height', Math.max(10, selectedComponent.size.height - 1));
+                  }
+                }}
                 className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -283,8 +319,10 @@ export const PropertyPanel: React.FC = () => {
         return <TennisSetScoreProperties />;
       case ComponentType.TENNIS_MATCH_SCORE:
         return <TennisMatchScoreProperties />;
-      case ComponentType.TENNIS_SETS_SCORE:
-        return <TennisSetsScoreProperties />;
+      case ComponentType.TENNIS_SERVE_SPEED:
+        return <TennisServeSpeedProperties />;
+      case ComponentType.TENNIS_DETAILED_SET_SCORE:
+        return <TennisDetailedSetScoreProperties />;
       default:
         return <div className="text-sm text-gray-500">No properties available</div>;
     }
@@ -713,6 +751,150 @@ export const PropertyPanel: React.FC = () => {
     );
   }
 
+  function TennisServeSpeedProperties() {
+    const [localText, setLocalText] = useState(selectedComponent?.data.text || '');
+
+    React.useEffect(() => {
+      setLocalText(selectedComponent?.data.text || '');
+    }, [selectedComponent?.id, selectedComponent?.data.text]);
+
+    const handleTextBlur = () => {
+      if (localText !== selectedComponent?.data.text) {
+        handleDataChange('text', localText);
+      }
+    };
+
+    return (
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Fallback Speed
+          </label>
+          <input
+            type="text"
+            value={localText}
+            onChange={(e) => setLocalText(e.target.value)}
+            onBlur={handleTextBlur}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Leave empty to show nothing until data arrives"
+          />
+          <div className="text-xs text-gray-500 mt-1">
+            Shows nothing by default until live data is available
+          </div>
+        </div>
+
+        <LiveDataBindingSection />
+        <TextStyleSection />
+      </div>
+    );
+  }
+
+  function TennisDetailedSetScoreProperties() {
+    const { getComponentBinding, getLiveData } = useLiveDataStore();
+    const [localText, setLocalText] = useState(selectedComponent?.data.text || '');
+
+    React.useEffect(() => {
+      setLocalText(selectedComponent?.data.text || '');
+    }, [selectedComponent?.id, selectedComponent?.data.text]);
+
+    const handleTextBlur = () => {
+      if (localText !== selectedComponent?.data.text) {
+        handleDataChange('text', localText);
+      }
+    };
+
+    // Determine available sets based on live data
+    const getAvailableSets = () => {
+      const binding = getComponentBinding(selectedComponent?.id || '');
+      if (!binding) return [1, 2, 3]; // Show all sets if no binding
+
+      const liveData = getLiveData(binding.connectionId);
+      if (!liveData) return [1, 2, 3]; // Show all sets if no live data
+
+      const currentSet = liveData.currentSet || 1;
+      const availableSets = [];
+      
+      // Show sets up to the current set being played
+      for (let i = 1; i <= Math.min(currentSet, 3); i++) {
+        availableSets.push(i);
+      }
+      
+      return availableSets;
+    };
+
+    const availableSets = getAvailableSets();
+    const currentSetNumber = selectedComponent?.data.setNumber || 1;
+
+    // If current selected set is not available anymore, reset to the highest available
+    React.useEffect(() => {
+      if (!availableSets.includes(currentSetNumber)) {
+        const maxAvailableSet = Math.max(...availableSets);
+        handleDataChange('setNumber', maxAvailableSet);
+      }
+    }, [availableSets, currentSetNumber]);
+
+    return (
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Set Number
+          </label>
+          <select
+            value={selectedComponent?.data.setNumber || 1}
+            onChange={(e) => handleDataChange('setNumber', parseInt(e.target.value))}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            {availableSets.map(setNum => (
+              <option key={setNum} value={setNum}>
+                Set {setNum}
+              </option>
+            ))}
+          </select>
+          <div className="text-xs text-gray-500 mt-1">
+            {availableSets.length < 3 ? 
+              `Only shows sets that are in progress or completed (${availableSets.length} of 3 available)` :
+              'All sets available (no live data connection)'
+            }
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Player Number
+          </label>
+          <select
+            value={selectedComponent?.data.playerNumber || 1}
+            onChange={(e) => handleDataChange('playerNumber', parseInt(e.target.value))}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value={1}>Player 1</option>
+            <option value={2}>Player 2</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Fallback Score
+          </label>
+          <input
+            type="text"
+            value={localText}
+            onChange={(e) => setLocalText(e.target.value)}
+            onBlur={handleTextBlur}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="0"
+          />
+          <div className="text-xs text-gray-500 mt-1">
+            Shown when no live data is available
+          </div>
+        </div>
+
+        <LiveDataBindingSection />
+        <TextStyleSection />
+      </div>
+    );
+  }
+
   function TennisSetsScoreProperties() {
     const [localText, setLocalText] = useState(selectedComponent?.data.text || '');
 
@@ -788,8 +970,13 @@ export const PropertyPanel: React.FC = () => {
         case ComponentType.TENNIS_MATCH_SCORE:
           dataPath = `score.player${playerNumber}Sets`;
           break;
-        case ComponentType.TENNIS_SETS_SCORE:
-          dataPath = 'sets';
+        case ComponentType.TENNIS_SERVE_SPEED:
+          dataPath = 'serve.speed';
+          break;
+        case ComponentType.TENNIS_DETAILED_SET_SCORE:
+          const setNumber = selectedComponent.data.setNumber || 1;
+          const playerNumber = selectedComponent.data.playerNumber || 1;
+          dataPath = `sets.set${setNumber}.player${playerNumber}`;
           break;
       }
 
