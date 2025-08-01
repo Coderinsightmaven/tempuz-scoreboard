@@ -50,10 +50,13 @@ pub fn run() {
             fetch_live_data,
             test_api_connection,
             get_available_matches,
-            // Live data storage commands
-            save_live_data_connections,
-            load_live_data_connections,
-            delete_live_data_connections,
+                    // Live data storage commands
+        save_live_data_connections,
+        load_live_data_connections,
+        delete_live_data_connections,
+        // Export/Import commands
+        export_scoreboard_as_zip,
+        import_scoreboard_from_zip,
         ])
         .setup(|app| {
             #[cfg(debug_assertions)]

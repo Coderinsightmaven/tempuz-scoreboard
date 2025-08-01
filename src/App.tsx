@@ -117,6 +117,88 @@ function App() {
     alert(`${newComponentIds.length} ${componentText} pasted successfully.`);
   };
 
+  const handleExportScoreboard = async () => {
+    if (!config) {
+      alert('Please create a scoreboard design before exporting.');
+      return;
+    }
+
+    try {
+      // Get the zip data from Tauri
+      const zipData = await TauriAPI.exportScoreboardAsZip(`${config.name}.json`);
+      
+      // Convert the number array to Uint8Array
+      const zipBlob = new Blob([new Uint8Array(zipData)], { type: 'application/zip' });
+      
+      // Create download link
+      const url = URL.createObjectURL(zipBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${config.name}_export.zip`;
+      
+      // Trigger download
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Clean up
+      URL.revokeObjectURL(url);
+      
+      alert(`Scoreboard "${config.name}" exported successfully!`);
+    } catch (error) {
+      console.error('Failed to export scoreboard:', error);
+      alert('Failed to export scoreboard. Please try again.');
+    }
+  };
+
+  const handleImportScoreboard = async () => {
+    try {
+      // Create file input element
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.zip';
+      input.style.display = 'none';
+      
+      // Handle file selection
+      input.onchange = async (event) => {
+        const file = (event.target as HTMLInputElement).files?.[0];
+        if (!file) return;
+        
+        try {
+          // Read file as array buffer
+          const arrayBuffer = await file.arrayBuffer();
+          const zipData = Array.from(new Uint8Array(arrayBuffer));
+          
+          // Import the scoreboard
+          const importedConfig = await TauriAPI.importScoreboardFromZip(zipData);
+          
+          // Load the imported scoreboard into the designer
+          const { loadScoreboard } = useScoreboardStore.getState();
+          await loadScoreboard(importedConfig);
+          
+          // Refresh images
+          const { loadImages } = useImageStore.getState();
+          await loadImages();
+          
+          alert(`Scoreboard "${importedConfig.name}" imported successfully!`);
+        } catch (error) {
+          console.error('Failed to import scoreboard:', error);
+          alert('Failed to import scoreboard. Please ensure the file is a valid scoreboard ZIP.');
+        } finally {
+          // Clean up
+          document.body.removeChild(input);
+        }
+      };
+      
+      // Trigger file dialog
+      document.body.appendChild(input);
+      input.click();
+    } catch (error) {
+      console.error('Failed to open file dialog:', error);
+      alert('Failed to open file dialog. Please try again.');
+    }
+  };
+
   const handleSaveScoreboard = async () => {
     if (!config || components.length === 0) {
       alert('Please create a scoreboard design with components before saving.');
@@ -259,7 +341,30 @@ function App() {
                 </svg>
                 <span>Save Design</span>
               </button>
+              
+              <button
+                onClick={handleExportScoreboard}
+                className="bg-indigo-500 hover:bg-indigo-600 text-white px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center space-x-2"
+                title="Export scoreboard with images as ZIP"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+                </svg>
+                <span>Export ZIP</span>
+              </button>
             )}
+
+            {/* Import ZIP Button */}
+            <button
+              onClick={handleImportScoreboard}
+              className="bg-teal-500 hover:bg-teal-600 text-white px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center space-x-2"
+              title="Import scoreboard from ZIP file"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+              </svg>
+              <span>Import ZIP</span>
+            </button>
 
             {/* Copy/Paste Buttons - only show when config is loaded */}
             {config && (

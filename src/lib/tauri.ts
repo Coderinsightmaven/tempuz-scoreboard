@@ -309,6 +309,25 @@ export class TauriAPI {
       throw error;
     }
   }
+
+  // Export/Import Methods
+  static async exportScoreboardAsZip(filename: string): Promise<number[]> {
+    try {
+      return await invoke('export_scoreboard_as_zip', { filename });
+    } catch (error) {
+      console.error('Failed to export scoreboard as zip:', error);
+      throw error;
+    }
+  }
+
+  static async importScoreboardFromZip(zipData: number[]): Promise<any> {
+    try {
+      return await invoke('import_scoreboard_from_zip', { zipData });
+    } catch (error) {
+      console.error('Failed to import scoreboard from zip:', error);
+      throw error;
+    }
+  }
 }
 
 export interface MatchInfo {

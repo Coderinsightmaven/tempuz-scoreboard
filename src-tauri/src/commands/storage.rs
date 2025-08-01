@@ -4,6 +4,10 @@ use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::fs;
 use serde_json;
+use std::io::{Write, Read};
+use zip::{ZipWriter, ZipArchive, CompressionMethod};
+use zip::write::FileOptions;
+use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ScoreboardConfig {
@@ -178,6 +182,299 @@ pub async fn export_scoreboard(
     fs::copy(&source_path, &export_path).map_err(|e| e.to_string())?;
     
     Ok(())
+}
+
+#[tauri::command]
+pub async fn export_scoreboard_as_zip(
+    app: AppHandle,
+    filename: String,
+) -> Result<Vec<u8>, String> {
+    let app_data_dir = app.path().app_data_dir()
+        .map_err(|e| e.to_string())?;
+    
+    let scoreboard_path = app_data_dir.join("scoreboards").join(&filename);
+    
+    if !scoreboard_path.exists() {
+        return Err("Scoreboard file not found".to_string());
+    }
+    
+    // Read the scoreboard configuration
+    let scoreboard_content = fs::read_to_string(&scoreboard_path)
+        .map_err(|e| format!("Failed to read scoreboard file: {}", e))?;
+    
+    let scoreboard_config: serde_json::Value = serde_json::from_str(&scoreboard_content)
+        .map_err(|e| format!("Failed to parse scoreboard config: {}", e))?;
+    
+    // Create in-memory zip
+    let mut zip_data = Vec::new();
+    {
+        let mut zip = ZipWriter::new(std::io::Cursor::new(&mut zip_data));
+        let options = FileOptions::default()
+            .compression_method(CompressionMethod::Deflated)
+            .unix_permissions(0o755);
+        
+        // Add the scoreboard configuration
+        zip.start_file("scoreboard.json", options)
+            .map_err(|e| format!("Failed to create scoreboard.json in zip: {}", e))?;
+        zip.write_all(scoreboard_content.as_bytes())
+            .map_err(|e| format!("Failed to write scoreboard.json: {}", e))?;
+        
+        // Collect all image IDs used in the scoreboard
+        let mut used_image_ids = std::collections::HashSet::new();
+        if let Some(components) = scoreboard_config.get("components").and_then(|c| c.as_array()) {
+            for component in components {
+                if let Some(data) = component.get("data") {
+                    if let Some(image_id) = data.get("imageId").and_then(|id| id.as_str()) {
+                        used_image_ids.insert(image_id.to_string());
+                    }
+                }
+            }
+        }
+        
+        // If there are images, add them to the zip
+        if !used_image_ids.is_empty() {
+            // Load image metadata
+            let images_dir = app_data_dir.join("images");
+            let metadata_file = images_dir.join("metadata.json");
+            
+            if metadata_file.exists() {
+                let metadata_content = fs::read_to_string(&metadata_file)
+                    .map_err(|e| format!("Failed to read image metadata: {}", e))?;
+                
+                let images: Vec<serde_json::Value> = serde_json::from_str(&metadata_content)
+                    .map_err(|e| format!("Failed to parse image metadata: {}", e))?;
+                
+                // Add used images to zip
+                for image in &images {
+                    if let Some(id) = image.get("id").and_then(|id| id.as_str()) {
+                        if used_image_ids.contains(id) {
+                            if let Some(path) = image.get("path").and_then(|p| p.as_str()) {
+                                let image_path = PathBuf::from(path);
+                                if image_path.exists() {
+                                    let image_data = fs::read(&image_path)
+                                        .map_err(|e| format!("Failed to read image file {}: {}", path, e))?;
+                                    
+                                    let filename = image_path.file_name()
+                                        .and_then(|n| n.to_str())
+                                        .unwrap_or("unknown");
+                                    
+                                    zip.start_file(&format!("images/{}", filename), options)
+                                        .map_err(|e| format!("Failed to create image file in zip: {}", e))?;
+                                    zip.write_all(&image_data)
+                                        .map_err(|e| format!("Failed to write image data: {}", e))?;
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // Add image metadata for used images
+                let used_images: Vec<serde_json::Value> = images.into_iter()
+                    .filter(|img| {
+                        img.get("id")
+                            .and_then(|id| id.as_str())
+                            .map(|id| used_image_ids.contains(id))
+                            .unwrap_or(false)
+                    })
+                    .collect();
+                
+                if !used_images.is_empty() {
+                    let metadata_json = serde_json::to_string_pretty(&used_images)
+                        .map_err(|e| format!("Failed to serialize image metadata: {}", e))?;
+                    
+                    zip.start_file("images/metadata.json", options)
+                        .map_err(|e| format!("Failed to create metadata.json in zip: {}", e))?;
+                    zip.write_all(metadata_json.as_bytes())
+                        .map_err(|e| format!("Failed to write metadata.json: {}", e))?;
+                }
+            }
+        }
+        
+        zip.finish()
+            .map_err(|e| format!("Failed to finalize zip: {}", e))?;
+    }
+    
+    Ok(zip_data)
+}
+
+#[tauri::command]
+pub async fn import_scoreboard_from_zip(
+    app: AppHandle,
+    zip_data: Vec<u8>,
+) -> Result<ScoreboardConfig, String> {
+    // Create a cursor from the zip data
+    let cursor = std::io::Cursor::new(zip_data.clone());
+    let mut archive = ZipArchive::new(cursor)
+        .map_err(|e| format!("Failed to read ZIP file: {}", e))?;
+    
+    // First pass: validate structure and read scoreboard.json
+    let mut scoreboard_content = String::new();
+    let mut has_scoreboard = false;
+    
+    // Find and read scoreboard.json
+    for i in 0..archive.len() {
+        let mut file = archive.by_index(i)
+            .map_err(|e| format!("Failed to read file from ZIP: {}", e))?;
+        
+        if file.name() == "scoreboard.json" {
+            file.read_to_string(&mut scoreboard_content)
+                .map_err(|e| format!("Failed to read scoreboard.json: {}", e))?;
+            has_scoreboard = true;
+            break;
+        }
+    }
+    
+    if !has_scoreboard {
+        return Err("Invalid ZIP: missing scoreboard.json".to_string());
+    }
+    
+    // Parse scoreboard configuration
+    let mut scoreboard_config: ScoreboardConfig = serde_json::from_str(&scoreboard_content)
+        .map_err(|e| format!("Invalid scoreboard.json format: {}", e))?;
+    
+    // Generate new unique name if a scoreboard with the same name exists
+    let app_data_dir = app.path().app_data_dir()
+        .map_err(|e| e.to_string())?;
+    let scoreboards_dir = app_data_dir.join("scoreboards");
+    
+    let mut final_name = scoreboard_config.name.clone();
+    let mut counter = 1;
+    while scoreboards_dir.join(&format!("{}.json", final_name)).exists() {
+        final_name = format!("{} ({})", scoreboard_config.name, counter);
+        counter += 1;
+    }
+    scoreboard_config.name = final_name;
+    
+    // Second pass: handle images if they exist
+    let mut imported_image_mapping = std::collections::HashMap::new();
+    
+    // Reset archive for second pass
+    let cursor = std::io::Cursor::new(&zip_data);
+    let mut archive = ZipArchive::new(cursor)
+        .map_err(|e| format!("Failed to re-read ZIP file: {}", e))?;
+    
+    // Check if we have images to import
+    let has_images = (0..archive.len()).any(|i| {
+        if let Ok(file) = archive.by_index(i) {
+            file.name().starts_with("images/") && file.name() != "images/" && file.name() != "images/metadata.json"
+        } else {
+            false
+        }
+    });
+    
+    if has_images {
+        // Import images
+        let images_dir = app_data_dir.join("images");
+        if !images_dir.exists() {
+            fs::create_dir_all(&images_dir)
+                .map_err(|e| format!("Failed to create images directory: {}", e))?;
+        }
+        
+        // Load existing image metadata
+        let metadata_file = images_dir.join("metadata.json");
+        let mut existing_images: Vec<serde_json::Value> = if metadata_file.exists() {
+            let content = fs::read_to_string(&metadata_file)
+                .map_err(|e| format!("Failed to read existing image metadata: {}", e))?;
+            serde_json::from_str(&content).unwrap_or_default()
+        } else {
+            Vec::new()
+        };
+        
+        // Read image metadata from ZIP
+        let mut image_metadata_content = String::new();
+        for i in 0..archive.len() {
+            let mut file = archive.by_index(i)
+                .map_err(|e| format!("Failed to read file from ZIP: {}", e))?;
+            
+            if file.name() == "images/metadata.json" {
+                file.read_to_string(&mut image_metadata_content)
+                    .map_err(|e| format!("Failed to read image metadata: {}", e))?;
+                break;
+            }
+        }
+        
+        if !image_metadata_content.is_empty() {
+            let zip_images: Vec<serde_json::Value> = serde_json::from_str(&image_metadata_content)
+                .map_err(|e| format!("Invalid image metadata format: {}", e))?;
+            
+            // Import each image
+            for zip_image in zip_images {
+                if let Some(old_id) = zip_image.get("id").and_then(|id| id.as_str()) {
+                    if let Some(original_name) = zip_image.get("name").and_then(|name| name.as_str()) {
+                        // Generate new unique ID to avoid conflicts
+                        let new_id = Uuid::new_v4().to_string();
+                        let file_extension = original_name.split('.').last().unwrap_or("png");
+                        let new_filename = format!("{}.{}", new_id, file_extension);
+                        
+                        // Find and extract the image file from ZIP
+                        let zip_image_path = format!("images/{}", original_name);
+                        for i in 0..archive.len() {
+                            let mut file = archive.by_index(i)
+                                .map_err(|e| format!("Failed to read file from ZIP: {}", e))?;
+                            
+                            if file.name() == zip_image_path {
+                                let mut image_data = Vec::new();
+                                file.read_to_end(&mut image_data)
+                                    .map_err(|e| format!("Failed to read image data: {}", e))?;
+                                
+                                // Save image to disk
+                                let new_image_path = images_dir.join(&new_filename);
+                                fs::write(&new_image_path, &image_data)
+                                    .map_err(|e| format!("Failed to save imported image: {}", e))?;
+                                
+                                // Create new metadata entry
+                                let mut new_image_metadata = zip_image.clone();
+                                if let Some(metadata_obj) = new_image_metadata.as_object_mut() {
+                                    metadata_obj.insert("id".to_string(), serde_json::Value::String(new_id.clone()));
+                                    metadata_obj.insert("name".to_string(), serde_json::Value::String(new_filename.clone()));
+                                    metadata_obj.insert("path".to_string(), serde_json::Value::String(new_image_path.to_string_lossy().to_string()));
+                                    metadata_obj.insert("uploadedAt".to_string(), serde_json::Value::String(chrono::Utc::now().to_rfc3339()));
+                                }
+                                
+                                existing_images.push(new_image_metadata);
+                                imported_image_mapping.insert(old_id.to_string(), new_id);
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Save updated image metadata
+            let updated_metadata = serde_json::to_string_pretty(&existing_images)
+                .map_err(|e| format!("Failed to serialize image metadata: {}", e))?;
+            fs::write(&metadata_file, updated_metadata)
+                .map_err(|e| format!("Failed to save updated image metadata: {}", e))?;
+        }
+    }
+    
+    // Update scoreboard configuration to use new image IDs
+    if let Some(components) = scoreboard_config.data.get_mut("components").and_then(|c| c.as_array_mut()) {
+        for component in components {
+            if let Some(data) = component.get_mut("data").and_then(|d| d.as_object_mut()) {
+                if let Some(image_id) = data.get("imageId").and_then(|id| id.as_str()) {
+                    if let Some(new_id) = imported_image_mapping.get(image_id) {
+                        data.insert("imageId".to_string(), serde_json::Value::String(new_id.clone()));
+                    }
+                }
+            }
+        }
+    }
+    
+    // Save the imported scoreboard
+    if !scoreboards_dir.exists() {
+        fs::create_dir_all(&scoreboards_dir)
+            .map_err(|e| format!("Failed to create scoreboards directory: {}", e))?;
+    }
+    
+    let scoreboard_file = scoreboards_dir.join(&format!("{}.json", scoreboard_config.name));
+    let updated_scoreboard_content = serde_json::to_string_pretty(&scoreboard_config)
+        .map_err(|e| format!("Failed to serialize updated scoreboard: {}", e))?;
+    
+    fs::write(&scoreboard_file, updated_scoreboard_content)
+        .map_err(|e| format!("Failed to save imported scoreboard: {}", e))?;
+    
+    Ok(scoreboard_config)
 }
 
 #[tauri::command]
