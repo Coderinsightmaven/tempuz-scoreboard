@@ -582,7 +582,8 @@
                     element.style.backgroundColor = component.style.backgroundColor;
                 }
                 if (component.style.borderWidth) {
-                    element.style.border = `${component.style.borderWidth}px solid ${component.style.borderColor || '#000'}`;
+                    const borderColor = component.style.borderColor === 'transparent' ? 'transparent' : (component.style.borderColor || '#000');
+                    element.style.border = `${component.style.borderWidth}px solid ${borderColor}`;
                 }
                 if (component.style.borderRadius) {
                     element.style.borderRadius = component.style.borderRadius + 'px';
@@ -694,7 +695,8 @@
                     element.style.backgroundColor = component.style.backgroundColor;
                 }
                 if (component.style.borderWidth) {
-                    element.style.border = `${component.style.borderWidth}px solid ${component.style.borderColor || '#000'}`;
+                    const borderColor = component.style.borderColor === 'transparent' ? 'transparent' : (component.style.borderColor || '#000');
+                    element.style.border = `${component.style.borderWidth}px solid ${borderColor}`;
                 }
                 if (component.style.borderRadius) {
                     element.style.borderRadius = component.style.borderRadius + 'px';
@@ -760,7 +762,8 @@
                     element.style.backgroundColor = component.style.backgroundColor;
                 }
                 if (component.style.borderWidth) {
-                    element.style.border = `${component.style.borderWidth}px solid ${component.style.borderColor || '#000'}`;
+                    const borderColor = component.style.borderColor === 'transparent' ? 'transparent' : (component.style.borderColor || '#000');
+                    element.style.border = `${component.style.borderWidth}px solid ${borderColor}`;
                 }
                 if (component.style.borderRadius) {
                     element.style.borderRadius = component.style.borderRadius + 'px';

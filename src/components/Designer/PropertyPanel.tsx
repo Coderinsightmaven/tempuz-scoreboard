@@ -194,12 +194,28 @@ export const PropertyPanel: React.FC = () => {
 
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">Border Color</label>
-            <input
-              type="color"
-              value={selectedComponent.style.borderColor || '#000000'}
-              onChange={(e) => handleStyleChange('borderColor', e.target.value)}
-              className="w-full h-8 rounded border border-gray-300"
-            />
+            <div className="flex items-center space-x-2">
+              <input
+                type="color"
+                value={selectedComponent.style.borderColor === 'transparent' ? '#000000' : (selectedComponent.style.borderColor || '#000000')}
+                onChange={(e) => handleStyleChange('borderColor', e.target.value)}
+                className="w-16 h-8 rounded border border-gray-300"
+                disabled={selectedComponent.style.borderColor === 'transparent'}
+              />
+              <button
+                onClick={() => handleStyleChange('borderColor', selectedComponent.style.borderColor === 'transparent' ? '#000000' : 'transparent')}
+                className={`px-3 py-1 text-xs rounded border ${
+                  selectedComponent.style.borderColor === 'transparent' 
+                    ? 'bg-blue-100 text-blue-800 border-blue-300' 
+                    : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200'
+                }`}
+              >
+                {selectedComponent.style.borderColor === 'transparent' ? 'Visible' : 'Transparent'}
+              </button>
+            </div>
+            {selectedComponent.style.borderColor === 'transparent' && (
+              <div className="text-xs text-gray-500 mt-1">Border is transparent</div>
+            )}
           </div>
 
           <div>
