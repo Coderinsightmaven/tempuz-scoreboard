@@ -124,27 +124,47 @@ function App() {
     }
 
     try {
-      // Get the zip data from Tauri
-      const zipData = await TauriAPI.exportScoreboardAsZip(`${config.name}.json`);
+      // Import save dialog from Tauri
+      const { save } = await import('@tauri-apps/plugin-dialog');
       
-      // Convert the number array to Uint8Array
-      const zipBlob = new Blob([new Uint8Array(zipData)], { type: 'application/zip' });
+      // Show save dialog
+      const filePath = await save({
+        defaultPath: `${config.name}_export.zip`,
+        filters: [
+          {
+            name: 'ZIP Files',
+            extensions: ['zip']
+          }
+        ]
+      });
+
+      // User cancelled the dialog
+      if (!filePath) {
+        return;
+      }
+
+      // First, ensure the scoreboard is saved to disk before exporting
+      const saveData = {
+        ...config,
+        components: components
+      };
+
+      // Save the scoreboard to disk first
+      const filename = await TauriAPI.saveScoreboard(config.name, saveData);
+      console.log('📁 Scoreboard saved to disk for export:', filename);
       
-      // Create download link
-      const url = URL.createObjectURL(zipBlob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${config.name}_export.zip`;
+      // Now export the saved scoreboard as zip data
+      const zipData = await TauriAPI.exportScoreboardAsZip(filename);
       
-      // Trigger download
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      // Write the zip data directly to the chosen file path
+      const { writeFile } = await import('@tauri-apps/plugin-fs');
+      await writeFile(filePath, new Uint8Array(zipData));
       
-      // Clean up
-      URL.revokeObjectURL(url);
+      // Mark as saved since we just saved it
+      const { markSaved } = useScoreboardStore.getState();
+      markSaved();
       
-      alert(`Scoreboard "${config.name}" exported successfully!`);
+      alert(`Scoreboard "${config.name}" exported successfully to:\n${filePath}`);
     } catch (error) {
       console.error('Failed to export scoreboard:', error);
       alert('Failed to export scoreboard. Please try again.');
@@ -170,7 +190,14 @@ function App() {
           const zipData = Array.from(new Uint8Array(arrayBuffer));
           
           // Import the scoreboard
-          const importedConfig = await TauriAPI.importScoreboardFromZip(zipData);
+          const importedTauriConfig = await TauriAPI.importScoreboardFromZip(zipData);
+          
+          // Convert TauriScoreboardConfig to ScoreboardConfig format
+          const importedConfig = {
+            ...importedTauriConfig.data,
+            id: importedTauriConfig.id,
+            name: importedTauriConfig.name,
+          };
           
           // Load the imported scoreboard into the designer
           const { loadScoreboard } = useScoreboardStore.getState();

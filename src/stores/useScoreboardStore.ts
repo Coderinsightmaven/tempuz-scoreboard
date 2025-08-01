@@ -177,7 +177,7 @@ export const useScoreboardStore = create<ScoreboardState & ScoreboardActions>()(
     loadScoreboard: (config: ScoreboardConfig) =>
       set(() => ({
         config,
-        components: config.components.map(component => {
+        components: (config.components || []).map(component => {
           // Ensure live data bindings are preserved when loading
           if (component.data && component.data.liveDataBinding) {
             console.log(`Loaded component ${component.id} with live data binding:`, component.data.liveDataBinding);

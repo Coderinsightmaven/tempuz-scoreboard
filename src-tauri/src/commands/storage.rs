@@ -221,36 +221,51 @@ pub async fn export_scoreboard_as_zip(
         
         // Collect all image IDs used in the scoreboard
         let mut used_image_ids = std::collections::HashSet::new();
-        if let Some(components) = scoreboard_config.get("components").and_then(|c| c.as_array()) {
-            for component in components {
-                if let Some(data) = component.get("data") {
-                    if let Some(image_id) = data.get("imageId").and_then(|id| id.as_str()) {
-                        used_image_ids.insert(image_id.to_string());
+        
+        // Components are nested under "data" in the saved scoreboard structure
+        if let Some(data) = scoreboard_config.get("data") {
+            if let Some(components) = data.get("components").and_then(|c| c.as_array()) {
+                for component in components {
+                    if let Some(component_data) = component.get("data") {
+                        if let Some(image_id) = component_data.get("imageId").and_then(|id| id.as_str()) {
+                            used_image_ids.insert(image_id.to_string());
+                            println!("Found image ID in component: {}", image_id);
+                        }
                     }
                 }
             }
         }
         
+        println!("Found {} image IDs in scoreboard: {:?}", used_image_ids.len(), used_image_ids);
+        
         // If there are images, add them to the zip
         if !used_image_ids.is_empty() {
+            println!("Attempting to add {} images to ZIP", used_image_ids.len());
             // Load image metadata
             let images_dir = app_data_dir.join("images");
             let metadata_file = images_dir.join("metadata.json");
             
+            println!("Looking for image metadata at: {:?}", metadata_file);
             if metadata_file.exists() {
+                println!("Image metadata file found, reading content...");
                 let metadata_content = fs::read_to_string(&metadata_file)
                     .map_err(|e| format!("Failed to read image metadata: {}", e))?;
                 
                 let images: Vec<serde_json::Value> = serde_json::from_str(&metadata_content)
                     .map_err(|e| format!("Failed to parse image metadata: {}", e))?;
                 
+                println!("Loaded {} images from metadata", images.len());
+                
                 // Add used images to zip
                 for image in &images {
                     if let Some(id) = image.get("id").and_then(|id| id.as_str()) {
                         if used_image_ids.contains(id) {
+                            println!("Processing image with ID: {}", id);
                             if let Some(path) = image.get("path").and_then(|p| p.as_str()) {
+                                println!("Image path: {}", path);
                                 let image_path = PathBuf::from(path);
                                 if image_path.exists() {
+                                    println!("Image file exists, reading data...");
                                     let image_data = fs::read(&image_path)
                                         .map_err(|e| format!("Failed to read image file {}: {}", path, e))?;
                                     
@@ -258,11 +273,18 @@ pub async fn export_scoreboard_as_zip(
                                         .and_then(|n| n.to_str())
                                         .unwrap_or("unknown");
                                     
+                                    println!("Adding image to ZIP: images/{}", filename);
                                     zip.start_file(&format!("images/{}", filename), options)
                                         .map_err(|e| format!("Failed to create image file in zip: {}", e))?;
                                     zip.write_all(&image_data)
                                         .map_err(|e| format!("Failed to write image data: {}", e))?;
+                                    
+                                    println!("Successfully added image {} to ZIP", filename);
+                                } else {
+                                    println!("Warning: Image file does not exist at path: {}", path);
                                 }
+                            } else {
+                                println!("Warning: No path found for image ID: {}", id);
                             }
                         }
                     }
@@ -279,6 +301,7 @@ pub async fn export_scoreboard_as_zip(
                     .collect();
                 
                 if !used_images.is_empty() {
+                    println!("Adding metadata for {} used images to ZIP", used_images.len());
                     let metadata_json = serde_json::to_string_pretty(&used_images)
                         .map_err(|e| format!("Failed to serialize image metadata: {}", e))?;
                     
@@ -286,8 +309,16 @@ pub async fn export_scoreboard_as_zip(
                         .map_err(|e| format!("Failed to create metadata.json in zip: {}", e))?;
                     zip.write_all(metadata_json.as_bytes())
                         .map_err(|e| format!("Failed to write metadata.json: {}", e))?;
+                    
+                    println!("Successfully added image metadata to ZIP");
+                } else {
+                    println!("No used images found in metadata");
                 }
+            } else {
+                println!("Image metadata file not found at: {:?}", metadata_file);
             }
+        } else {
+            println!("No images found in scoreboard components");
         }
         
         zip.finish()
