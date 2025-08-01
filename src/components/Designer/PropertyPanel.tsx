@@ -267,6 +267,8 @@ export const PropertyPanel: React.FC = () => {
         return <TennisSetScoreProperties />;
       case ComponentType.TENNIS_MATCH_SCORE:
         return <TennisMatchScoreProperties />;
+      case ComponentType.TENNIS_SETS_SCORE:
+        return <TennisSetsScoreProperties />;
       default:
         return <div className="text-sm text-gray-500">No properties available</div>;
     }
@@ -695,7 +697,54 @@ export const PropertyPanel: React.FC = () => {
     );
   }
 
-  function LiveDataBindingSection() {
+  function TennisSetsScoreProperties() {
+    const [localText, setLocalText] = useState(selectedComponent?.data.text || '');
+
+    React.useEffect(() => {
+      setLocalText(selectedComponent?.data.text || '');
+    }, [selectedComponent?.id, selectedComponent?.data.text]);
+
+    const handleTextBlur = () => {
+      if (localText !== selectedComponent?.data.text) {
+        handleDataChange('text', localText);
+      }
+    };
+
+    return (
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Sets Score Format
+          </label>
+          <p className="text-sm text-gray-600 mb-2">
+            Displays all completed sets in format: "6-4, 5-7, 7-5"
+          </p>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Fallback Sets
+          </label>
+          <input
+            type="text"
+            value={localText}
+            onChange={(e) => setLocalText(e.target.value)}
+            onBlur={handleTextBlur}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="6-4, 5-7"
+          />
+          <div className="text-xs text-gray-500 mt-1">
+            Shown when no live data is available
+          </div>
+        </div>
+
+        <LiveDataBindingSection customDataPath="sets" />
+        <TextStyleSection />
+      </div>
+    );
+  }
+
+  function LiveDataBindingSection({ customDataPath }: { customDataPath?: string } = {}) {
     const { connections, addComponentBinding, removeComponentBinding, getComponentBinding } = useLiveDataStore();
     const currentBinding = getComponentBinding(selectedComponent?.id || '');
 
@@ -722,6 +771,9 @@ export const PropertyPanel: React.FC = () => {
           break;
         case ComponentType.TENNIS_MATCH_SCORE:
           dataPath = `score.player${playerNumber}Sets`;
+          break;
+        case ComponentType.TENNIS_SETS_SCORE:
+          dataPath = 'sets';
           break;
       }
 
@@ -863,6 +915,8 @@ export const PropertyPanel: React.FC = () => {
           return 'Tennis Set Score';
         case ComponentType.TENNIS_MATCH_SCORE:
           return 'Tennis Match Score';
+        case ComponentType.TENNIS_SETS_SCORE:
+          return 'Tennis Sets Score';
         default:
           return 'Unknown';
       }
@@ -881,6 +935,7 @@ export const PropertyPanel: React.FC = () => {
         case ComponentType.TENNIS_GAME_SCORE:
         case ComponentType.TENNIS_SET_SCORE:
         case ComponentType.TENNIS_MATCH_SCORE:
+        case ComponentType.TENNIS_SETS_SCORE:
           return '🎾';
         default:
           return '❓';
@@ -901,6 +956,8 @@ export const PropertyPanel: React.FC = () => {
         case ComponentType.TENNIS_SET_SCORE:
         case ComponentType.TENNIS_MATCH_SCORE:
           return `Player ${component.data.playerNumber || 1} Score`;
+        case ComponentType.TENNIS_SETS_SCORE:
+          return 'Sets Score (e.g., 6-4, 5-7, 7-5)';
         default:
           return 'No text';
       }

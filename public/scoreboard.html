@@ -98,10 +98,85 @@
             border-radius: 50%;
             animation: pulse 2s infinite;
         }
+        
+        /* Score Change Animation Styles */
+        .score-change-base {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .score-increase {
+            animation: scoreIncrease 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .score-decrease {
+            animation: scoreDecrease 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .score-flash {
+            animation: scoreFlash 0.5s ease-out;
+        }
+        
+        .score-glow {
+            animation: scoreGlow 1s ease-out;
+        }
+        
         @keyframes pulse {
             0% { opacity: 1; }
             50% { opacity: 0.5; }
             100% { opacity: 1; }
+        }
+        
+        @keyframes scoreIncrease {
+            0% { 
+                transform: scale(1);
+            }
+            50% { 
+                transform: scale(1.1);
+            }
+            100% { 
+                transform: scale(1);
+            }
+        }
+        
+        @keyframes scoreDecrease {
+            0% { 
+                transform: scale(1);
+            }
+            50% { 
+                transform: scale(0.95);
+            }
+            100% { 
+                transform: scale(1);
+            }
+        }
+        
+        @keyframes scoreFlash {
+            0% { 
+                transform: scale(1);
+            }
+            50% { 
+                transform: scale(1.05);
+            }
+            100% { 
+                transform: scale(1);
+            }
+        }
+        
+        @keyframes scoreGlow {
+            0% { 
+                transform: scale(1);
+            }
+            50% { 
+                transform: scale(1.02);
+            }
+            100% { 
+                transform: scale(1);
+            }
+        }
+        
+        /* Smooth transitions */
+        .text-component, .tennis-component {
+            transition: transform 0.2s ease;
         }
     </style>
 </head>
@@ -256,7 +331,8 @@
                     } else if (component.type === 'tennis_player_name' || 
                                component.type === 'tennis_game_score' || 
                                component.type === 'tennis_set_score' || 
-                               component.type === 'tennis_match_score') {
+                               component.type === 'tennis_match_score' ||
+                               component.type === 'tennis_sets_score') {
                         renderTennisComponent(component);
                     }
                 }
@@ -467,6 +543,12 @@
                     player1Points: ["0", "15", "30", "40"][Math.floor(Math.random() * 4)],
                     player2Points: ["0", "15", "30", "40"][Math.floor(Math.random() * 4)]
                 },
+                sets: [
+                    { player1Games: 6, player2Games: 4, completed: true },
+                    { player1Games: 5, player2Games: 7, completed: true },
+                    { player1Games: 7, player2Games: 5, completed: true },
+                    { player1Games: Math.floor(Math.random() * 7), player2Games: Math.floor(Math.random() * 7), completed: false }
+                ],
                 matchStatus: "in_progress",
                 servingPlayer: Math.random() > 0.5 ? 1 : 2,
                 currentSet: 4,
@@ -632,7 +714,7 @@
             const container = document.getElementById('scoreboardContainer');
             
             const element = document.createElement('div');
-            element.className = 'text-component tennis-component';
+            element.className = 'text-component tennis-component score-change-base';
             element.style.position = 'absolute';
             // Add 20px offset to match design canvas margin
             element.style.left = (component.position.x + 20) + 'px';
@@ -715,6 +797,8 @@
                     return '0';
                 case 'tennis_match_score':
                     return '0';
+                case 'tennis_sets_score':
+                    return '6-4, 5-7';
                 default:
                     return 'Tennis Data';
             }

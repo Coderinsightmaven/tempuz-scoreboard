@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { ScoreboardComponent, ComponentType } from '../../../types/scoreboard';
@@ -22,6 +22,54 @@ export const DraggableComponent: React.FC<DraggableComponentProps> = ({
   const { selectedComponents, isResizing } = useCanvasStore();
   const { getComponentValue } = useLiveDataStore();
   const isSelected = selectedComponents.has(component.id);
+  const previousValueRef = useRef<any>();
+  const elementRef = useRef<HTMLDivElement>(null);
+
+  // Get current live value
+  const currentValue = getComponentValue(component.id);
+  
+  // Animate score changes in design canvas
+  useEffect(() => {
+    if (currentValue !== undefined && 
+        previousValueRef.current !== undefined && 
+        currentValue !== previousValueRef.current &&
+        elementRef.current) {
+      
+      const element = elementRef.current;
+      const oldValue = previousValueRef.current;
+      const newValue = currentValue;
+      
+      // Remove existing animation classes
+      element.classList.remove('score-increase', 'score-decrease', 'score-flash', 'score-glow');
+      
+      // Force reflow
+      element.offsetHeight;
+      
+      // Determine animation type
+      const isNumeric = !isNaN(parseFloat(oldValue)) && !isNaN(parseFloat(newValue));
+      
+      if (isNumeric) {
+        const oldNum = parseFloat(oldValue) || 0;
+        const newNum = parseFloat(newValue) || 0;
+        
+        if (newNum > oldNum) {
+          element.classList.add('score-increase');
+          setTimeout(() => element.classList.remove('score-increase'), 800);
+        } else if (newNum < oldNum) {
+          element.classList.add('score-decrease');
+          setTimeout(() => element.classList.remove('score-decrease'), 800);
+        } else {
+          element.classList.add('score-flash');
+          setTimeout(() => element.classList.remove('score-flash'), 500);
+        }
+      } else {
+        element.classList.add('score-glow');
+        setTimeout(() => element.classList.remove('score-glow'), 1000);
+      }
+    }
+    
+    previousValueRef.current = currentValue;
+  }, [currentValue]);
 
   const {
     attributes,
@@ -112,6 +160,7 @@ export const DraggableComponent: React.FC<DraggableComponentProps> = ({
       case ComponentType.TENNIS_GAME_SCORE:
       case ComponentType.TENNIS_SET_SCORE:
       case ComponentType.TENNIS_MATCH_SCORE:
+      case ComponentType.TENNIS_SETS_SCORE:
         return renderTennisComponent();
       default:
         return (
@@ -149,13 +198,14 @@ export const DraggableComponent: React.FC<DraggableComponentProps> = ({
 
     return (
       <div 
-        className={`w-full h-full flex items-center ${getJustifyClass()} ${getTextAlignClass()} px-2 relative`}
+        className={`w-full h-full flex items-center ${getJustifyClass()} ${getTextAlignClass()} px-2 relative score-change-base`}
         style={{
           fontSize: `${component.style.fontSize || 16}px`,
           color: component.style.textColor || '#ffffff',
           fontWeight: component.style.fontWeight || 'bold',
           wordWrap: 'break-word',
           overflow: 'hidden',
+          transition: 'transform 0.2s ease',
         }}
       >
         {displayValue}
@@ -177,6 +227,8 @@ export const DraggableComponent: React.FC<DraggableComponentProps> = ({
         return '0';
       case ComponentType.TENNIS_MATCH_SCORE:
         return '0';
+      case ComponentType.TENNIS_SETS_SCORE:
+        return '6-4, 5-7';
       default:
         return 'Tennis Data';
     }

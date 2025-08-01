@@ -304,6 +304,22 @@ export const DesignCanvas: React.FC = () => {
     }
   }, [resizeState, handleResizeMove, handleResizeEnd]);
 
+  // Add keyboard event listener for ESC key to clear selection
+  React.useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        clearSelection();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [clearSelection]);
+
   return (
     <div className="flex-1 canvas-container relative overflow-hidden">
       <DndContext

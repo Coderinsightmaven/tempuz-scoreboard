@@ -2,6 +2,75 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Score Change Animation Styles for Design Canvas */
+.score-change-base {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.score-increase {
+  animation: scoreIncrease 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.score-decrease {
+  animation: scoreDecrease 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.score-flash {
+  animation: scoreFlash 0.5s ease-out;
+}
+
+.score-glow {
+  animation: scoreGlow 1s ease-out;
+}
+
+@keyframes scoreIncrease {
+  0% { 
+    transform: scale(1);
+  }
+  50% { 
+    transform: scale(1.1);
+  }
+  100% { 
+    transform: scale(1);
+  }
+}
+
+@keyframes scoreDecrease {
+  0% { 
+    transform: scale(1);
+  }
+  50% { 
+    transform: scale(0.95);
+  }
+  100% { 
+    transform: scale(1);
+  }
+}
+
+@keyframes scoreFlash {
+  0% { 
+    transform: scale(1);
+  }
+  50% { 
+    transform: scale(1.05);
+  }
+  100% { 
+    transform: scale(1);
+  }
+}
+
+@keyframes scoreGlow {
+  0% { 
+    transform: scale(1);
+  }
+  50% { 
+    transform: scale(1.02);
+  }
+  100% { 
+    transform: scale(1);
+  }
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;

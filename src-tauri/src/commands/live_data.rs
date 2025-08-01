@@ -8,6 +8,7 @@ pub struct TennisLiveData {
     pub player1: PlayerInfo,
     pub player2: PlayerInfo,
     pub score: TennisScore,
+    pub sets: Vec<TennisSet>,
     #[serde(rename = "matchStatus")]
     pub match_status: String,
     #[serde(rename = "servingPlayer")]
@@ -46,6 +47,15 @@ pub struct TennisScore {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TennisSet {
+    #[serde(rename = "player1Games")]
+    pub player1_games: u8,
+    #[serde(rename = "player2Games")]
+    pub player2_games: u8,
+    pub completed: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TiebreakScore {
     pub player1: u8,
     pub player2: u8,
@@ -80,6 +90,28 @@ fn create_mock_tennis_data() -> TennisLiveData {
             player1_points: "30".to_string(),
             player2_points: "15".to_string(),
         },
+        sets: vec![
+            TennisSet {
+                player1_games: 6,
+                player2_games: 4,
+                completed: true,
+            },
+            TennisSet {
+                player1_games: 5,
+                player2_games: 7,
+                completed: true,
+            },
+            TennisSet {
+                player1_games: 7,
+                player2_games: 5,
+                completed: true,
+            },
+            TennisSet {
+                player1_games: 4,
+                player2_games: 3,
+                completed: false,
+            },
+        ],
         match_status: "in_progress".to_string(),
         serving_player: Some(1),
         current_set: 4,

@@ -30,9 +30,11 @@ function App() {
     components,
     createNewScoreboard,
     addComponent,
+    copyComponents,
+    pasteComponents,
   } = useScoreboardStore();
 
-  const { setCanvasSize } = useCanvasStore();
+  const { setCanvasSize, selectedComponents, clipboard, setClipboard } = useCanvasStore();
   const { loadImages } = useImageStore();
   const { loadConnections, isLoaded } = useLiveDataStore();
 
@@ -64,6 +66,56 @@ function App() {
       root.classList.remove('dark');
     }
   }, [theme]);
+
+  // Keyboard shortcuts for copy/paste
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Only handle shortcuts when a scoreboard is loaded
+      if (!config) return;
+      
+      const isCtrlCmd = event.ctrlKey || event.metaKey;
+      
+      if (isCtrlCmd && event.key === 'c') {
+        event.preventDefault();
+        handleCopyComponents();
+      } else if (isCtrlCmd && event.key === 'v') {
+        event.preventDefault();
+        handlePasteComponents();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [config, selectedComponents, clipboard]);
+
+  const handleCopyComponents = () => {
+    if (selectedComponents.size === 0) {
+      alert('Please select components to copy.');
+      return;
+    }
+    
+    const selectedIds = Array.from(selectedComponents);
+    const componentsToCopy = copyComponents(selectedIds);
+    setClipboard(componentsToCopy);
+    
+    const componentText = selectedIds.length === 1 ? 'component' : 'components';
+    alert(`${selectedIds.length} ${componentText} copied to clipboard.`);
+  };
+
+  const handlePasteComponents = () => {
+    if (clipboard.length === 0) {
+      alert('No components in clipboard. Copy components first.');
+      return;
+    }
+    
+    const newComponentIds = pasteComponents(clipboard);
+    
+    const componentText = newComponentIds.length === 1 ? 'component' : 'components';
+    alert(`${newComponentIds.length} ${componentText} pasted successfully.`);
+  };
 
   const handleSaveScoreboard = async () => {
     if (!config || components.length === 0) {
@@ -207,6 +259,35 @@ function App() {
                 </svg>
                 <span>Save Design</span>
               </button>
+            )}
+
+            {/* Copy/Paste Buttons - only show when config is loaded */}
+            {config && (
+              <>
+                <button
+                  onClick={handleCopyComponents}
+                  disabled={selectedComponents.size === 0}
+                  className="bg-gray-500 hover:bg-gray-600 text-white px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Copy selected components (Ctrl+C)"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                  <span>Copy ({selectedComponents.size})</span>
+                </button>
+                
+                <button
+                  onClick={handlePasteComponents}
+                  disabled={clipboard.length === 0}
+                  className="bg-gray-500 hover:bg-gray-600 text-white px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Paste components (Ctrl+V)"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                  </svg>
+                  <span>Paste ({clipboard.length})</span>
+                </button>
+              </>
             )}
 
             {/* Multiple Scoreboard Manager Button */}
