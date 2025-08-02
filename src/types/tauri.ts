@@ -8,6 +8,10 @@ export interface MonitorInfo {
   y: number;
   is_primary: boolean;
   scale_factor: number;
+  work_area_width: number;
+  work_area_height: number;
+  work_area_x: number;
+  work_area_y: number;
 }
 
 export interface WindowConfig {

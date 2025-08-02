@@ -113,11 +113,20 @@ export class TauriAPI {
     }
   }
 
-  static async toggleScoreboardFullscreen(): Promise<void> {
+  static async toggleScoreboardFullscreen(windowId: string): Promise<void> {
     try {
-      await invoke('toggle_scoreboard_fullscreen');
+      await invoke('toggle_scoreboard_fullscreen', { windowId });
     } catch (error) {
       console.error('Failed to toggle scoreboard fullscreen:', error);
+      throw error;
+    }
+  }
+
+  static async setScoreboardFullscreen(windowId: string, fullscreen: boolean): Promise<void> {
+    try {
+      await invoke('set_scoreboard_fullscreen', { windowId, fullscreen });
+    } catch (error) {
+      console.error('Failed to set scoreboard fullscreen:', error);
       throw error;
     }
   }

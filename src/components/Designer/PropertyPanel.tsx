@@ -944,14 +944,58 @@ export const PropertyPanel: React.FC = () => {
 
   function LiveDataBindingSection({ customDataPath }: { customDataPath?: string } = {}) {
     const { connections, addComponentBinding, removeComponentBinding, getComponentBinding } = useLiveDataStore();
+    const { activeLiveDataConnection, setActiveLiveDataConnection, switchLiveDataConnection } = useScoreboardStore();
     const currentBinding = getComponentBinding(selectedComponent?.id || '');
+    
+    // Get the active connection details
+    const activeConnection = connections.find(conn => conn.id === activeLiveDataConnection);
+    
+    // Filter connections based on current active connection
+    const availableConnections = activeLiveDataConnection 
+      ? connections.filter(conn => conn.id === activeLiveDataConnection)
+      : connections;
 
     const handleConnectionChange = (connectionId: string) => {
       if (!selectedComponent) return;
 
       if (connectionId === '') {
         removeComponentBinding(selectedComponent.id);
+        
+        // Check if this was the last component bound to live data on this scoreboard
+        const { components } = useScoreboardStore.getState();
+        const remainingBindings = components.filter(comp => 
+          comp.id !== selectedComponent.id && 
+          getComponentBinding(comp.id)
+        ).length;
+        
+        if (remainingBindings === 0) {
+          // No more live data bindings, clear the active connection
+          setActiveLiveDataConnection(null);
+        }
+        
         return;
+      }
+
+      // Check if trying to use a different connection than the current active one
+      if (activeLiveDataConnection && activeLiveDataConnection !== connectionId) {
+        const currentConnection = connections.find(conn => conn.id === activeLiveDataConnection);
+        const newConnection = connections.find(conn => conn.id === connectionId);
+        
+        const confirmSwitch = confirm(
+          `This scoreboard is currently using "${currentConnection?.name || 'Unknown'}". ` +
+          `Do you want to switch the entire scoreboard to use "${newConnection?.name || 'Unknown'}" instead?\n\n` +
+          `This will update all existing live data bindings on this scoreboard.`
+        );
+        
+        if (!confirmSwitch) {
+          return; // User cancelled, don't change anything
+        }
+        
+        // User confirmed, switch the entire scoreboard
+        switchLiveDataConnection(connectionId);
+      } else if (!activeLiveDataConnection) {
+        // First binding on this scoreboard, set as active connection
+        setActiveLiveDataConnection(connectionId);
       }
 
       const playerNumber = selectedComponent.data.playerNumber || 1;
@@ -991,6 +1035,18 @@ export const PropertyPanel: React.FC = () => {
       <div className="border-t border-gray-200 pt-4">
         <h5 className="text-sm font-medium text-gray-900 mb-2">Live Data Binding</h5>
         
+        {/* Show current scoreboard's active connection */}
+        {activeConnection && (
+          <div className="mb-3 p-2 bg-blue-50 border border-blue-200 rounded text-xs">
+            <div className="font-medium text-blue-800">
+              📊 Scoreboard Connection: {activeConnection.name}
+            </div>
+            <div className="text-blue-600">
+              All components on this scoreboard use this connection
+            </div>
+          </div>
+        )}
+        
         <div>
           <label className="block text-xs font-medium text-gray-700 mb-1">Data Connection</label>
           <select
@@ -999,11 +1055,24 @@ export const PropertyPanel: React.FC = () => {
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
           >
             <option value="">No live data (static text)</option>
-            {connections.map(connection => (
+            {availableConnections.map(connection => (
               <option key={connection.id} value={connection.id}>
                 {connection.name} {connection.isActive ? '🟢' : '🔴'}
               </option>
             ))}
+            {activeLiveDataConnection && (
+              <option disabled style={{ backgroundColor: '#f3f4f6', fontStyle: 'italic' }}>
+                ── Other Connections (requires switching) ──
+              </option>
+            )}
+            {activeLiveDataConnection && connections
+              .filter(conn => conn.id !== activeLiveDataConnection)
+              .map(connection => (
+                <option key={connection.id} value={connection.id}>
+                  {connection.name} {connection.isActive ? '🟢' : '🔴'} (switch required)
+                </option>
+              ))
+            }
           </select>
           {connections.length === 0 && (
             <div className="text-xs text-gray-500 mt-1">
@@ -1020,6 +1089,12 @@ export const PropertyPanel: React.FC = () => {
             <div className="text-xs text-green-600">
               ✓ Live data binding active
             </div>
+          </div>
+        )}
+        
+        {activeLiveDataConnection && !activeConnection && (
+          <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-800">
+            ⚠️ Active connection not found. It may have been deleted.
           </div>
         )}
       </div>

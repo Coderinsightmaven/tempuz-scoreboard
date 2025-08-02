@@ -187,6 +187,10 @@ export interface MonitorInfo {
   y: number;
   is_primary: boolean;
   scale_factor: number;
+  work_area_width: number;
+  work_area_height: number;
+  work_area_x: number;
+  work_area_y: number;
 }
 
 export interface ScoreboardInstance {
@@ -213,11 +217,13 @@ export interface ScoreboardInstance {
 export interface LiveDataConnection {
   id: string;
   name: string;
-  provider: 'custom_api' | 'tennis_api' | 'mock';
+  provider: 'custom_api' | 'tennis_api' | 'mock' | 'manual_tennis';
   apiUrl: string;
   apiKey: string;
   pollInterval: number; // in seconds
   isActive: boolean;
+  createdAt?: Date;
+  updatedAt?: Date;
   lastUpdated?: Date;
   lastError?: string;
 }

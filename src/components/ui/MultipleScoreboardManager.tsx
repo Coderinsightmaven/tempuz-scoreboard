@@ -13,6 +13,7 @@ export const MultipleScoreboardManager: React.FC<MultipleScoreboardManagerProps>
   onClose,
 }) => {
   const {
+    monitors,
     scoreboardInstances,
     selectedMonitor,
     createScoreboardInstance,
@@ -20,6 +21,9 @@ export const MultipleScoreboardManager: React.FC<MultipleScoreboardManagerProps>
     closeAllScoreboardInstances,
     updateScoreboardInstancePosition,
     updateScoreboardInstanceSize,
+    selectMonitor,
+    loadMonitors,
+    isLoadingMonitors,
     lastError,
     isCreatingScoreboardWindow,
   } = useAppStore();
@@ -153,18 +157,77 @@ export const MultipleScoreboardManager: React.FC<MultipleScoreboardManagerProps>
         </div>
 
         <div className="p-6 overflow-y-auto max-h-[calc(80vh-120px)]">
-          {/* Monitor Selection Info */}
+          {/* Monitor Selection */}
           <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-            <h3 className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-2">
-              Selected Monitor
-            </h3>
-            {selectedMonitor ? (
-              <p className="text-sm text-blue-700 dark:text-blue-200">
-                {selectedMonitor.name} ({selectedMonitor.width}x{selectedMonitor.height}) at ({selectedMonitor.x}, {selectedMonitor.y})
-              </p>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                Target Monitor
+              </h3>
+              <button
+                onClick={() => loadMonitors()}
+                disabled={isLoadingMonitors}
+                className="flex items-center space-x-1 px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded transition-colors"
+                title="Refresh monitor list"
+              >
+                <svg className={`w-3 h-3 ${isLoadingMonitors ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                <span>{isLoadingMonitors ? 'Scanning...' : 'Refresh'}</span>
+              </button>
+            </div>
+            
+            {monitors.length > 0 ? (
+              <div className="space-y-3">
+                <select
+                  value={selectedMonitor?.id || ''}
+                  onChange={(e) => {
+                    const monitorId = parseInt(e.target.value);
+                    const monitor = monitors.find(m => m.id === monitorId);
+                    selectMonitor(monitor || null);
+                  }}
+                  className="w-full px-3 py-2 border border-blue-200 dark:border-blue-700 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                >
+                  <option value="">{monitors.length === 1 ? 'Main Display' : 'Choose display...'}</option>
+                  {monitors.map((monitor) => (
+                    <option key={monitor.id} value={monitor.id}>
+                      {monitor.name} - {monitor.width}×{monitor.height} 
+                      {monitor.is_primary ? ' (Primary)' : ''}
+                      {monitor.scale_factor !== 1 ? ` @${monitor.scale_factor}x` : ''}
+                    </option>
+                  ))}
+                </select>
+                
+                {selectedMonitor && (
+                  <div className="text-xs text-blue-700 dark:text-blue-300 bg-white dark:bg-blue-800/30 p-2 rounded border border-blue-200 dark:border-blue-600">
+                    <div className="font-medium mb-1">📺 {selectedMonitor.name}</div>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div>Total Size: {selectedMonitor.width}×{selectedMonitor.height}</div>
+                      <div>Usable Area: {selectedMonitor.work_area_width}×{selectedMonitor.work_area_height}</div>
+                      <div>Position: ({selectedMonitor.x}, {selectedMonitor.y})</div>
+                      <div>Scale: {selectedMonitor.scale_factor}x</div>
+                      <div>{selectedMonitor.is_primary ? '🌟 Primary' : '📄 Secondary'}</div>
+                      <div className="text-gray-500">
+                        {selectedMonitor.is_primary ? '(excludes menu bar & dock)' : '(full display area)'}
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                <div className="text-xs text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/40 p-2 rounded border border-blue-200 dark:border-blue-600">
+                  <div className="font-medium mb-1">🎯 <strong>Fullscreen Scoreboard Mode</strong></div>
+                  <div className="space-y-1">
+                    <div>• Scoreboards open in <strong>fullscreen mode</strong> to completely hide the menu bar</div>
+                    <div>• Use the <strong>fullscreen toggle button</strong> (⛶) to exit fullscreen if needed</div>
+                    <div>• Press <strong>F11</strong> or <strong>Esc</strong> to exit fullscreen from the scoreboard window</div>
+                    {monitors.length > 1 && (
+                      <div>• Scoreboards will appear on the selected display with proper monitor positioning</div>
+                    )}
+                  </div>
+                </div>
+              </div>
             ) : (
               <p className="text-sm text-red-600 dark:text-red-400">
-                No monitor selected. Please select a monitor first.
+                No monitors detected. Please check your display connections.
               </p>
             )}
           </div>
@@ -399,14 +462,26 @@ const ScoreboardInstanceCard: React.FC<ScoreboardInstanceCardProps> = ({
             Created: {instance.createdAt.toLocaleString()}
           </p>
         </div>
-        <button
-          onClick={onClose}
-          className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
+        <div className="flex space-x-2">
+          <button
+            onClick={() => TauriAPI.toggleScoreboardFullscreen(instance.windowId)}
+            className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+            title="Toggle Fullscreen (F11 to exit)"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V6a2 2 0 012-2h2M4 16v2a2 2 0 002 2h2M16 4h2a2 2 0 012 2v2M16 20h2a2 2 0 01-2 2h-2" />
+            </svg>
+          </button>
+          <button
+            onClick={onClose}
+            className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+            title="Close Scoreboard Window"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -462,6 +537,9 @@ const ScoreboardInstanceCard: React.FC<ScoreboardInstanceCardProps> = ({
           >
             Update Size
           </button>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            * Size controls only work when not in fullscreen mode
+          </p>
         </div>
       </div>
 

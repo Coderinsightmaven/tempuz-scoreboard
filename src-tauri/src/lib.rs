@@ -25,6 +25,7 @@ pub fn run() {
             update_scoreboard_window_position,
             update_scoreboard_window_size,
             toggle_scoreboard_fullscreen,
+            set_scoreboard_fullscreen,
             // Storage commands
             save_scoreboard,
             load_scoreboard,

@@ -245,12 +245,18 @@ export const useAppStore = create<AppState & AppActions>()(
           }
         }
         
+        console.log('Creating scoreboard window:');
+        console.log('  Selected monitor:', state.selectedMonitor);
+        console.log('  Monitor ID:', state.selectedMonitor.id);
+        console.log('  Monitor position:', state.selectedMonitor.x, state.selectedMonitor.y);
+        console.log('  Offsets:', offsetX, offsetY);
+        
         await TauriAPI.createScoreboardWindow(
           windowId,
           state.selectedMonitor.id,
           width,
           height,
-          state.selectedMonitor.x,
+          state.selectedMonitor.x, // Use full monitor coordinates for fullscreen mode
           state.selectedMonitor.y,
           offsetX,
           offsetY,
@@ -263,7 +269,7 @@ export const useAppStore = create<AppState & AppActions>()(
           name,
           monitorId: state.selectedMonitor.id,
           position: {
-            x: state.selectedMonitor.x,
+            x: state.selectedMonitor.x, // Use full monitor coordinates for fullscreen mode
             y: state.selectedMonitor.y,
             offsetX,
             offsetY,

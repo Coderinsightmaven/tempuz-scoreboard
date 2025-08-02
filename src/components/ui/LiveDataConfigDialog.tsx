@@ -101,8 +101,14 @@ export const LiveDataConfigDialog: React.FC<LiveDataConfigDialogProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name || !formData.apiUrl || !formData.apiKey) {
-      alert('Please fill in all required fields');
+    // Validate required fields based on provider type
+    if (!formData.name) {
+      alert('Please enter a connection name');
+      return;
+    }
+    
+    if (formData.provider !== 'manual_tennis' && (!formData.apiUrl || !formData.apiKey)) {
+      alert('Please fill in API URL and API Key');
       return;
     }
 
@@ -115,7 +121,7 @@ export const LiveDataConfigDialog: React.FC<LiveDataConfigDialogProps> = ({
     onClose();
   };
 
-  const handlePresetSelect = (preset: 'mock' | 'tennis_api') => {
+  const handlePresetSelect = (preset: 'mock' | 'tennis_api' | 'manual_tennis') => {
     switch (preset) {
       case 'mock':
         setFormData(prev => ({
@@ -131,6 +137,15 @@ export const LiveDataConfigDialog: React.FC<LiveDataConfigDialogProps> = ({
           provider: 'tennis_api',
           apiUrl: 'https://api.tennis-live.com/v1/matches',
           apiKey: '',
+        }));
+        break;
+      case 'manual_tennis':
+        setFormData(prev => ({
+          ...prev,
+          provider: 'manual_tennis',
+          apiUrl: '', // Not used for manual tennis
+          apiKey: '', // Not used for manual tennis
+          pollInterval: 1, // Update every second for responsive manual scoring
         }));
         break;
     }
@@ -176,6 +191,13 @@ export const LiveDataConfigDialog: React.FC<LiveDataConfigDialogProps> = ({
               >
                 Tennis API
               </button>
+              <button
+                type="button"
+                onClick={() => handlePresetSelect('manual_tennis')}
+                className="px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 text-sm"
+              >
+                Manual Tennis
+              </button>
             </div>
           </div>
 
@@ -207,38 +229,59 @@ export const LiveDataConfigDialog: React.FC<LiveDataConfigDialogProps> = ({
               <option value="custom_api">Custom API</option>
               <option value="tennis_api">Tennis API Service</option>
               <option value="mock">Mock Data (Testing)</option>
+              <option value="manual_tennis">Manual Tennis Scoring</option>
             </select>
           </div>
 
-          {/* API URL */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              API URL *
-            </label>
-            <input
-              type="url"
-              value={formData.apiUrl}
-              onChange={(e) => setFormData(prev => ({ ...prev, apiUrl: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-              placeholder="https://api.example.com/tennis/live"
-              required
-            />
-          </div>
+          {/* API URL - Hidden for manual tennis */}
+          {formData.provider !== 'manual_tennis' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                API URL *
+              </label>
+              <input
+                type="url"
+                value={formData.apiUrl}
+                onChange={(e) => setFormData(prev => ({ ...prev, apiUrl: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                placeholder="https://api.example.com/tennis/live"
+                required
+              />
+            </div>
+          )}
 
-          {/* API Key */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              API Key *
-            </label>
-            <input
-              type="password"
-              value={formData.apiKey}
-              onChange={(e) => setFormData(prev => ({ ...prev, apiKey: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-              placeholder="Your API key"
-              required
-            />
-          </div>
+          {/* API Key - Hidden for manual tennis */}
+          {formData.provider !== 'manual_tennis' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                API Key *
+              </label>
+              <input
+                type="password"
+                value={formData.apiKey}
+                onChange={(e) => setFormData(prev => ({ ...prev, apiKey: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                placeholder="Your API key"
+                required
+              />
+            </div>
+          )}
+
+          {/* Manual Tennis Info */}
+          {formData.provider === 'manual_tennis' && (
+            <div className="bg-emerald-50 dark:bg-emerald-900 p-4 rounded-lg">
+              <div className="flex items-center space-x-2 mb-2">
+                <svg className="w-5 h-5 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <h4 className="font-medium text-emerald-800 dark:text-emerald-200">Manual Tennis Scoring</h4>
+              </div>
+              <p className="text-sm text-emerald-700 dark:text-emerald-300">
+                This connection will pull data from the manual tennis scoring interface. 
+                Use the Tennis Scoring button in the main app to input scores manually.
+              </p>
+            </div>
+          )}
 
           {/* Poll Interval */}
           <div>
