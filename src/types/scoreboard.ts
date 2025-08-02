@@ -17,6 +17,7 @@ export const enum ComponentType {
   BACKGROUND = 'background',
   LOGO = 'logo', 
   TEXT = 'text',
+  VIDEO = 'video',
   TENNIS_PLAYER_NAME = 'tennis_player_name',
   TENNIS_GAME_SCORE = 'tennis_game_score',
   TENNIS_SET_SCORE = 'tennis_set_score',
@@ -82,8 +83,19 @@ export interface ComponentData {
   value?: number | string;
   imageUrl?: string;
   imageId?: string;
+  videoId?: string;
   teamId?: string;
   format?: string;
+  // Video-specific data
+  videoData?: {
+    autoplay?: boolean;
+    loop?: boolean;
+    muted?: boolean;
+    controls?: boolean;
+    volume?: number;
+    playbackRate?: number;
+    scaleMode?: 'cover' | 'contain' | 'stretch' | 'original';
+  };
   // Tennis-specific data
   tennisData?: {
     player1SetScore?: number;

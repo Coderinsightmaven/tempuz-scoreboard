@@ -5,6 +5,7 @@ import { ScoreboardComponent, ComponentType } from '../../../types/scoreboard';
 import { ResizeHandle } from '../../../types/canvas';
 import { ResizeHandles } from './ResizeHandles';
 import { ImageComponent } from './ImageComponent';
+import { VideoComponent } from './VideoComponent';
 import { useCanvasStore } from '../../../stores/useCanvasStore';
 import { useLiveDataStore } from '../../../stores/useLiveDataStore';
 
@@ -155,6 +156,29 @@ export const DraggableComponent: React.FC<DraggableComponentProps> = ({
           >
             {component.data.text || 'Sample Text'}
           </div>
+        );
+      case ComponentType.VIDEO:
+        if (!component.data.videoId) {
+          return (
+            <div className="w-full h-full flex items-center justify-center bg-gray-100 border-2 border-dashed border-gray-300 text-gray-500 text-sm">
+              <div className="text-center">
+                <div className="text-2xl mb-2">🎥</div>
+                <div>No Video Selected</div>
+              </div>
+            </div>
+          );
+        }
+        return (
+          <VideoComponent
+            videoId={component.data.videoId}
+            scaleMode={component.data.videoData?.scaleMode || 'cover'}
+            autoplay={component.data.videoData?.autoplay || false}
+            loop={component.data.videoData?.loop || false}
+            muted={component.data.videoData?.muted !== false} // default to true
+            controls={component.data.videoData?.controls || false}
+            volume={component.data.videoData?.volume || 1}
+            playbackRate={component.data.videoData?.playbackRate || 1}
+          />
         );
       case ComponentType.TENNIS_PLAYER_NAME:
       case ComponentType.TENNIS_GAME_SCORE:

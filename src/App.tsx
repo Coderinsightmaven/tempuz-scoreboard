@@ -533,6 +533,15 @@ function App() {
                 Add a text overlay
               </div>
             </button>
+            <button
+              onClick={() => addComponent(ComponentType.VIDEO, { x: 100, y: 100 })}
+              className="w-full text-left p-3 bg-white border border-gray-200 rounded hover:bg-gray-50 transition-colors"
+            >
+              <div className="font-medium">VIDEO</div>
+              <div className="text-sm text-gray-600">
+                Add a video player component
+              </div>
+            </button>
             
             {/* Tennis Live Data Components */}
             <div className="pt-4 border-t border-gray-300">

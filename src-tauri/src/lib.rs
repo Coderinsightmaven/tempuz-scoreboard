@@ -47,6 +47,11 @@ pub fn run() {
             get_stored_images,
             delete_image,
             get_image_data,
+            // Video commands
+            upload_video,
+            get_stored_videos,
+            delete_video,
+            get_video_data,
             // Live data commands
             fetch_live_data,
             test_api_connection,
