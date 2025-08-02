@@ -88,6 +88,26 @@
         .tennis-component {
             /* Specific styling for tennis components */
         }
+        .video-component {
+            position: absolute;
+            overflow: hidden;
+        }
+        .video-component video {
+            width: 100%;
+            height: 100%;
+        }
+        .video-component .video-placeholder {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            background: #333;
+            color: #fff;
+            font-size: 12px;
+            text-align: center;
+            padding: 10px;
+        }
         .live-data-indicator {
             position: absolute;
             top: 2px;
@@ -337,6 +357,8 @@
                         await renderImageComponent(component);
                     } else if (component.type === 'text') {
                         renderTextComponent(component);
+                    } else if (component.type === 'video') {
+                        await renderVideoComponent(component);
                     } else if (component.type === 'tennis_player_name' || 
                                component.type === 'tennis_game_score' || 
                                component.type === 'tennis_set_score' || 
@@ -730,6 +752,111 @@
                 }
             } else {
                 element.innerHTML = `<div class="placeholder-text">No Image</div>`;
+            }
+            
+            container.appendChild(element);
+        }
+
+        async function renderVideoComponent(component) {
+            const container = document.getElementById('scoreboardContainer');
+            
+            const element = document.createElement('div');
+            element.className = 'video-component';
+            element.style.position = 'absolute';
+            // Position component exactly as designed (no offset needed)
+            element.style.left = component.position.x + 'px';
+            element.style.top = component.position.y + 'px';
+            element.style.width = component.size.width + 'px';
+            element.style.height = component.size.height + 'px';
+            element.style.zIndex = component.zIndex || 1;
+            
+            // Apply styling
+            if (component.style) {
+                if (component.style.backgroundColor) {
+                    element.style.backgroundColor = component.style.backgroundColor;
+                }
+                if (component.style.borderWidth) {
+                    const borderColor = component.style.borderColor === 'transparent' ? 'transparent' : (component.style.borderColor || '#000');
+                    element.style.border = `${component.style.borderWidth}px solid ${borderColor}`;
+                }
+                if (component.style.borderRadius) {
+                    element.style.borderRadius = component.style.borderRadius + 'px';
+                }
+                if (component.style.opacity) {
+                    element.style.opacity = component.style.opacity;
+                }
+            }
+            
+            // Load video if available
+            if (component.data && component.data.videoId) {
+                try {
+                    if (window.__TAURI__ && window.__TAURI__.core) {
+                        const { invoke } = window.__TAURI__.core;
+                        const videoData = await invoke('get_video_data', { 
+                            videoId: component.data.videoId 
+                        });
+                        
+                        const video = document.createElement('video');
+                        video.src = videoData;
+                        video.style.width = '100%';
+                        video.style.height = '100%';
+                        video.playsInline = true;
+                        
+                        // Apply video settings from component data
+                        const videoSettings = component.data.videoData || {};
+                        video.autoplay = videoSettings.autoplay || false;
+                        video.loop = videoSettings.loop || false;
+                        video.muted = videoSettings.muted !== false; // default to true
+                        video.controls = videoSettings.controls || false;
+                        video.volume = videoSettings.volume || 1;
+                        video.playbackRate = videoSettings.playbackRate || 1;
+                        
+                        // Apply scale mode
+                        const scaleMode = videoSettings.scaleMode || 'cover';
+                        switch (scaleMode) {
+                            case 'cover':
+                                video.style.objectFit = 'cover';
+                                break;
+                            case 'contain':
+                                video.style.objectFit = 'contain';
+                                break;
+                            case 'stretch':
+                                video.style.objectFit = 'fill';
+                                break;
+                            case 'original':
+                                video.style.objectFit = 'none';
+                                break;
+                            default:
+                                video.style.objectFit = 'cover';
+                        }
+                        
+                        // Handle video errors
+                        video.onerror = () => {
+                            console.error('Video failed to load');
+                            element.innerHTML = `<div class="video-placeholder">Video not found</div>`;
+                        };
+                        
+                        // Try to play the video if autoplay is enabled
+                        if (video.autoplay) {
+                            video.play().catch(error => {
+                                console.log('Autoplay failed:', error);
+                                // This is normal - browsers often block autoplay
+                            });
+                        }
+                        
+                        element.appendChild(video);
+                        
+                        console.log(`Loaded video component:`, component.id, 'Settings:', videoSettings);
+                    } else {
+                        // Fallback: show placeholder
+                        element.innerHTML = `<div class="video-placeholder">🎥<br>Video<br>(Tauri API not available)</div>`;
+                    }
+                } catch (error) {
+                    console.error('Failed to load video:', error);
+                    element.innerHTML = `<div class="video-placeholder">🎥<br>Video not found</div>`;
+                }
+            } else {
+                element.innerHTML = `<div class="video-placeholder">🎥<br>No Video Selected</div>`;
             }
             
             container.appendChild(element);
