@@ -38,15 +38,8 @@ export const DraggableComponent: React.FC<DraggableComponentProps> = ({
         return state.getTennisApiMatch(tennisApiScoreboardId);
       }
 
-      // For design canvas (no specific scoreboard ID), try component ID first,
-      // then fall back to any available match for preview
-      let match = state.getTennisApiMatch(component.id);
-      if (!match) {
-        const matches = Object.values(state.tennisApiMatches);
-        match = matches.length > 0 ? matches[0] : undefined;
-      }
-
-      return match;
+      // For design canvas (no specific scoreboard ID), get match by component ID
+      return state.getTennisApiMatch(component.id);
     })() : null;
   
   // Animate tennis score changes in design canvas

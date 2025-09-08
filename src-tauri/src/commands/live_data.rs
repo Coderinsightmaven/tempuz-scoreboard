@@ -170,7 +170,7 @@ pub async fn test_api_connection(api_url: String, api_key: String) -> Result<boo
     
     let response = client
         .get(&api_url)
-        .header("Authorization", format!("Bearer {}", api_key))
+        .header("x-api-key", api_key)
         .header("Content-Type", "application/json")
         .timeout(std::time::Duration::from_secs(10))
         .send()
@@ -181,57 +181,55 @@ pub async fn test_api_connection(api_url: String, api_key: String) -> Result<boo
 }
 
 #[tauri::command]
-pub async fn get_available_matches(api_url: String, api_key: String) -> Result<Vec<MatchInfo>, String> {
-    // For mock URLs, return sample matches
+pub async fn get_available_scoreboards(api_url: String, api_key: String) -> Result<Vec<ScoreboardInfo>, String> {
+    // For mock URLs, return sample scoreboards
     if api_url.contains("mock") {
         return Ok(vec![
-            MatchInfo {
-                match_id: "mock_match_001".to_string(),
-                player1_name: "Novak Djokovic".to_string(),
-                player2_name: "Rafael Nadal".to_string(),
-                tournament: "Wimbledon".to_string(),
-                round: "Final".to_string(),
-                status: "in_progress".to_string(),
+            ScoreboardInfo {
+                id: "test-1".to_string(),
+                name: "Test Court 1".to_string(),
             },
-            MatchInfo {
-                match_id: "mock_match_002".to_string(),
-                player1_name: "Carlos Alcaraz".to_string(),
-                player2_name: "Daniil Medvedev".to_string(),
-                tournament: "Wimbledon".to_string(),
-                round: "Semi-Final".to_string(),
-                status: "completed".to_string(),
+            ScoreboardInfo {
+                id: "test-2".to_string(),
+                name: "Test Court 2".to_string(),
+            },
+            ScoreboardInfo {
+                id: "stadium".to_string(),
+                name: "Main Stadium".to_string(),
             },
         ]);
     }
 
     let client = reqwest::Client::new();
-    let matches_url = format!("{}/matches", api_url.trim_end_matches('/'));
-    
+    let scoreboards_url = format!("{}/scoreboards", api_url.trim_end_matches('/'));
+
     let response = client
-        .get(&matches_url)
-        .header("Authorization", format!("Bearer {}", api_key))
+        .get(&scoreboards_url)
+        .header("x-api-key", api_key)
         .header("Content-Type", "application/json")
         .send()
         .await
-        .map_err(|e| format!("Failed to fetch matches: {}", e))?;
+        .map_err(|e| format!("Failed to fetch scoreboards: {}", e))?;
 
     if !response.status().is_success() {
         return Err(format!(
-            "Failed to fetch matches with status: {}",
+            "Failed to fetch scoreboards with status: {}",
             response.status()
         ));
     }
 
-    let api_response: ApiResponse<Vec<MatchInfo>> = response
+    let scoreboards: Vec<ScoreboardInfo> = response
         .json()
         .await
-        .map_err(|e| format!("Failed to parse matches response: {}", e))?;
+        .map_err(|e| format!("Failed to parse scoreboards response: {}", e))?;
 
-    if !api_response.success {
-        return Err(api_response.error.unwrap_or("Unknown API error".to_string()));
-    }
+    Ok(scoreboards)
+}
 
-    api_response.data.ok_or_else(|| "No matches data in response".to_string())
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ScoreboardInfo {
+    pub id: String,
+    pub name: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -283,11 +283,11 @@ export class TauriAPI {
     }
   }
 
-  static async getAvailableMatches(apiUrl: string, apiKey: string): Promise<MatchInfo[]> {
+  static async getAvailableScoreboards(apiUrl: string, apiKey: string): Promise<ScoreboardInfo[]> {
     try {
-      return await invoke('get_available_matches', { apiUrl, apiKey });
+      return await invoke('get_available_scoreboards', { apiUrl, apiKey });
     } catch (error) {
-      console.error('Failed to get available matches:', error);
+      console.error('Failed to get available scoreboards:', error);
       throw error;
     }
   }
@@ -338,6 +338,11 @@ export class TauriAPI {
       throw error;
     }
   }
+}
+
+export interface ScoreboardInfo {
+  id: string;
+  name: string;
 }
 
 export interface MatchInfo {

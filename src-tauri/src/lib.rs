@@ -55,7 +55,7 @@ pub fn run() {
             // Live data commands
             fetch_live_data,
             test_api_connection,
-            get_available_matches,
+            get_available_scoreboards,
                     // Live data storage commands
         save_live_data_connections,
         load_live_data_connections,

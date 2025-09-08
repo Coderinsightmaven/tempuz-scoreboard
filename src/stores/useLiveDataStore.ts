@@ -3,7 +3,7 @@ import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { LiveDataConnection, TennisLiveData, LiveDataComponentBinding } from '../types/scoreboard';
 import { v4 as uuidv4 } from 'uuid';
-import { TauriAPI, LiveDataState } from '../lib/tauri';
+import { TauriAPI, LiveDataState, ScoreboardInfo } from '../lib/tauri';
 
 interface LiveDataStoreState {
   connections: LiveDataConnection[];
@@ -16,8 +16,7 @@ interface LiveDataStoreState {
 
   // Tennis API integration
   tennisApiConnected: boolean;
-  tennisApiMatches: Record<string, any>;
-  tennisApiScoreboards: any[];
+  tennisApiScoreboards: ScoreboardInfo[];
 }
 
 interface LiveDataActions {
@@ -59,7 +58,7 @@ interface LiveDataActions {
   disconnectFromTennisApi: () => void;
   clearError: () => void;
   getTennisApiMatch: (scoreboardId: string) => any;
-  getTennisApiScoreboards: () => any[];
+  getTennisApiScoreboards: () => ScoreboardInfo[];
 }
 
 const getValueFromPath = (obj: any, path: string): any => {
@@ -150,7 +149,6 @@ export const useLiveDataStore = create<LiveDataStoreState & LiveDataActions>()(
 
     // Tennis API integration
     tennisApiConnected: false,
-    tennisApiMatches: {},
     tennisApiScoreboards: [],
 
     // Connection management
@@ -498,11 +496,18 @@ export const useLiveDataStore = create<LiveDataStoreState & LiveDataActions>()(
         const isConnected = await TauriAPI.testApiConnection(apiUrl, apiKey);
 
         if (isConnected) {
+          console.log('✅ Connection test successful, fetching available scoreboards...');
+
+          // Fetch available scoreboards
+          const scoreboards = await TauriAPI.getAvailableScoreboards(apiUrl, apiKey);
+
           set({
             tennisApiConnected: true,
+            tennisApiScoreboards: scoreboards,
             lastError: null
           });
-          console.log('✅ Successfully connected to tennis API');
+
+          console.log('✅ Successfully connected to tennis API and fetched', scoreboards.length, 'scoreboards');
         } else {
           throw new Error('Failed to connect to tennis API');
         }
@@ -511,6 +516,7 @@ export const useLiveDataStore = create<LiveDataStoreState & LiveDataActions>()(
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         set({
           tennisApiConnected: false,
+          tennisApiScoreboards: [],
           lastError: errorMessage
         });
         throw error;
@@ -519,9 +525,9 @@ export const useLiveDataStore = create<LiveDataStoreState & LiveDataActions>()(
 
     disconnectFromTennisApi: () => {
       console.log('🔌 Disconnecting from tennis API...');
+
       set({
         tennisApiConnected: false,
-        tennisApiMatches: {},
         tennisApiScoreboards: [],
         lastError: null
       });
@@ -531,9 +537,10 @@ export const useLiveDataStore = create<LiveDataStoreState & LiveDataActions>()(
       set({ lastError: null });
     },
 
-    getTennisApiMatch: (scoreboardId: string) => {
-      const state = get();
-      return state.tennisApiMatches[scoreboardId];
+    getTennisApiMatch: (_scoreboardId: string) => {
+      // For now, return null since we only fetch scoreboard list, not match data
+      // Match data should be fetched separately when needed (e.g., when opening scoreboard.html)
+      return null;
     },
 
     getTennisApiScoreboards: () => {
