@@ -858,6 +858,8 @@
 
             const pollData = async () => {
                 try {
+                    // MOCK DATA DISABLED - No longer using mock data for live updates
+                    /*
                     // This would need to be connected to the live data store
                     // For now, we'll simulate with mock data
                     if (binding.connectionId.includes('mock') || binding.connectionId === 'mock_connection') {
@@ -867,12 +869,12 @@
                             // Get current value for comparison
                             const currentValue = element.textContent;
                             const newValue = String(value);
-                            
+
                             // Only update and animate if value actually changed
                             if (currentValue !== newValue) {
                                 // Apply transition animation based on component type and change
                                 animateValueChange(element, component, currentValue, newValue);
-                                
+
                                 // Update the text content
                                 const textNodes = element.childNodes;
                                 if (textNodes.length > 0) {
@@ -890,6 +892,7 @@
                             }
                         }
                     }
+                    */
                 } catch (error) {
                     console.error('Failed to poll live data:', error);
                 }
@@ -954,21 +957,23 @@
             }, duration);
         }
 
+        // MOCK DATA FUNCTION DISABLED - No longer generating fake tennis data
+        /*
         function getMockTennisData() {
             // Progressive match simulation - starts at set 1 and progresses over time
             const now = Date.now();
             const matchStartTime = window.mockMatchStartTime || (window.mockMatchStartTime = now);
             const matchDuration = now - matchStartTime;
-            
+
             // Progress through sets over time (each set takes ~30 seconds for demo)
             let currentSet = 1;
             let setsWon = { player1: 0, player2: 0 };
             let setsData = {};
-            
+
             // Determine current set based on time elapsed
             if (matchDuration > 30000) currentSet = 2; // After 30 seconds, start set 2
             if (matchDuration > 60000) currentSet = 3; // After 60 seconds, start set 3
-            
+
             // Build sets data progressively
             for (let setNum = 1; setNum <= currentSet; setNum++) {
                 if (setNum < currentSet) {
@@ -997,7 +1002,7 @@
                     seed: 1
                 },
                 player2: {
-                    name: "Rafael Nadal", 
+                    name: "Rafael Nadal",
                     country: "ESP",
                     seed: 2
                 },
@@ -1019,6 +1024,7 @@
                 isTiebreak: false
             };
         }
+        */
 
         // Cleanup intervals and WebSocket when window is closed
         window.addEventListener('beforeunload', () => {
