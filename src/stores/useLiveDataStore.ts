@@ -13,6 +13,11 @@ interface LiveDataStoreState {
   pollingIntervals: Record<string, number>;
   isLoaded: boolean;
   lastError: string | null;
+
+  // Tennis API integration
+  tennisApiConnected: boolean;
+  tennisApiMatches: Record<string, any>;
+  tennisApiScoreboards: any[];
 }
 
 interface LiveDataActions {
@@ -48,9 +53,13 @@ interface LiveDataActions {
   loadConnections: () => Promise<void>;
   saveConnections: () => Promise<void>;
   
-  // Manual tennis integration
-  createManualTennisConnection: (name?: string) => string;
-  refreshManualTennisData: () => void;
+
+  // Tennis API integration
+  connectToTennisApi: (apiUrl: string, apiKey: string) => Promise<void>;
+  disconnectFromTennisApi: () => void;
+  clearError: () => void;
+  getTennisApiMatch: (scoreboardId: string) => any;
+  getTennisApiScoreboards: () => any[];
 }
 
 const getValueFromPath = (obj: any, path: string): any => {
@@ -138,6 +147,11 @@ export const useLiveDataStore = create<LiveDataStoreState & LiveDataActions>()(
     pollingIntervals: {},
     isLoaded: false,
     lastError: null,
+
+    // Tennis API integration
+    tennisApiConnected: false,
+    tennisApiMatches: {},
+    tennisApiScoreboards: [],
 
     // Connection management
     addConnection: (connectionData) => {
@@ -306,37 +320,10 @@ export const useLiveDataStore = create<LiveDataStoreState & LiveDataActions>()(
           // Handle different data providers
           if (connection.provider === 'mock') {
             data = getMockTennisDataProgressive();
-          } else if (connection.provider === 'manual_tennis') {
-            // Import manual tennis store dynamically to avoid circular dependencies
-            const manualTennisModule = await import('./useManualTennisStore');
-            const manualTennisStore = manualTennisModule.useManualTennisStore.getState();
-            data = manualTennisStore.getCurrentData();
-            
-            // If no manual match is active, provide empty data
-            if (!data) {
-              data = {
-                matchId: 'manual_no_match',
-                player1: { name: 'Player 1' },
-                player2: { name: 'Player 2' },
-                score: {
-                  player1Sets: 0,
-                  player2Sets: 0,
-                  player1Games: 0,
-                  player2Games: 0,
-                  player1Points: '0',
-                  player2Points: '0',
-                },
-                sets: {},
-                matchStatus: 'not_started',
-                servingPlayer: 1,
-                currentSet: 1,
-                isTiebreak: false,
-              };
-            }
           } else {
             // Import TauriAPI dynamically to avoid circular dependencies
             const tauriModule = await import('../lib/tauri');
-            data = await tauriModule.TauriAPI.fetchLiveData(connection.apiUrl, connection.apiKey);
+            data = await tauriModule.TauriAPI.fetchLiveData(connection.apiUrl || '', connection.apiKey || '');
           }
           
           get().updateLiveData(connectionId, data);
@@ -472,8 +459,8 @@ export const useLiveDataStore = create<LiveDataStoreState & LiveDataActions>()(
             id: conn.id,
             name: conn.name,
             provider: conn.provider,
-            apiUrl: conn.apiUrl,
-            apiKey: conn.apiKey,
+            apiUrl: conn.apiUrl || '',
+            apiKey: conn.apiKey || '',
             pollInterval: conn.pollInterval,
             isActive: conn.isActive,
             createdAt: conn.createdAt ? conn.createdAt.toISOString() : new Date().toISOString(),
@@ -500,72 +487,58 @@ export const useLiveDataStore = create<LiveDataStoreState & LiveDataActions>()(
       }
     },
 
-    // Manual tennis integration
-    createManualTennisConnection: (name = 'Manual Tennis Match') => {
-      const id = uuidv4();
-      const now = new Date();
-      const connection: LiveDataConnection = {
-        id,
-        name,
-        provider: 'manual_tennis',
-        apiUrl: '', // Not used for manual tennis
-        apiKey: '', // Not used for manual tennis
-        pollInterval: 1, // Update every second for responsive manual scoring
-        isActive: false,
-        lastUpdated: now,
-      };
-      
-      set((state) => ({
-        connections: [...state.connections, connection],
-      }));
-      
-      // Auto-save after adding connection
-      setTimeout(() => get().saveConnections(), 100);
-      
-      return id;
+
+    // Tennis API integration methods
+    connectToTennisApi: async (apiUrl: string, apiKey: string) => {
+      try {
+        console.log('🔌 Connecting to tennis API...');
+        set({ lastError: null });
+
+        // Test the connection first
+        const isConnected = await TauriAPI.testApiConnection(apiUrl, apiKey);
+
+        if (isConnected) {
+          set({
+            tennisApiConnected: true,
+            lastError: null
+          });
+          console.log('✅ Successfully connected to tennis API');
+        } else {
+          throw new Error('Failed to connect to tennis API');
+        }
+      } catch (error) {
+        console.error('❌ Failed to connect to tennis API:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        set({
+          tennisApiConnected: false,
+          lastError: errorMessage
+        });
+        throw error;
+      }
     },
 
-    refreshManualTennisData: () => {
-      const state = get();
-      
-      // Find all active manual tennis connections and refresh their data
-      const manualConnections = state.connections.filter(
-        conn => conn.provider === 'manual_tennis' && conn.isActive
-      );
-      
-      manualConnections.forEach(async (connection) => {
-        try {
-          // Import manual tennis store dynamically
-          const manualTennisModule = await import('./useManualTennisStore');
-          const manualTennisStore = manualTennisModule.useManualTennisStore.getState();
-          const data = manualTennisStore.getCurrentData();
-          
-          // Provide default data if no manual match is active
-          const finalData = data || {
-            matchId: 'manual_no_match',
-            player1: { name: 'Player 1' },
-            player2: { name: 'Player 2' },
-            score: {
-              player1Sets: 0,
-              player2Sets: 0,
-              player1Games: 0,
-              player2Games: 0,
-              player1Points: '0',
-              player2Points: '0',
-            },
-            sets: {},
-            matchStatus: 'not_started',
-            servingPlayer: 1,
-            currentSet: 1,
-            isTiebreak: false,
-          };
-          
-          get().updateLiveData(connection.id, finalData);
-        } catch (error) {
-          console.error('Failed to refresh manual tennis data:', error);
-          get().setConnectionError(connection.id, 'Failed to get manual tennis data');
-        }
+    disconnectFromTennisApi: () => {
+      console.log('🔌 Disconnecting from tennis API...');
+      set({
+        tennisApiConnected: false,
+        tennisApiMatches: {},
+        tennisApiScoreboards: [],
+        lastError: null
       });
+    },
+
+    clearError: () => {
+      set({ lastError: null });
+    },
+
+    getTennisApiMatch: (scoreboardId: string) => {
+      const state = get();
+      return state.tennisApiMatches[scoreboardId];
+    },
+
+    getTennisApiScoreboards: () => {
+      const state = get();
+      return state.tennisApiScoreboards;
     },
   }))
 );

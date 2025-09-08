@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAppStore } from '../../stores/useAppStore';
+import { useLiveDataStore } from '../../stores/useLiveDataStore';
 import { ScoreboardInstance } from '../../types/scoreboard';
 import { TauriAPI, TauriScoreboardConfig } from '../../lib/tauri';
 
@@ -28,7 +29,6 @@ export const MultipleScoreboardManager: React.FC<MultipleScoreboardManagerProps>
     isCreatingScoreboardWindow,
   } = useAppStore();
 
-  const [newScoreboardName, setNewScoreboardName] = useState('');
   const [newScoreboardWidth, setNewScoreboardWidth] = useState(800);
   const [newScoreboardHeight, setNewScoreboardHeight] = useState(600);
   const [newOffsetX, setNewOffsetX] = useState(0);
@@ -36,7 +36,11 @@ export const MultipleScoreboardManager: React.FC<MultipleScoreboardManagerProps>
   const [savedScoreboards, setSavedScoreboards] = useState<TauriScoreboardConfig[]>([]);
   const [selectedScoreboardId, setSelectedScoreboardId] = useState<string>('');
   const [isLoadingScoreboards, setIsLoadingScoreboards] = useState(false);
-  const [createFromSaved, setCreateFromSaved] = useState(false);
+
+  // Tennis API scoreboards
+  const [selectedTennisApiScoreboardId, setSelectedTennisApiScoreboardId] = useState<string>('');
+  const tennisApiConnected = useLiveDataStore((state) => state.tennisApiConnected);
+  const availableTennisApiScoreboards = useLiveDataStore((state) => state.tennisApiScoreboards);
 
   // Load saved scoreboards when dialog opens
   useEffect(() => {
@@ -58,53 +62,33 @@ export const MultipleScoreboardManager: React.FC<MultipleScoreboardManagerProps>
   };
 
   const handleCreateScoreboard = async () => {
-    if (createFromSaved) {
-      if (!selectedScoreboardId) {
-        alert('Please select a saved scoreboard design');
-        return;
-      }
-      
-      const selectedScoreboard = savedScoreboards.find(sb => sb.id === selectedScoreboardId);
-      if (!selectedScoreboard) {
-        alert('Selected scoreboard not found');
-        return;
-      }
+    if (!selectedScoreboardId) {
+      alert('Please select a saved scoreboard design');
+      return;
+    }
 
-      const instanceId = await createScoreboardInstance(
-        selectedScoreboard.name,
-        newScoreboardWidth,
-        newScoreboardHeight,
-        newOffsetX,
-        newOffsetY,
-        selectedScoreboardId
-      );
+    const selectedScoreboard = savedScoreboards.find(sb => sb.id === selectedScoreboardId);
+    if (!selectedScoreboard) {
+      alert('Selected scoreboard not found');
+      return;
+    }
 
-      if (instanceId) {
-        // Reset form
-        setSelectedScoreboardId('');
-        setNewOffsetX(0);
-        setNewOffsetY(0);
-        setCreateFromSaved(false);
-      }
-    } else {
-      if (!newScoreboardName.trim()) {
-        alert('Please enter a name for the scoreboard');
-        return;
-      }
+    const instanceId = await createScoreboardInstance(
+      selectedScoreboard.name,
+      newScoreboardWidth,
+      newScoreboardHeight,
+      newOffsetX,
+      newOffsetY,
+      selectedScoreboardId,
+      selectedTennisApiScoreboardId || undefined
+    );
 
-      const instanceId = await createScoreboardInstance(
-        newScoreboardName,
-        newScoreboardWidth,
-        newScoreboardHeight,
-        newOffsetX,
-        newOffsetY
-      );
-
-      if (instanceId) {
-        setNewScoreboardName('');
-        setNewOffsetX(0);
-        setNewOffsetY(0);
-      }
+    if (instanceId) {
+      // Reset form
+      setSelectedScoreboardId('');
+      setNewOffsetX(0);
+      setNewOffsetY(0);
+      setSelectedTennisApiScoreboardId('');
     }
   };
 
@@ -130,12 +114,12 @@ export const MultipleScoreboardManager: React.FC<MultipleScoreboardManagerProps>
 
   // Update dimensions when a saved scoreboard is selected
   useEffect(() => {
-    if (createFromSaved && selectedScoreboardId) {
+    if (selectedScoreboardId) {
       const dimensions = getSelectedScoreboardDimensions();
       setNewScoreboardWidth(dimensions.width);
       setNewScoreboardHeight(dimensions.height);
     }
-  }, [selectedScoreboardId, createFromSaved]);
+  }, [selectedScoreboardId]);
 
   if (!isOpen) return null;
 
@@ -237,83 +221,50 @@ export const MultipleScoreboardManager: React.FC<MultipleScoreboardManagerProps>
             <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
               Create New Scoreboard Display
             </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              Create display windows from your saved scoreboard designs. You must have at least one saved design to create displays.
+            </p>
             
-            {/* Toggle between new and saved */}
-            <div className="mb-4">
-              <div className="flex space-x-4">
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    name="scoreboardType"
-                    checked={!createFromSaved}
-                    onChange={() => setCreateFromSaved(false)}
-                    className="mr-2"
-                  />
-                  <span className="text-sm text-gray-700 dark:text-gray-300">Create blank scoreboard</span>
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    name="scoreboardType"
-                    checked={createFromSaved}
-                    onChange={() => setCreateFromSaved(true)}
-                    className="mr-2"
-                  />
-                  <span className="text-sm text-gray-700 dark:text-gray-300">Use saved design</span>
-                </label>
-              </div>
-            </div>
 
-            {createFromSaved ? (
-              /* Saved Scoreboard Selection */
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Select Saved Scoreboard
-                </label>
-                {isLoadingScoreboards ? (
-                  <p className="text-sm text-gray-500">Loading saved scoreboards...</p>
-                ) : savedScoreboards.length === 0 ? (
-                  <p className="text-sm text-orange-600 dark:text-orange-400">
-                    No saved scoreboards found. Create and save a scoreboard design first.
+            {/* Saved Scoreboard Selection */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Select Saved Scoreboard Design
+              </label>
+              {isLoadingScoreboards ? (
+                <p className="text-sm text-gray-500">Loading saved scoreboards...</p>
+              ) : savedScoreboards.length === 0 ? (
+                <div className="p-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-700 rounded-md">
+                  <p className="text-sm text-orange-800 dark:text-orange-200 font-medium mb-2">
+                    ⚠️ No saved scoreboards found
                   </p>
-                ) : (
-                  <select
-                    value={selectedScoreboardId}
-                    onChange={(e) => setSelectedScoreboardId(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  >
-                    <option value="">Select a saved scoreboard...</option>
-                    {savedScoreboards.map((scoreboard) => (
-                      <option key={scoreboard.id} value={scoreboard.id}>
-                        {scoreboard.name} - {new Date(scoreboard.updated_at).toLocaleDateString()}
-                      </option>
-                    ))}
-                  </select>
-                )}
-                {selectedScoreboardId && (
-                  <button
-                    onClick={loadSavedScoreboards}
-                    className="mt-2 text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
-                  >
-                    Refresh List
-                  </button>
-                )}
-              </div>
-            ) : (
-              /* New Scoreboard Name */
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Display Name
-                </label>
-                <input
-                  type="text"
-                  value={newScoreboardName}
-                  onChange={(e) => setNewScoreboardName(e.target.value)}
+                  <p className="text-sm text-orange-700 dark:text-orange-300">
+                    You must create and save a scoreboard design first before you can create display windows.
+                  </p>
+                </div>
+              ) : (
+                <select
+                  value={selectedScoreboardId}
+                  onChange={(e) => setSelectedScoreboardId(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  placeholder="Scoreboard Display 1"
-                />
-              </div>
-            )}
+                >
+                  <option value="">Select a saved scoreboard design...</option>
+                  {savedScoreboards.map((scoreboard) => (
+                    <option key={`saved-${scoreboard.id}`} value={scoreboard.id}>
+                      {scoreboard.name} - {new Date(scoreboard.updated_at).toLocaleDateString()}
+                    </option>
+                  ))}
+                </select>
+              )}
+              {selectedScoreboardId && (
+                <button
+                  onClick={loadSavedScoreboards}
+                  className="mt-2 text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                >
+                  Refresh List
+                </button>
+              )}
+            </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div className="grid grid-cols-2 gap-2">
@@ -326,7 +277,7 @@ export const MultipleScoreboardManager: React.FC<MultipleScoreboardManagerProps>
                     value={newScoreboardWidth}
                     onChange={(e) => setNewScoreboardWidth(Number(e.target.value))}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    disabled={createFromSaved}
+                    disabled={!!selectedScoreboardId}
                   />
                 </div>
                 <div>
@@ -338,7 +289,7 @@ export const MultipleScoreboardManager: React.FC<MultipleScoreboardManagerProps>
                     value={newScoreboardHeight}
                     onChange={(e) => setNewScoreboardHeight(Number(e.target.value))}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    disabled={createFromSaved}
+                    disabled={!!selectedScoreboardId}
                   />
                 </div>
               </div>
@@ -371,9 +322,50 @@ export const MultipleScoreboardManager: React.FC<MultipleScoreboardManagerProps>
               </div>
             </div>
 
+            {/* Tennis API Scoreboard Selection */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                🎾 Tennis API Data Source <span className="text-xs text-gray-500">(Optional)</span>
+              </label>
+              {!tennisApiConnected ? (
+                <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-md">
+                  <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                    ⚠️ Tennis API not connected. Scoreboard will display static content only.
+                  </p>
+                  <p className="text-xs text-yellow-600 dark:text-yellow-300 mt-1">
+                    Connect to tennis API in the main app to enable live data.
+                  </p>
+                </div>
+              ) : availableTennisApiScoreboards.length === 0 ? (
+                <div className="p-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-700 rounded-md">
+                  <p className="text-sm text-orange-800 dark:text-orange-200">
+                    📭 No tennis API scoreboards available.
+                  </p>
+                  <p className="text-xs text-orange-600 dark:text-orange-300 mt-1">
+                    Create scoreboards in the tennis API first.
+                  </p>
+                </div>
+              ) : (
+                <select
+                  value={selectedTennisApiScoreboardId}
+                  onChange={(e) => setSelectedTennisApiScoreboardId(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                >
+                  <option value="">-- No live data (static display) --</option>
+                  {availableTennisApiScoreboards.map((scoreboard: { id: string; name: string }) => (<option key={`api-${scoreboard.id}`} value={scoreboard.id}>
+                      {scoreboard.name} (ID: {scoreboard.id})
+                    </option>
+                  ))}
+                </select>
+              )}
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Select which tennis API scoreboard this display should listen to for live data updates.
+              </p>
+            </div>
+
             <button
               onClick={handleCreateScoreboard}
-              disabled={!selectedMonitor || isCreatingScoreboardWindow || (createFromSaved && !selectedScoreboardId) || (!createFromSaved && !newScoreboardName.trim())}
+              disabled={!selectedMonitor || isCreatingScoreboardWindow || !selectedScoreboardId}
               className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-medium py-2 px-4 rounded-md transition-colors"
             >
               {isCreatingScoreboardWindow ? 'Creating...' : 'Create Scoreboard Display'}
@@ -461,6 +453,22 @@ const ScoreboardInstanceCard: React.FC<ScoreboardInstanceCardProps> = ({
           <p className="text-sm text-gray-500 dark:text-gray-400">
             Created: {instance.createdAt.toLocaleString()}
           </p>
+          {instance.tennisApiScoreboardId ? (
+            <div className="mt-2 p-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded text-xs">
+              <div className="font-medium text-green-800 dark:text-green-200 flex items-center">
+                🎾 Listening to: Tennis API Scoreboard
+              </div>
+              <div className="text-green-600 dark:text-green-400 mt-1">
+                ID: {instance.tennisApiScoreboardId}
+              </div>
+            </div>
+          ) : (
+            <div className="mt-2 p-2 bg-gray-50 dark:bg-gray-900/20 border border-gray-200 dark:border-gray-700 rounded text-xs">
+              <div className="text-gray-600 dark:text-gray-400">
+                📊 Static display (no live data)
+              </div>
+            </div>
+          )}
         </div>
         <div className="flex space-x-2">
           <button

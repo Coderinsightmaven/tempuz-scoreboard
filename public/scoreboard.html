@@ -31,18 +31,37 @@
             height: 100%;
             object-fit: cover;
         }
-        .status-indicator { 
-            position: absolute; 
-            top: 10px; 
-            right: 10px; 
-            padding: 4px 8px; 
-            background: rgba(0,255,136,0.2); 
-            border: 1px solid #00ff88; 
-            border-radius: 12px; 
-            font-size: 0.7rem; 
-            font-weight: bold; 
-            color: #00ff88; 
-            z-index: 1000; 
+        .status-indicator {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 4px 8px;
+            background: rgba(0,255,136,0.2);
+            border: 1px solid #00ff88;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            color: #00ff88;
+            z-index: 1000;
+        }
+        .tennis-api-indicator {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            padding: 4px 8px;
+            background: rgba(255,136,0,0.2);
+            border: 1px solid #ff8800;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            color: #ff8800;
+            z-index: 1000;
+            display: none;
+        }
+        .tennis-api-indicator.connected {
+            background: rgba(0,255,136,0.2);
+            border: 1px solid #00ff88;
+            color: #00ff88;
         }
         .loading-message { 
             width: 100%; 
@@ -215,7 +234,15 @@
             <div>Loading Scoreboard...</div>
             <div class="debug-info" id="debugInfo">Initializing...</div>
         </div>
+
+        <!-- Tennis API Connection Status Indicator -->
+        <div class="tennis-api-indicator" id="tennisApiIndicator">
+            <span id="tennisApiStatus">🎾 Connecting...</span>
+        </div>
     </div>
+
+    <!-- Load Socket.IO client for WebSocket connections -->
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 
     <script>
         let currentWindow = null;
@@ -308,7 +335,19 @@
             
             if (instanceData) {
                 scoreboardData = instanceData.scoreboardData || instanceData;
+                console.log('🎾 [SCOREBOARD] Received scoreboard data:', scoreboardData);
                 updateDebug(`Found ${scoreboardData.components ? scoreboardData.components.length : 0} components`);
+
+                // Debug: Log tennis API scoreboard ID
+                if (scoreboardData.tennisApiScoreboardId) {
+                    console.log('🎾 [SCOREBOARD] ✅ Found tennis API scoreboard ID:', scoreboardData.tennisApiScoreboardId);
+                    updateDebug(`Tennis API ID: ${scoreboardData.tennisApiScoreboardId}`);
+                } else {
+                    console.log('🎾 [SCOREBOARD] ❌ No tennisApiScoreboardId found in scoreboard data');
+                    console.log('🎾 [SCOREBOARD] 📊 Available data keys:', Object.keys(scoreboardData));
+                    updateDebug('No tennis API ID found');
+                }
+
                 await renderScoreboard(scoreboardData);
                 // Initialize live data after rendering
                 loadLiveDataConnections();
@@ -418,6 +457,10 @@
         let activeDataSources = {};
         let pollingIntervals = {};
 
+        // Tennis API WebSocket connection
+        let tennisApiSocket = null;
+        let tennisApiScoreboardId = null;
+
         async function loadLiveDataConnections() {
             try {
                 if (!window.__TAURI__ || !window.__TAURI__.core) {
@@ -425,11 +468,320 @@
                     return;
                 }
 
-                // In a real implementation, we'd load connections from storage
-                // For now, we'll check if there are any active connections from the main app
-                console.log('Live data setup ready for scoreboard display');
+                // Get tennis API scoreboard ID from scoreboard data
+                if (scoreboardData && scoreboardData.tennisApiScoreboardId) {
+                    tennisApiScoreboardId = scoreboardData.tennisApiScoreboardId;
+                    console.log('🎾 [SCOREBOARD] Found tennis API scoreboard ID:', tennisApiScoreboardId);
+                    console.log('🎾 [SCOREBOARD] This scoreboard will only receive updates for tennis API scoreboard:', tennisApiScoreboardId);
+                    updateDebug(`Connecting to tennis API scoreboard: ${tennisApiScoreboardId}`);
+
+                    // Show tennis API indicator
+                    const indicator = document.getElementById('tennisApiIndicator');
+                    if (indicator) {
+                        indicator.style.display = 'block';
+                    }
+
+                    // Connect to tennis API WebSocket
+                    await connectToTennisApi();
+                } else {
+                    console.log('🎾 [SCOREBOARD] No tennis API scoreboard ID found in scoreboard data');
+                    console.log('🎾 [SCOREBOARD] This scoreboard will display static content only');
+                    updateDebug('No tennis API scoreboard configured');
+                }
             } catch (error) {
                 console.error('Failed to load live data connections:', error);
+            }
+        }
+
+        async function connectToTennisApi() {
+            try {
+                console.log('🎾 [SCOREBOARD] Initializing tennis API WebSocket connection...');
+
+                // Use the same WebSocket URL as the main app
+                // For now, assume it's running on localhost:3000
+                const wsUrl = 'ws://localhost:3000';
+                console.log('🎾 [SCOREBOARD] WebSocket URL:', wsUrl);
+                console.log('🎾 [SCOREBOARD] Listening for tennis API scoreboard ID:', tennisApiScoreboardId);
+
+                // Create socket.io client
+                tennisApiSocket = io(wsUrl, {
+                    transports: ['websocket', 'polling'],
+                    timeout: 5000,
+                    forceNew: true,
+                });
+
+                console.log('🎾 [SCOREBOARD] Socket.IO client created, attempting connection...');
+
+                tennisApiSocket.on('connect', () => {
+                    console.log('🎾 [SCOREBOARD] ✅ Successfully connected to tennis API WebSocket!');
+                    console.log('🎾 [SCOREBOARD] 🔗 WebSocket connection established to:', wsUrl);
+                    console.log('🎾 [SCOREBOARD] 📡 Listening for updates on tennis API scoreboard:', tennisApiScoreboardId);
+                    console.log('🎾 [SCOREBOARD] 🎯 Ready to receive live tennis match data');
+                    updateDebug('Connected to tennis API');
+                    updateTennisApiIndicator('🎾 Connected', true);
+                });
+
+                tennisApiSocket.on('disconnect', (reason) => {
+                    console.log('🎾 [SCOREBOARD] ❌ Disconnected from tennis API WebSocket');
+                    console.log('🎾 [SCOREBOARD] 📵 Disconnect reason:', reason);
+                    console.log('🎾 [SCOREBOARD] 🔄 Will attempt to reconnect automatically');
+                    updateDebug('Disconnected from tennis API');
+                    updateTennisApiIndicator('🎾 Disconnected', false);
+                });
+
+                tennisApiSocket.on('connect_error', (error) => {
+                    console.error('🎾 [SCOREBOARD] 🚨 WebSocket connection error:', error);
+                    console.error('🎾 [SCOREBOARD] ❌ Error details:', error.message);
+                    console.log('🎾 [SCOREBOARD] 🔄 Will retry connection automatically');
+                    updateDebug(`WebSocket error: ${error.message}`);
+                    updateTennisApiIndicator('🎾 Connection Error', false);
+                });
+
+                // Listen for tennis match updates
+                tennisApiSocket.on('tennis:match:updated', (message) => {
+                    console.log('🎾 [SCOREBOARD] 📨 Received tennis:match:updated event');
+                    console.log('🎾 [SCOREBOARD] 📦 Full message received:', message);
+
+                    // Extract the actual match data from the message
+                    const match = message?.data;
+                    console.log('🎾 [SCOREBOARD] 📊 Match data extracted:', match);
+                    console.log('🎾 [SCOREBOARD] 🔍 Match scoreboard ID:', match?.scoreboardId || 'UNDEFINED');
+                    console.log('🎾 [SCOREBOARD] 🎯 Our scoreboard ID:', tennisApiScoreboardId);
+                    console.log('🎾 [SCOREBOARD] 📋 Match data keys:', match ? Object.keys(match) : 'null');
+
+                    // Check if match has valid scoreboardId
+                    if (!match || !match.scoreboardId) {
+                        console.log('🎾 [SCOREBOARD] ⚠️ Match data is missing scoreboardId field');
+                        console.log('🎾 [SCOREBOARD] ⏭️ Ignoring update - invalid match data');
+                        return;
+                    }
+
+                    // Only update if this match is for our scoreboard
+                    if (match.scoreboardId === tennisApiScoreboardId) {
+                        console.log('🎾 [SCOREBOARD] ✅ Match is for our scoreboard - updating components...');
+                        console.log('🎾 [SCOREBOARD] 🔄 Updating tennis components with live data');
+                        updateTennisComponents(match);
+                    } else {
+                        console.log('🎾 [SCOREBOARD] ❌ Match is for different scoreboard');
+                        console.log('🎾 [SCOREBOARD] ⏭️ Ignoring update - not for our scoreboard');
+                    }
+                });
+
+                tennisApiSocket.on('tennis:match:created', (message) => {
+                    console.log('🎾 [SCOREBOARD] 📨 Received tennis:match:created event');
+                    console.log('🎾 [SCOREBOARD] 📦 Full message received:', message);
+
+                    // Extract the actual match data from the message
+                    const match = message?.data;
+                    console.log('🎾 [SCOREBOARD] 📊 New match data:', match);
+                    console.log('🎾 [SCOREBOARD] 🔍 Match scoreboard ID:', match?.scoreboardId || 'UNDEFINED');
+                    console.log('🎾 [SCOREBOARD] 🎯 Our scoreboard ID:', tennisApiScoreboardId);
+                    console.log('🎾 [SCOREBOARD] 📋 Match data keys:', match ? Object.keys(match) : 'null');
+
+                    // Check if match has valid scoreboardId
+                    if (!match || !match.scoreboardId) {
+                        console.log('🎾 [SCOREBOARD] ⚠️ New match data is missing scoreboardId field');
+                        console.log('🎾 [SCOREBOARD] ⏭️ Ignoring creation - invalid match data');
+                        return;
+                    }
+
+                    // Only update if this match is for our scoreboard
+                    if (match.scoreboardId === tennisApiScoreboardId) {
+                        console.log('🎾 [SCOREBOARD] ✅ New match is for our scoreboard - updating components...');
+                        console.log('🎾 [SCOREBOARD] 🔄 Displaying new tennis match data');
+                        updateTennisComponents(match);
+                    } else {
+                        console.log('🎾 [SCOREBOARD] ❌ New match is for different scoreboard');
+                        console.log('🎾 [SCOREBOARD] ⏭️ Ignoring new match - not for our scoreboard');
+                    }
+                });
+
+                tennisApiSocket.on('tennis:match:deleted', (message) => {
+                    console.log('🎾 [SCOREBOARD] 📨 Received tennis:match:deleted event');
+                    console.log('🎾 [SCOREBOARD] 📦 Full message received:', message);
+
+                    // Extract the actual delete data from the message
+                    const data = message?.data;
+                    console.log('🎾 [SCOREBOARD] 🗑️ Deleted match data:', data);
+                    console.log('🎾 [SCOREBOARD] 🎯 Our scoreboard ID:', tennisApiScoreboardId);
+
+                    // Check if data is valid
+                    if (!data || !data.id) {
+                        console.log('🎾 [SCOREBOARD] ⚠️ Invalid delete data received');
+                        return;
+                    }
+
+                    // Clear components if our match was deleted
+                    if (tennisApiScoreboardId && data.id === tennisApiScoreboardId) {
+                        console.log('🎾 [SCOREBOARD] ⚠️ Our match was deleted - clearing components...');
+                        console.log('🎾 [SCOREBOARD] 🔄 Resetting tennis components to defaults');
+                        clearTennisComponents();
+                    } else {
+                        console.log('🎾 [SCOREBOARD] ✅ Different match deleted - no action needed');
+                    }
+                });
+
+            } catch (error) {
+                console.error('Failed to connect to tennis API:', error);
+                updateDebug(`Failed to connect: ${error.message}`);
+            }
+        }
+
+        function updateTennisComponents(match) {
+            console.log('🎾 [SCOREBOARD] 🔄 Updating tennis components with match data');
+
+            // Validate match data
+            if (!match) {
+                console.log('🎾 [SCOREBOARD] ⚠️ Match data is null or undefined');
+                return;
+            }
+
+            console.log('🎾 [SCOREBOARD] 📊 Player 1:', match.player1Name || 'Unknown', 'vs Player 2:', match.player2Name || 'Unknown');
+            console.log('🎾 [SCOREBOARD] 🏆 Score:', match.scoreStringSide1 || '0-0', '-', match.scoreStringSide2 || '0-0');
+            console.log('🎾 [SCOREBOARD] 🎾 Current points:', match.side1PointScore || '0', '-', match.side2PointScore || '0');
+
+            // Find all tennis components and update them
+            const tennisComponents = document.querySelectorAll('[data-component-type^="tennis_"]');
+            console.log('🎾 [SCOREBOARD] 🎯 Found', tennisComponents.length, 'tennis components to update');
+
+            tennisComponents.forEach(component => {
+                const componentType = component.getAttribute('data-component-type');
+                const playerNumber = parseInt(component.getAttribute('data-player-number')) || 1;
+
+                let newValue = '';
+
+                switch (componentType) {
+                    case 'tennis_player_name':
+                        newValue = playerNumber === 1 ? (match.player1Name || 'Player 1') : (match.player2Name || 'Player 2');
+                        break;
+                    case 'tennis_game_score':
+                        // Show current point score (0, 15, 30, 40, etc.)
+                        newValue = playerNumber === 1 ? (match.side1PointScore || '0') : (match.side2PointScore || '0');
+                        break;
+                    case 'tennis_set_score':
+                        // Count sets won - a set is won when a player reaches 6 games and leads by at least 2
+                        let setsWon = 0;
+                        if (match.sets) {
+                            match.sets.forEach(set => {
+                                const side1Score = set.side1Score || 0;
+                                const side2Score = set.side2Score || 0;
+                                const scoreDiff = Math.abs(side1Score - side2Score);
+
+                                // A set is complete if one player has 6+ games and leads by 2+
+                                if ((side1Score >= 6 || side2Score >= 6) && scoreDiff >= 2) {
+                                    if (playerNumber === 1 && side1Score > side2Score) {
+                                        setsWon++;
+                                    } else if (playerNumber === 2 && side2Score > side1Score) {
+                                        setsWon++;
+                                    }
+                                }
+                            });
+                        }
+                        newValue = setsWon.toString();
+                        break;
+                    case 'tennis_match_score':
+                        // Show overall match score strings
+                        newValue = playerNumber === 1 ? (match.scoreStringSide1 || '0-0') : (match.scoreStringSide2 || '0-0');
+                        break;
+                    case 'tennis_detailed_set_score':
+                        // Show detailed set scores like "6-4, 3-6, 2-2"
+                        if (match.sets && match.sets.length > 0) {
+                            const setScores = match.sets.map(set => `${set.side1Score || 0}-${set.side2Score || 0}`);
+                            newValue = setScores.join(', ');
+                        } else {
+                            newValue = '0-0';
+                        }
+                        break;
+                    default:
+                        newValue = component.textContent || '';
+                }
+
+                // Animate the change if value is different
+                if (component.textContent !== newValue) {
+                    console.log(`🎾 [SCOREBOARD] 🔄 Updating ${componentType} for Player ${playerNumber}`);
+                    console.log(`🎾 [SCOREBOARD] 📈 Value change: "${component.textContent}" → "${newValue}"`);
+                    console.log(`🎾 [SCOREBOARD] ✨ Animating component update`);
+
+                    // Add animation class for smooth transition
+                    component.classList.add('score-flash');
+
+                    // Update the text content
+                    const textNodes = component.childNodes;
+                    if (textNodes.length > 0) {
+                        for (let node of textNodes) {
+                            if (node.nodeType === Node.TEXT_NODE) {
+                                node.textContent = newValue;
+                                break;
+                            }
+                        }
+                    } else {
+                        component.textContent = newValue;
+                    }
+
+                    // Remove animation class after animation completes
+                    setTimeout(() => {
+                        component.classList.remove('score-flash');
+                    }, 600);
+                } else {
+                    console.log(`🎾 [SCOREBOARD] ✅ ${componentType} for Player ${playerNumber} already shows: "${newValue}"`);
+                }
+            });
+        }
+
+        function clearTennisComponents() {
+            console.log('🎾 [SCOREBOARD] 🧹 Clearing tennis components to default values');
+
+            const tennisComponents = document.querySelectorAll('[data-component-type^="tennis_"]');
+            console.log('🎾 [SCOREBOARD] 🎯 Clearing', tennisComponents.length, 'tennis components');
+
+            tennisComponents.forEach(component => {
+                const componentType = component.getAttribute('data-component-type');
+                const playerNumber = parseInt(component.getAttribute('data-player-number')) || 1;
+
+                // Reset to default values matching the live data format
+                let defaultValue = '';
+                switch (componentType) {
+                    case 'tennis_player_name':
+                        defaultValue = `Player ${playerNumber}`;
+                        break;
+                    case 'tennis_game_score':
+                        defaultValue = '0'; // Point score starts at 0
+                        break;
+                    case 'tennis_set_score':
+                        defaultValue = '0'; // Sets won starts at 0
+                        break;
+                    case 'tennis_match_score':
+                        defaultValue = '0-0'; // Match score string format
+                        break;
+                    case 'tennis_detailed_set_score':
+                        defaultValue = '0-0'; // Set scores format
+                        break;
+                    case 'tennis_serve_speed':
+                        defaultValue = ''; // Empty for serve speed when no data
+                        break;
+                    default:
+                        defaultValue = '';
+                }
+
+                console.log(`🎾 [SCOREBOARD] 🔄 Resetting ${componentType} for Player ${playerNumber} to: "${defaultValue}"`);
+                component.textContent = defaultValue;
+            });
+
+            console.log('🎾 [SCOREBOARD] ✅ All tennis components cleared to default values');
+        }
+
+        function updateTennisApiIndicator(statusText, isConnected) {
+            const indicator = document.getElementById('tennisApiIndicator');
+            const status = document.getElementById('tennisApiStatus');
+
+            if (indicator && status) {
+                status.textContent = statusText;
+
+                if (isConnected) {
+                    indicator.classList.add('connected');
+                } else {
+                    indicator.classList.remove('connected');
+                }
             }
         }
 
@@ -668,11 +1020,21 @@
             };
         }
 
-        // Cleanup intervals when window is closed
+        // Cleanup intervals and WebSocket when window is closed
         window.addEventListener('beforeunload', () => {
+            console.log('🎾 Cleaning up scoreboard window...');
+
+            // Clear polling intervals
             Object.values(pollingIntervals).forEach(interval => {
                 clearInterval(interval);
             });
+
+            // Disconnect WebSocket
+            if (tennisApiSocket) {
+                console.log('🎾 Disconnecting WebSocket...');
+                tennisApiSocket.disconnect();
+                tennisApiSocket = null;
+            }
         });
 
         async function renderImageComponent(component) {
@@ -1052,6 +1414,9 @@
 
         // Start initialization
         document.addEventListener('DOMContentLoaded', () => {
+            console.log('🎾 [SCOREBOARD] 🚀 Scoreboard display window starting...');
+            console.log('🎾 [SCOREBOARD] 📋 This window will show tennis match data in real-time');
+            console.log('🎾 [SCOREBOARD] 🔍 Check console logs for WebSocket connection status');
             updateDebug('DOM ready, starting...');
             initializeScoreboard();
         });
@@ -1059,6 +1424,7 @@
         // Also try on window load
         window.addEventListener('load', () => {
             if (initAttempts === 0) {
+                console.log('🎾 [SCOREBOARD] 🖥️ Scoreboard window fully loaded');
                 updateDebug('Window loaded, starting...');
                 initializeScoreboard();
             }

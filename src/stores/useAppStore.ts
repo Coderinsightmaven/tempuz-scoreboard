@@ -62,7 +62,8 @@ interface AppActions {
     height: number,
     offsetX?: number,
     offsetY?: number,
-    savedScoreboardId?: string
+    savedScoreboardId?: string,
+    tennisApiScoreboardId?: string
   ) => Promise<string | null>;
   closeScoreboardInstance: (instanceId: string) => Promise<void>;
   closeAllScoreboardInstances: () => Promise<void>;
@@ -172,7 +173,8 @@ export const useAppStore = create<AppState & AppActions>()(
       height: number,
       offsetX: number = 0,
       offsetY: number = 0,
-      savedScoreboardId?: string
+      savedScoreboardId?: string,
+      tennisApiScoreboardId?: string
     ) => {
       const state = get();
       if (!state.selectedMonitor) {
@@ -199,6 +201,13 @@ export const useAppStore = create<AppState & AppActions>()(
             const savedScoreboard = savedScoreboards.find(sb => sb.id === savedScoreboardId);
             if (savedScoreboard) {
               scoreboardData = savedScoreboard.data;
+              // Include tennis API scoreboard ID in the data if provided
+              if (tennisApiScoreboardId) {
+                scoreboardData = {
+                  ...scoreboardData,
+                  tennisApiScoreboardId: tennisApiScoreboardId
+                };
+              }
               // Use the saved scoreboard's name if no custom name provided
               if (!name || name === savedScoreboard.name) {
                 name = `${savedScoreboard.name} Display`;
@@ -210,29 +219,12 @@ export const useAppStore = create<AppState & AppActions>()(
         } else if (scoreboardStoreState.config) {
           // Use current scoreboard data with live data bindings
           try {
-            const liveDataStoreModule = await import('./useLiveDataStore');
-            const liveDataStoreState = liveDataStoreModule.useLiveDataStore.getState();
-            
-            // Enhance components with their live data bindings
-            const enhancedComponents = scoreboardStoreState.components.map(component => {
-              const binding = liveDataStoreState.componentBindings.find(b => b.componentId === component.id);
-              if (binding) {
-                console.log(`Adding live data binding to component ${component.id}:`, binding);
-                return {
-                  ...component,
-                  data: {
-                    ...component.data,
-                    liveDataBinding: binding
-                  }
-                };
-              }
-              return component;
-            });
-            
+            // Use components as-is (tennis API integration handles live data)
             scoreboardData = {
               config: scoreboardStoreState.config,
-              components: enhancedComponents,
-              gameState: scoreboardStoreState.gameState
+              components: scoreboardStoreState.components,
+              gameState: scoreboardStoreState.gameState,
+              tennisApiScoreboardId: tennisApiScoreboardId // Include tennis API scoreboard ID
             };
           } catch (error) {
             console.warn('Failed to load live data bindings:', error);
@@ -240,7 +232,8 @@ export const useAppStore = create<AppState & AppActions>()(
             scoreboardData = {
               config: scoreboardStoreState.config,
               components: scoreboardStoreState.components,
-              gameState: scoreboardStoreState.gameState
+              gameState: scoreboardStoreState.gameState,
+              tennisApiScoreboardId: tennisApiScoreboardId // Include tennis API scoreboard ID
             };
           }
         }
@@ -250,7 +243,9 @@ export const useAppStore = create<AppState & AppActions>()(
         console.log('  Monitor ID:', state.selectedMonitor.id);
         console.log('  Monitor position:', state.selectedMonitor.x, state.selectedMonitor.y);
         console.log('  Offsets:', offsetX, offsetY);
-        
+        console.log('  Tennis API Scoreboard ID:', tennisApiScoreboardId);
+        console.log('  Scoreboard data includes tennisApiScoreboardId:', !!scoreboardData?.tennisApiScoreboardId);
+
         await TauriAPI.createScoreboardWindow(
           windowId,
           state.selectedMonitor.id,
@@ -278,6 +273,7 @@ export const useAppStore = create<AppState & AppActions>()(
           isActive: true,
           createdAt: new Date(),
           scoreboardData, // Store the saved scoreboard data with the instance
+          tennisApiScoreboardId, // Which tennis API scoreboard to listen to for live data
         };
         
         set((state) => ({

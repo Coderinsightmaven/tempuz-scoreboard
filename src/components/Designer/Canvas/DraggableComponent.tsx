@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef } from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { ScoreboardComponent, ComponentType } from '../../../types/scoreboard';
@@ -8,69 +8,61 @@ import { ImageComponent } from './ImageComponent';
 import { VideoComponent } from './VideoComponent';
 import { useCanvasStore } from '../../../stores/useCanvasStore';
 import { useLiveDataStore } from '../../../stores/useLiveDataStore';
+import { useEffect } from 'react';
 
 interface DraggableComponentProps {
   component: ScoreboardComponent;
   onSelect?: (id: string) => void;
   onResizeStart?: (componentId: string, handle: ResizeHandle, event: React.MouseEvent) => void;
+  tennisApiScoreboardId?: string; // For filtering tennis data in scoreboard windows
 }
 
 export const DraggableComponent: React.FC<DraggableComponentProps> = ({
   component,
   onSelect,
   onResizeStart,
+  tennisApiScoreboardId,
 }) => {
   const { selectedComponents, isResizing } = useCanvasStore();
-  const { getComponentValue } = useLiveDataStore();
   const isSelected = selectedComponents.has(component.id);
-  const previousValueRef = useRef<any>();
   const elementRef = useRef<HTMLDivElement>(null);
 
-  // Get current live value
-  const currentValue = getComponentValue(component.id);
-  
-  // Animate score changes in design canvas
-  useEffect(() => {
-    if (currentValue !== undefined && 
-        previousValueRef.current !== undefined && 
-        currentValue !== previousValueRef.current &&
-        elementRef.current) {
-      
-      const element = elementRef.current;
-      const oldValue = previousValueRef.current;
-      const newValue = currentValue;
-      
-      // Remove existing animation classes
-      element.classList.remove('score-increase', 'score-decrease', 'score-flash', 'score-glow');
-      
-      // Force reflow
-      element.offsetHeight;
-      
-      // Determine animation type
-      const isNumeric = !isNaN(parseFloat(oldValue)) && !isNaN(parseFloat(newValue));
-      
-      if (isNumeric) {
-        const oldNum = parseFloat(oldValue) || 0;
-        const newNum = parseFloat(newValue) || 0;
-        
-        if (newNum > oldNum) {
-          element.classList.add('score-increase');
-          setTimeout(() => element.classList.remove('score-increase'), 800);
-        } else if (newNum < oldNum) {
-          element.classList.add('score-decrease');
-          setTimeout(() => element.classList.remove('score-decrease'), 800);
-        } else {
-          element.classList.add('score-flash');
-          setTimeout(() => element.classList.remove('score-flash'), 500);
-        }
-      } else {
-        element.classList.add('score-glow');
-        setTimeout(() => element.classList.remove('score-glow'), 1000);
+  // For tennis components, get the live data from tennis-api store
+  const tennisMatch = component.type.startsWith('tennis_') ?
+    (() => {
+      const state = useLiveDataStore.getState();
+
+      // If a specific tennis API scoreboard ID is provided (for scoreboard windows),
+      // only get data from that scoreboard
+      if (tennisApiScoreboardId) {
+        return state.getTennisApiMatch(tennisApiScoreboardId);
       }
+
+      // For design canvas (no specific scoreboard ID), try component ID first,
+      // then fall back to any available match for preview
+      let match = state.getTennisApiMatch(component.id);
+      if (!match) {
+        const matches = Object.values(state.tennisApiMatches);
+        match = matches.length > 0 ? matches[0] : undefined;
+      }
+
+      return match;
+    })() : null;
+  
+  // Animate tennis score changes in design canvas
+  useEffect(() => {
+    if (tennisMatch && elementRef.current) {
+      const element = elementRef.current;
+
+      // Simple flash animation for tennis data changes
+      element.classList.add('score-flash');
+      setTimeout(() => {
+        if (element) {
+          element.classList.remove('score-flash');
+        }
+      }, 500);
     }
-    
-    previousValueRef.current = currentValue;
-  }, [currentValue]);
+  }, [tennisMatch]);
 
   const {
     attributes,
@@ -184,7 +176,6 @@ export const DraggableComponent: React.FC<DraggableComponentProps> = ({
       case ComponentType.TENNIS_GAME_SCORE:
       case ComponentType.TENNIS_SET_SCORE:
       case ComponentType.TENNIS_MATCH_SCORE:
-      case ComponentType.TENNIS_SERVE_SPEED:
       case ComponentType.TENNIS_DETAILED_SET_SCORE:
         return renderTennisComponent();
       default:
@@ -197,11 +188,55 @@ export const DraggableComponent: React.FC<DraggableComponentProps> = ({
   };
 
   const renderTennisComponent = () => {
-    // Get live data value for this component
-    const liveValue = getComponentValue(component.id);
-    
-    // Use live data if available, otherwise fallback to static text
-    const displayValue = liveValue !== undefined ? String(liveValue) : (component.data.text || getDefaultTennisText());
+    // Get live data value for this component from tennis-api
+    let displayValue = component.data.text || getDefaultTennisText();
+
+    if (tennisMatch) {
+      // Map component types to tennis match data
+      switch (component.type) {
+        case ComponentType.TENNIS_PLAYER_NAME:
+          displayValue = component.data.playerNumber === 2 ? tennisMatch.player2Name || 'Player 2' : tennisMatch.player1Name || 'Player 1';
+          break;
+        case ComponentType.TENNIS_GAME_SCORE:
+          displayValue = component.data.playerNumber === 2 ? tennisMatch.side2PointScore : tennisMatch.side1PointScore;
+          break;
+        case ComponentType.TENNIS_SET_SCORE:
+          // Count sets won - a set is won when a player reaches 6 games and leads by at least 2
+          let setsWon = 0;
+          if (tennisMatch.sets) {
+            tennisMatch.sets.forEach((set: { setNumber: number; side1Score: number; side2Score: number; winningSide?: number }) => {
+              const side1Score = set.side1Score || 0;
+              const side2Score = set.side2Score || 0;
+              const scoreDiff = Math.abs(side1Score - side2Score);
+
+              // A set is complete if one player has 6+ games and leads by 2+
+              if ((side1Score >= 6 || side2Score >= 6) && scoreDiff >= 2) {
+                if (component.data.playerNumber === 1 && side1Score > side2Score) {
+                  setsWon++;
+                } else if (component.data.playerNumber === 2 && side2Score > side1Score) {
+                  setsWon++;
+                }
+              }
+            });
+          }
+          displayValue = setsWon.toString();
+          break;
+        case ComponentType.TENNIS_MATCH_SCORE:
+          displayValue = `${tennisMatch.scoreStringSide1} - ${tennisMatch.scoreStringSide2}`;
+          break;
+        case ComponentType.TENNIS_DETAILED_SET_SCORE:
+          // Show detailed set information
+          if (tennisMatch.sets && tennisMatch.sets.length > 0) {
+            const setInfo = tennisMatch.sets.map((set: { setNumber: number; side1Score: number; side2Score: number; winningSide?: number }) =>
+              `Set ${set.setNumber}: ${set.side1Score}-${set.side2Score}`
+            ).join(', ');
+            displayValue = setInfo;
+          } else {
+            displayValue = 'No sets data';
+          }
+          break;
+      }
+    }
     
     const textAlign = component.style.textAlign || 'center';
     const getJustifyClass = () => {
@@ -222,8 +257,8 @@ export const DraggableComponent: React.FC<DraggableComponentProps> = ({
     };
 
     return (
-      <div 
-        className={`w-full h-full flex items-center ${getJustifyClass()} ${getTextAlignClass()} px-2 relative score-change-base`}
+      <div
+        className={`w-full h-full flex items-center ${getJustifyClass()} ${getTextAlignClass()} px-2 relative score-change-base tennis-component`}
         style={{
           fontSize: `${component.style.fontSize || 16}px`,
           color: component.style.textColor || '#ffffff',
@@ -232,10 +267,13 @@ export const DraggableComponent: React.FC<DraggableComponentProps> = ({
           overflow: 'hidden',
           transition: 'transform 0.2s ease',
         }}
+        data-component-id={component.id}
+        data-component-type={component.type}
+        data-player-number={component.data.playerNumber || 1}
       >
         {displayValue}
-        {/* Live data indicator */}
-        {liveValue !== undefined && (
+        {/* Tennis API indicator */}
+        {tennisMatch && (
           <div className="absolute top-1 right-1 w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
         )}
       </div>
@@ -252,8 +290,6 @@ export const DraggableComponent: React.FC<DraggableComponentProps> = ({
         return '0';
       case ComponentType.TENNIS_MATCH_SCORE:
         return '0';
-      case ComponentType.TENNIS_SERVE_SPEED:
-        return ''; // Show nothing until data arrives
       case ComponentType.TENNIS_DETAILED_SET_SCORE:
         return '0';
       default:

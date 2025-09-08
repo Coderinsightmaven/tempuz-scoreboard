@@ -11,7 +11,6 @@ interface ScoreboardState {
   selectedTemplate: string | null;
   isDirty: boolean;
   lastSaved: Date | null;
-  activeLiveDataConnection: string | null; // Track single live data connection per scoreboard
 }
 
 interface ScoreboardActions {
@@ -47,10 +46,6 @@ interface ScoreboardActions {
   toggleGameActive: () => void;
   resetGame: () => void;
   
-  // Live Data Connection Management
-  setActiveLiveDataConnection: (connectionId: string | null) => void;
-  getActiveLiveDataConnection: () => string | null;
-  switchLiveDataConnection: (newConnectionId: string) => void;
 
   // Utility
   markDirty: () => void;
@@ -87,55 +82,46 @@ const createDefaultComponent = (
       break;
     case ComponentType.TENNIS_PLAYER_NAME:
       defaultSize = { width: 300, height: 60 }; // Wide rectangle for player names
-      defaultData = { 
+      defaultData = {
+        imageId: undefined,
+        imageUrl: undefined,
         text: 'Player Name',
-        playerNumber: 1, // 1 or 2
-        liveDataBinding: undefined
       };
       defaultZIndex = 6; // Above text but below interactive elements
       break;
     case ComponentType.TENNIS_GAME_SCORE:
       defaultSize = { width: 100, height: 80 }; // Square-ish for game scores
-      defaultData = { 
+      defaultData = {
+        imageId: undefined,
+        imageUrl: undefined,
         text: '0',
-        playerNumber: 1, // 1 or 2
-        liveDataBinding: undefined
       };
       defaultZIndex = 6;
       break;
     case ComponentType.TENNIS_SET_SCORE:
       defaultSize = { width: 80, height: 60 }; // Medium for set scores
-      defaultData = { 
+      defaultData = {
+        imageId: undefined,
+        imageUrl: undefined,
         text: '0',
-        playerNumber: 1, // 1 or 2
-        liveDataBinding: undefined
       };
       defaultZIndex = 6;
       break;
     case ComponentType.TENNIS_MATCH_SCORE:
       defaultSize = { width: 60, height: 50 }; // Small for match scores
-      defaultData = { 
+      defaultData = {
+        imageId: undefined,
+        imageUrl: undefined,
         text: '0',
-        playerNumber: 1, // 1 or 2
-        liveDataBinding: undefined
-      };
-      defaultZIndex = 6;
-      break;
-    case ComponentType.TENNIS_SERVE_SPEED:
-      defaultSize = { width: 120, height: 60 }; // Medium size for serve speed
-      defaultData = { 
-        text: '', // Empty until live data arrives
-        liveDataBinding: undefined
       };
       defaultZIndex = 6;
       break;
     case ComponentType.TENNIS_DETAILED_SET_SCORE:
       defaultSize = { width: 60, height: 50 }; // Small for individual set scores
-      defaultData = { 
+      defaultData = {
+        imageId: undefined,
+        imageUrl: undefined,
         text: '0',
-        setNumber: 1, // 1, 2, or 3
-        playerNumber: 1, // 1 or 2
-        liveDataBinding: undefined
       };
       defaultZIndex = 6;
       break;
@@ -178,7 +164,6 @@ export const useScoreboardStore = create<ScoreboardState & ScoreboardActions>()(
     selectedTemplate: null,
     isDirty: false,
     lastSaved: null,
-    activeLiveDataConnection: null,
 
     // Configuration actions
     createNewScoreboard: (name: string, width: number, height: number, sport: SportType = SportType.GENERIC) =>
@@ -209,39 +194,11 @@ export const useScoreboardStore = create<ScoreboardState & ScoreboardActions>()(
           return component;
         });
         
-        // Detect active live data connection from component bindings
-        let activeLiveDataConnection: string | null = null;
-        
-        // Import live data store to check for bindings
-        import('./useLiveDataStore').then(liveDataModule => {
-          const liveDataStore = liveDataModule.useLiveDataStore.getState();
-          
-          for (const component of components) {
-            const binding = liveDataStore.getComponentBinding(component.id);
-            if (binding) {
-              if (activeLiveDataConnection && activeLiveDataConnection !== binding.connectionId) {
-                console.warn('Multiple live data connections detected in loaded scoreboard:', {
-                  existing: activeLiveDataConnection,
-                  new: binding.connectionId
-                });
-              }
-              activeLiveDataConnection = binding.connectionId;
-            }
-          }
-          
-          // Update the active connection if one was found
-          if (activeLiveDataConnection) {
-            console.log('Detected active live data connection on load:', activeLiveDataConnection);
-            get().setActiveLiveDataConnection(activeLiveDataConnection);
-          }
-        });
-        
         return {
           config,
           components,
           isDirty: false,
           lastSaved: new Date(),
-          activeLiveDataConnection: null, // Will be set by the async detection above
         };
       }),
 
@@ -499,40 +456,6 @@ export const useScoreboardStore = create<ScoreboardState & ScoreboardActions>()(
         };
       }),
 
-    // Live Data Connection Management
-    setActiveLiveDataConnection: (connectionId: string | null) =>
-      set(() => ({
-        activeLiveDataConnection: connectionId,
-        isDirty: true,
-      })),
-
-    getActiveLiveDataConnection: () => {
-      const state = get();
-      return state.activeLiveDataConnection;
-    },
-
-    switchLiveDataConnection: (newConnectionId: string) => {
-      const state = get();
-      
-      // Update all existing component bindings to use the new connection
-      const { updateComponentData } = get();
-      state.components.forEach(component => {
-        if (component.data.liveDataBinding) {
-          updateComponentData(component.id, {
-            liveDataBinding: {
-              ...component.data.liveDataBinding,
-              connectionId: newConnectionId,
-            },
-          });
-        }
-      });
-      
-      // Set the new active connection
-      set(() => ({
-        activeLiveDataConnection: newConnectionId,
-        isDirty: true,
-      }));
-    },
 
     // Utility actions
     markDirty: () =>
@@ -548,7 +471,6 @@ export const useScoreboardStore = create<ScoreboardState & ScoreboardActions>()(
         gameState: null,
         isDirty: false,
         lastSaved: null,
-        activeLiveDataConnection: null,
       })),
 
     getComponentById: (id: string) => {

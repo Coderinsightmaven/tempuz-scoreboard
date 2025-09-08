@@ -7,7 +7,6 @@ import { useLiveDataStore } from '../../stores/useLiveDataStore';
 import { ComponentType, ScoreboardComponent } from '../../types/scoreboard';
 import { ImageManager } from '../ui/ImageManager';
 import { VideoManager } from '../ui/VideoManager';
-import { ColorPicker } from '../ui/ColorPicker';
 
 export const PropertyPanel: React.FC = () => {
   const { components, updateComponentData, updateComponentStyle, removeComponent } = useScoreboardStore();
@@ -54,31 +53,6 @@ export const PropertyPanel: React.FC = () => {
     updateComponentData(selectedComponent.id, { [property]: value });
   };
 
-  // Helper function to convert hex to RGB
-  const hexToRgb = (hex: string): { r: number; g: number; b: number; a: number } => {
-    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    return result ? {
-      r: parseInt(result[1], 16),
-      g: parseInt(result[2], 16),
-      b: parseInt(result[3], 16),
-      a: 1
-    } : { r: 0, g: 0, b: 0, a: 1 };
-  };
-
-  // Helper function to convert RGB to hex
-  const rgbToHex = (rgb: { r: number; g: number; b: number; a?: number }): string => {
-    const toHex = (n: number) => {
-      const hex = Math.round(n).toString(16);
-      return hex.length === 1 ? '0' + hex : hex;
-    };
-    return `#${toHex(rgb.r)}${toHex(rgb.g)}${toHex(rgb.b)}`;
-  };
-
-  // Helper function to handle color change
-  const handleColorChange = (property: string, color: { r: number; g: number; b: number; a?: number }) => {
-    const hexColor = rgbToHex(color);
-    handleStyleChange(property, hexColor);
-  };
 
   // Handle component deletion
   const handleDelete = () => {
@@ -336,8 +310,6 @@ export const PropertyPanel: React.FC = () => {
         return <TennisSetScoreProperties />;
       case ComponentType.TENNIS_MATCH_SCORE:
         return <TennisMatchScoreProperties />;
-      case ComponentType.TENNIS_SERVE_SPEED:
-        return <TennisServeSpeedProperties />;
       case ComponentType.TENNIS_DETAILED_SET_SCORE:
         return <TennisDetailedSetScoreProperties />;
       default:
@@ -718,7 +690,6 @@ export const PropertyPanel: React.FC = () => {
   }
 
   function TennisPlayerNameProperties() {
-    const { connections } = useLiveDataStore();
     const [localText, setLocalText] = useState(selectedComponent?.data.text || '');
 
     React.useEffect(() => {
@@ -764,7 +735,7 @@ export const PropertyPanel: React.FC = () => {
           </div>
         </div>
 
-        <LiveDataBindingSection />
+        <TennisApiBindingSection />
         <TextStyleSection />
       </div>
     );
@@ -816,7 +787,7 @@ export const PropertyPanel: React.FC = () => {
           </div>
         </div>
 
-        <LiveDataBindingSection />
+        <TennisApiBindingSection />
         <TextStyleSection />
       </div>
     );
@@ -868,7 +839,7 @@ export const PropertyPanel: React.FC = () => {
           </div>
         </div>
 
-        <LiveDataBindingSection />
+        <TennisApiBindingSection />
         <TextStyleSection />
       </div>
     );
@@ -920,52 +891,14 @@ export const PropertyPanel: React.FC = () => {
           </div>
         </div>
 
-        <LiveDataBindingSection />
+        <TennisApiBindingSection />
         <TextStyleSection />
       </div>
     );
   }
 
-  function TennisServeSpeedProperties() {
-    const [localText, setLocalText] = useState(selectedComponent?.data.text || '');
-
-    React.useEffect(() => {
-      setLocalText(selectedComponent?.data.text || '');
-    }, [selectedComponent?.id, selectedComponent?.data.text]);
-
-    const handleTextBlur = () => {
-      if (localText !== selectedComponent?.data.text) {
-        handleDataChange('text', localText);
-      }
-    };
-
-    return (
-      <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Fallback Speed
-          </label>
-          <input
-            type="text"
-            value={localText}
-            onChange={(e) => setLocalText(e.target.value)}
-            onBlur={handleTextBlur}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Leave empty to show nothing until data arrives"
-          />
-          <div className="text-xs text-gray-500 mt-1">
-            Shows nothing by default until live data is available
-          </div>
-        </div>
-
-        <LiveDataBindingSection />
-        <TextStyleSection />
-      </div>
-    );
-  }
 
   function TennisDetailedSetScoreProperties() {
-    const { getComponentBinding, getLiveData } = useLiveDataStore();
     const [localText, setLocalText] = useState(selectedComponent?.data.text || '');
 
     React.useEffect(() => {
@@ -980,21 +913,8 @@ export const PropertyPanel: React.FC = () => {
 
     // Determine available sets based on live data
     const getAvailableSets = () => {
-      const binding = getComponentBinding(selectedComponent?.id || '');
-      if (!binding) return [1, 2, 3]; // Show all sets if no binding
-
-      const liveData = getLiveData(binding.connectionId);
-      if (!liveData) return [1, 2, 3]; // Show all sets if no live data
-
-      const currentSet = liveData.currentSet || 1;
-      const availableSets = [];
-      
-      // Show sets up to the current set being played
-      for (let i = 1; i <= Math.min(currentSet, 3); i++) {
-        availableSets.push(i);
-      }
-      
-      return availableSets;
+      // Since we're focused on tennis API, show all sets
+      return [1, 2, 3];
     };
 
     const availableSets = getAvailableSets();
@@ -1064,214 +984,63 @@ export const PropertyPanel: React.FC = () => {
           </div>
         </div>
 
-        <LiveDataBindingSection />
+        <TennisApiBindingSection />
         <TextStyleSection />
       </div>
     );
   }
 
-  function TennisSetsScoreProperties() {
-    const [localText, setLocalText] = useState(selectedComponent?.data.text || '');
 
-    React.useEffect(() => {
-      setLocalText(selectedComponent?.data.text || '');
-    }, [selectedComponent?.id, selectedComponent?.data.text]);
+  function TennisApiBindingSection() {
+    const { tennisApiConnected, getTennisApiScoreboards, getTennisApiMatch } = useLiveDataStore();
 
-    const handleTextBlur = () => {
-      if (localText !== selectedComponent?.data.text) {
-        handleDataChange('text', localText);
-      }
-    };
-
-    return (
-      <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Sets Score Format
-          </label>
-          <p className="text-sm text-gray-600 mb-2">
-            Displays all completed sets in format: "6-4, 5-7, 7-5"
-          </p>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Fallback Sets
-          </label>
-          <input
-            type="text"
-            value={localText}
-            onChange={(e) => setLocalText(e.target.value)}
-            onBlur={handleTextBlur}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="6-4, 5-7"
-          />
-          <div className="text-xs text-gray-500 mt-1">
-            Shown when no live data is available
+    if (!tennisApiConnected) {
+      return (
+        <div className="border-t border-gray-200 pt-4">
+          <h5 className="text-sm font-medium text-gray-900 mb-2">Tennis API</h5>
+          <div className="text-xs text-gray-600 bg-gray-50 p-2 rounded">
+            🔌 Connect to tennis-api WebSocket to enable live data
           </div>
         </div>
+      );
+    }
 
-        <LiveDataBindingSection customDataPath="sets" />
-        <TextStyleSection />
-      </div>
-    );
-  }
-
-  function LiveDataBindingSection({ customDataPath }: { customDataPath?: string } = {}) {
-    const { connections, addComponentBinding, removeComponentBinding, getComponentBinding } = useLiveDataStore();
-    const { activeLiveDataConnection, setActiveLiveDataConnection, switchLiveDataConnection } = useScoreboardStore();
-    const currentBinding = getComponentBinding(selectedComponent?.id || '');
-    
-    // Get the active connection details
-    const activeConnection = connections.find(conn => conn.id === activeLiveDataConnection);
-    
-    // Filter connections based on current active connection
-    const availableConnections = activeLiveDataConnection 
-      ? connections.filter(conn => conn.id === activeLiveDataConnection)
-      : connections;
-
-    const handleConnectionChange = (connectionId: string) => {
-      if (!selectedComponent) return;
-
-      if (connectionId === '') {
-        removeComponentBinding(selectedComponent.id);
-        
-        // Check if this was the last component bound to live data on this scoreboard
-        const { components } = useScoreboardStore.getState();
-        const remainingBindings = components.filter(comp => 
-          comp.id !== selectedComponent.id && 
-          getComponentBinding(comp.id)
-        ).length;
-        
-        if (remainingBindings === 0) {
-          // No more live data bindings, clear the active connection
-          setActiveLiveDataConnection(null);
-        }
-        
-        return;
-      }
-
-      // Check if trying to use a different connection than the current active one
-      if (activeLiveDataConnection && activeLiveDataConnection !== connectionId) {
-        const currentConnection = connections.find(conn => conn.id === activeLiveDataConnection);
-        const newConnection = connections.find(conn => conn.id === connectionId);
-        
-        const confirmSwitch = confirm(
-          `This scoreboard is currently using "${currentConnection?.name || 'Unknown'}". ` +
-          `Do you want to switch the entire scoreboard to use "${newConnection?.name || 'Unknown'}" instead?\n\n` +
-          `This will update all existing live data bindings on this scoreboard.`
-        );
-        
-        if (!confirmSwitch) {
-          return; // User cancelled, don't change anything
-        }
-        
-        // User confirmed, switch the entire scoreboard
-        switchLiveDataConnection(connectionId);
-      } else if (!activeLiveDataConnection) {
-        // First binding on this scoreboard, set as active connection
-        setActiveLiveDataConnection(connectionId);
-      }
-
-      const playerNumber = selectedComponent.data.playerNumber || 1;
-      let dataPath = '';
-
-      switch (selectedComponent.type) {
-        case ComponentType.TENNIS_PLAYER_NAME:
-          dataPath = `player${playerNumber}.name`;
-          break;
-        case ComponentType.TENNIS_GAME_SCORE:
-          dataPath = `score.player${playerNumber}Points`;
-          break;
-        case ComponentType.TENNIS_SET_SCORE:
-          dataPath = `score.player${playerNumber}Games`;
-          break;
-        case ComponentType.TENNIS_MATCH_SCORE:
-          dataPath = `score.player${playerNumber}Sets`;
-          break;
-        case ComponentType.TENNIS_SERVE_SPEED:
-          dataPath = 'serve.speed';
-          break;
-        case ComponentType.TENNIS_DETAILED_SET_SCORE:
-          const setNumber = selectedComponent.data.setNumber || 1;
-          const playerNumber = selectedComponent.data.playerNumber || 1;
-          dataPath = `sets.set${setNumber}.player${playerNumber}`;
-          break;
-      }
-
-      addComponentBinding({
-        componentId: selectedComponent.id,
-        connectionId,
-        dataPath,
-      });
-    };
+    const scoreboards = getTennisApiScoreboards();
+    const currentMatch = selectedComponent ? getTennisApiMatch(selectedComponent.id) : null;
 
     return (
       <div className="border-t border-gray-200 pt-4">
-        <h5 className="text-sm font-medium text-gray-900 mb-2">Live Data Binding</h5>
-        
-        {/* Show current scoreboard's active connection */}
-        {activeConnection && (
-          <div className="mb-3 p-2 bg-blue-50 border border-blue-200 rounded text-xs">
-            <div className="font-medium text-blue-800">
-              📊 Scoreboard Connection: {activeConnection.name}
-            </div>
-            <div className="text-blue-600">
-              All components on this scoreboard use this connection
+        <h5 className="text-sm font-medium text-gray-900 mb-2">Tennis API</h5>
+
+        <div className="space-y-3">
+          <div className="text-xs text-green-600 bg-green-50 p-2 rounded">
+            ✅ Connected to tennis-api WebSocket
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">
+              Available Scoreboards ({scoreboards.length})
+            </label>
+            <div className="text-xs text-gray-600">
+              {scoreboards.length === 0 ? (
+                'No scoreboards loaded'
+              ) : (
+                scoreboards.map((sb: { id: string; name: string }) => `${sb.name} (${sb.id})`).join(', ')
+              )}
             </div>
           </div>
-        )}
-        
-        <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Data Connection</label>
-          <select
-            value={currentBinding?.connectionId || ''}
-            onChange={(e) => handleConnectionChange(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-          >
-            <option value="">No live data (static text)</option>
-            {availableConnections.map(connection => (
-              <option key={connection.id} value={connection.id}>
-                {connection.name} {connection.isActive ? '🟢' : '🔴'}
-              </option>
-            ))}
-            {activeLiveDataConnection && (
-              <option disabled style={{ backgroundColor: '#f3f4f6', fontStyle: 'italic' }}>
-                ── Other Connections (requires switching) ──
-              </option>
-            )}
-            {activeLiveDataConnection && connections
-              .filter(conn => conn.id !== activeLiveDataConnection)
-              .map(connection => (
-                <option key={connection.id} value={connection.id}>
-                  {connection.name} {connection.isActive ? '🟢' : '🔴'} (switch required)
-                </option>
-              ))
-            }
-          </select>
-          {connections.length === 0 && (
-            <div className="text-xs text-gray-500 mt-1">
-              No live data connections configured. Add one in the Live Data manager.
+
+          {selectedComponent && currentMatch && (
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                Live Data Status
+              </label>
+              <div className="text-xs text-green-600 bg-green-50 p-2 rounded">
+                📊 Receiving live tennis data for this component
+              </div>
             </div>
           )}
         </div>
-
-        {currentBinding && (
-          <div className="mt-2">
-            <div className="text-xs text-gray-500">
-              Data Path: {currentBinding.dataPath}
-            </div>
-            <div className="text-xs text-green-600">
-              ✓ Live data binding active
-            </div>
-          </div>
-        )}
-        
-        {activeLiveDataConnection && !activeConnection && (
-          <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-800">
-            ⚠️ Active connection not found. It may have been deleted.
-          </div>
-        )}
       </div>
     );
   }
@@ -1368,7 +1137,7 @@ export const PropertyPanel: React.FC = () => {
           return 'Tennis Set Score';
         case ComponentType.TENNIS_MATCH_SCORE:
           return 'Tennis Match Score';
-        case ComponentType.TENNIS_SETS_SCORE:
+        case ComponentType.TENNIS_SET_SCORE:
           return 'Tennis Sets Score';
         default:
           return 'Unknown';
@@ -1388,7 +1157,7 @@ export const PropertyPanel: React.FC = () => {
         case ComponentType.TENNIS_GAME_SCORE:
         case ComponentType.TENNIS_SET_SCORE:
         case ComponentType.TENNIS_MATCH_SCORE:
-        case ComponentType.TENNIS_SETS_SCORE:
+        case ComponentType.TENNIS_SET_SCORE:
           return '🎾';
         default:
           return '❓';
@@ -1409,7 +1178,7 @@ export const PropertyPanel: React.FC = () => {
         case ComponentType.TENNIS_SET_SCORE:
         case ComponentType.TENNIS_MATCH_SCORE:
           return `Player ${component.data.playerNumber || 1} Score`;
-        case ComponentType.TENNIS_SETS_SCORE:
+        case ComponentType.TENNIS_SET_SCORE:
           return 'Sets Score (e.g., 6-4, 5-7, 7-5)';
         default:
           return 'No text';
@@ -1532,11 +1301,11 @@ export const PropertyPanel: React.FC = () => {
                   </div>
                 </div>
                 
-                {/* Live Data Indicator */}
-                {(component.type.startsWith('tennis_') || (component.data && component.data.liveDataBinding)) && (
+                {/* Tennis API Indicator */}
+                {component.type.startsWith('tennis_') && (
                   <div className="mt-2 flex items-center space-x-1 text-xs">
                     <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                    <span className="text-green-600">Live Data</span>
+                    <span className="text-green-600">Tennis API</span>
                   </div>
                 )}
                 

@@ -22,7 +22,6 @@ export const enum ComponentType {
   TENNIS_GAME_SCORE = 'tennis_game_score',
   TENNIS_SET_SCORE = 'tennis_set_score',
   TENNIS_MATCH_SCORE = 'tennis_match_score',
-  TENNIS_SERVE_SPEED = 'tennis_serve_speed',
   TENNIS_DETAILED_SET_SCORE = 'tennis_detailed_set_score',
 }
 
@@ -223,16 +222,17 @@ export interface ScoreboardInstance {
   isActive: boolean;
   createdAt: Date;
   scoreboardData?: any; // Saved scoreboard configuration and components
+  tennisApiScoreboardId?: string; // Which tennis API scoreboard to listen to for live data
 }
 
-// Live Data API Types
+// Live Data Types for integration with external APIs
 export interface LiveDataConnection {
   id: string;
   name: string;
-  provider: 'custom_api' | 'tennis_api' | 'mock' | 'manual_tennis';
-  apiUrl: string;
-  apiKey: string;
-  pollInterval: number; // in seconds
+  provider: 'mock' | 'api' | 'tennis_api';
+  apiUrl?: string;
+  apiKey?: string;
+  pollInterval: number;
   isActive: boolean;
   createdAt?: Date;
   updatedAt?: Date;
@@ -257,33 +257,27 @@ export interface TennisLiveData {
     player2Sets: number;
     player1Games: number;
     player2Games: number;
-    player1Points: string; // "0", "15", "30", "40", "A", "D"
+    player1Points: string;
     player2Points: string;
   };
-  sets?: {
-    [key: string]: {
-      player1: number;
-      player2: number;
-    };
-  };
-  serve?: {
-    speed: string;
-  };
-  matchStatus: 'scheduled' | 'in_progress' | 'completed' | 'suspended';
-  servingPlayer: 1 | 2 | null;
-  currentSet: number;
-  isTiebreak: boolean;
-  tiebreakScore?: {
+  sets: Record<string, {
     player1: number;
     player2: number;
+  }>;
+  serve?: {
+    speed?: string;
   };
-  tournament?: string;
-  round?: string;
+  matchStatus: 'not_started' | 'in_progress' | 'completed' | 'suspended';
+  servingPlayer: 1 | 2;
+  currentSet: number;
+  isTiebreak: boolean;
 }
 
 export interface LiveDataComponentBinding {
   componentId: string;
   connectionId: string;
-  dataPath: string; // e.g., "player1.name", "score.player1Games"
-  updateInterval?: number; // component-specific override
-} 
+  dataPath: string;
+  updateInterval?: number;
+}
+
+// Tennis API types are now defined in lib/tauri.ts for cleaner organization

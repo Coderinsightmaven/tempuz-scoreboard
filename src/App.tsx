@@ -9,8 +9,7 @@ import { CreateScoreboardDialog } from './components/ui/CreateScoreboardDialog';
 import { LoadScoreboardDialog } from './components/ui/LoadScoreboardDialog';
 import { MultipleScoreboardManager } from './components/ui/MultipleScoreboardManager';
 import { ScoreboardManager } from './components/ui/ScoreboardManager';
-import { LiveDataManager } from './components/ui/LiveDataManager';
-import { ManualTennisScoring } from './components/ui/ManualTennisScoring';
+import { TennisApiConnectionButton } from './components/ui/TennisApiConnectionButton';
 import { TauriAPI } from './lib/tauri';
 import { ComponentType } from './types/scoreboard';
 import { useImageStore } from './stores/useImageStore';
@@ -19,11 +18,9 @@ import { useLiveDataStore } from './stores/useLiveDataStore';
 function App() {
   const {
     theme,
-    monitors,
     scoreboardInstances,
     isLoadingMonitors,
-    loadMonitors,
-    lastError
+    loadMonitors
   } = useAppStore();
 
   const {
@@ -37,26 +34,64 @@ function App() {
 
   const { setCanvasSize, selectedComponents, clipboard, setClipboard } = useCanvasStore();
   const { loadImages } = useImageStore();
-  const { loadConnections, isLoaded } = useLiveDataStore();
+
+  const {
+    connectToTennisApi,
+    tennisApiConnected,
+    clearError
+  } = useLiveDataStore();
 
   // UI state
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showLoadDialog, setShowLoadDialog] = useState(false);
   const [showMultipleManager, setShowMultipleManager] = useState(false);
   const [showScoreboardManager, setShowScoreboardManager] = useState(false);
-  const [showLiveDataManager, setShowLiveDataManager] = useState(false);
-  const [showManualTennisScoring, setShowManualTennisScoring] = useState(false);
   const [showPropertyPanel, setShowPropertyPanel] = useState(true);
-  const [selectedComponentForImage, setSelectedComponentForImage] = useState<string | null>(null);
 
   useEffect(() => {
     // Initialize the app on mount
     loadMonitors();
     loadImages();
-    if (!isLoaded) {
-      loadConnections();
+  }, [loadMonitors, loadImages]);
+
+  // Separate effect for tennis API auto-connection
+  useEffect(() => {
+    autoConnectToTennisApi();
+  }, []); // Empty dependency array - only run once on mount
+
+  // Auto-connect to tennis API on app startup
+  const autoConnectToTennisApi = async () => {
+    // Only attempt auto-connection if not already connected
+    if (tennisApiConnected) {
+      console.log('🎾 App: Already connected to tennis API');
+      return;
     }
-  }, [loadMonitors, loadImages, loadConnections, isLoaded]);
+
+    console.log('🎾 App: Attempting automatic connection to tennis API...');
+
+    // Clear any previous errors
+    clearError();
+
+    try {
+      // Use default development settings
+      const apiUrl = 'http://localhost:3000';
+      const apiKey = 'dev-api-key-12345';
+
+      console.log('🎾 App: Connecting to:', apiUrl);
+      console.log('🎾 App: Using API key:', apiKey.substring(0, 10) + '...');
+
+      // Store auto-connection flag in localStorage to track attempts
+      localStorage.setItem('tennisApiAutoConnecting', 'true');
+
+      connectToTennisApi(apiUrl, apiKey);
+
+      console.log('🎾 App: Auto-connection initiated, connection will happen asynchronously');
+    } catch (error) {
+      console.warn('🎾 App: Auto-connection failed:', error);
+      localStorage.removeItem('tennisApiAutoConnecting');
+      // Don't show error to user - this is automatic and shouldn't interrupt workflow
+    }
+  };
 
   // Theme handling
   useEffect(() => {
@@ -310,22 +345,6 @@ function App() {
     );
   }
 
-  if (lastError) {
-    return (
-      <div className="flex items-center justify-center h-screen bg-background text-foreground">
-        <div className="text-center p-6 border border-destructive/20 rounded-lg bg-destructive/5">
-          <div className="text-destructive mb-2">⚠️ Error</div>
-          <p className="text-sm text-muted-foreground">{lastError}</p>
-          <button 
-            onClick={() => window.location.reload()} 
-            className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
-          >
-            Reload App
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="h-screen flex flex-col bg-gray-100 dark:bg-gray-900">
@@ -466,25 +485,7 @@ function App() {
               <span>Manage Scoreboards</span>
             </button>
 
-            <button
-              onClick={() => setShowLiveDataManager(true)}
-              className="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center space-x-2"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
-              </svg>
-              <span>Live Data</span>
-            </button>
-
-            <button
-              onClick={() => setShowManualTennisScoring(true)}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center space-x-2"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-              </svg>
-              <span>Tennis Scoring</span>
-            </button>
+            <TennisApiConnectionButton />
 
             <button
               onClick={() => setShowPropertyPanel(!showPropertyPanel)}
@@ -583,15 +584,6 @@ function App() {
                 </div>
               </button>
               <button
-                onClick={() => addComponent(ComponentType.TENNIS_SERVE_SPEED, { x: 100, y: 100 })}
-                className="w-full text-left p-3 bg-white border border-gray-200 rounded hover:bg-gray-50 transition-colors mb-2"
-              >
-                <div className="font-medium text-sm">SERVE SPEED</div>
-                <div className="text-xs text-gray-600">
-                  Live serve speed (MPH/KMH)
-                </div>
-              </button>
-              <button
                 onClick={() => addComponent(ComponentType.TENNIS_DETAILED_SET_SCORE, { x: 100, y: 100 })}
                 className="w-full text-left p-3 bg-white border border-gray-200 rounded hover:bg-gray-50 transition-colors"
               >
@@ -664,27 +656,6 @@ function App() {
         onClose={() => setShowScoreboardManager(false)}
       />
 
-      <LiveDataManager
-        isOpen={showLiveDataManager}
-        onClose={() => setShowLiveDataManager(false)}
-      />
-
-      <ManualTennisScoring
-        isOpen={showManualTennisScoring}
-        onClose={() => setShowManualTennisScoring(false)}
-      />
-
-      {/* Error Toast */}
-      {lastError && (
-        <div className="fixed bottom-4 right-4 bg-red-600 text-white px-4 py-2 rounded-md shadow-lg">
-          <div className="flex items-center space-x-2">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span className="text-sm">{lastError}</span>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

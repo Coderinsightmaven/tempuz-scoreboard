@@ -166,7 +166,7 @@ export const CompositeScoreboardManager: React.FC<CompositeScoreboardManagerProp
         layout
       });
       
-      await TauriAPI.createCompositeScoreboardWindow(
+      await TauriAPI.createScoreboardWindow(
         windowId,
         selectedMonitor.id,
         windowWidth,
