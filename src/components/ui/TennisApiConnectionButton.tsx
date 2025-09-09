@@ -103,14 +103,6 @@ export const TennisApiConnectionButton: React.FC = () => {
 
               {tennisApiConnected ? (
                 <div className="space-y-4">
-                  <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-md">
-                    <div className="flex items-center">
-                      <div className="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
-                      <p className="text-green-800 dark:text-green-200 font-medium">
-                        Successfully connected to Tennis API
-                      </p>
-                    </div>
-                  </div>
 
                   <div className="flex space-x-3">
                     <button

@@ -312,6 +312,8 @@ export const PropertyPanel: React.FC = () => {
         return <TennisMatchScoreProperties />;
       case ComponentType.TENNIS_DETAILED_SET_SCORE:
         return <TennisDetailedSetScoreProperties />;
+      case ComponentType.TENNIS_SERVING_INDICATOR:
+        return <TennisServingIndicatorProperties />;
       default:
         return <div className="text-sm text-gray-500">No properties available</div>;
     }
@@ -990,9 +992,34 @@ export const PropertyPanel: React.FC = () => {
     );
   }
 
+  function TennisServingIndicatorProperties() {
+    return (
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Player to Track
+          </label>
+          <select
+            value={selectedComponent?.data.playerNumber || 1}
+            onChange={(e) => handleDataChange('playerNumber', parseInt(e.target.value))}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value={1}>Player 1</option>
+            <option value={2}>Player 2</option>
+          </select>
+          <div className="text-xs text-gray-500 mt-1">
+            The tennis ball emoji will appear when this player is serving
+          </div>
+        </div>
+
+        <TennisApiBindingSection />
+        <TextStyleSection />
+      </div>
+    );
+  }
 
   function TennisApiBindingSection() {
-    const { tennisApiConnected, getTennisApiScoreboards, getTennisApiMatch } = useLiveDataStore();
+    const { tennisApiConnected, getTennisApiScoreboards } = useLiveDataStore();
 
     if (!tennisApiConnected) {
       return (
@@ -1006,16 +1033,12 @@ export const PropertyPanel: React.FC = () => {
     }
 
     const scoreboards = getTennisApiScoreboards();
-    const currentMatch = selectedComponent ? getTennisApiMatch(selectedComponent.id) : null;
 
     return (
       <div className="border-t border-gray-200 pt-4">
         <h5 className="text-sm font-medium text-gray-900 mb-2">Tennis API</h5>
 
         <div className="space-y-3">
-          <div className="text-xs text-green-600 bg-green-50 p-2 rounded">
-            ✅ Connected to tennis-api WebSocket
-          </div>
 
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">
@@ -1030,16 +1053,6 @@ export const PropertyPanel: React.FC = () => {
             </div>
           </div>
 
-          {selectedComponent && currentMatch && (
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">
-                Live Data Status
-              </label>
-              <div className="text-xs text-green-600 bg-green-50 p-2 rounded">
-                📊 Receiving live tennis data for this component
-              </div>
-            </div>
-          )}
         </div>
       </div>
     );
@@ -1137,8 +1150,10 @@ export const PropertyPanel: React.FC = () => {
           return 'Tennis Set Score';
         case ComponentType.TENNIS_MATCH_SCORE:
           return 'Tennis Match Score';
-        case ComponentType.TENNIS_SET_SCORE:
-          return 'Tennis Sets Score';
+        case ComponentType.TENNIS_DETAILED_SET_SCORE:
+          return 'Tennis Detailed Set Score';
+        case ComponentType.TENNIS_SERVING_INDICATOR:
+          return 'Tennis Serving Indicator';
         default:
           return 'Unknown';
       }
@@ -1157,7 +1172,8 @@ export const PropertyPanel: React.FC = () => {
         case ComponentType.TENNIS_GAME_SCORE:
         case ComponentType.TENNIS_SET_SCORE:
         case ComponentType.TENNIS_MATCH_SCORE:
-        case ComponentType.TENNIS_SET_SCORE:
+        case ComponentType.TENNIS_DETAILED_SET_SCORE:
+        case ComponentType.TENNIS_SERVING_INDICATOR:
           return '🎾';
         default:
           return '❓';
@@ -1178,8 +1194,10 @@ export const PropertyPanel: React.FC = () => {
         case ComponentType.TENNIS_SET_SCORE:
         case ComponentType.TENNIS_MATCH_SCORE:
           return `Player ${component.data.playerNumber || 1} Score`;
-        case ComponentType.TENNIS_SET_SCORE:
+        case ComponentType.TENNIS_DETAILED_SET_SCORE:
           return 'Sets Score (e.g., 6-4, 5-7, 7-5)';
+        case ComponentType.TENNIS_SERVING_INDICATOR:
+          return `Player ${component.data.playerNumber || 1} Serving`;
         default:
           return 'No text';
       }
@@ -1301,13 +1319,6 @@ export const PropertyPanel: React.FC = () => {
                   </div>
                 </div>
                 
-                {/* Tennis API Indicator */}
-                {component.type.startsWith('tennis_') && (
-                  <div className="mt-2 flex items-center space-x-1 text-xs">
-                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                    <span className="text-green-600">Tennis API</span>
-                  </div>
-                )}
                 
                 {/* Hidden Component Indicator */}
                 {!component.visible && (

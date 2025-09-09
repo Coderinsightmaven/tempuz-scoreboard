@@ -226,7 +226,6 @@ const CompositeInstanceCard: React.FC<CompositeInstanceCardProps> = ({
       <div className="flex justify-between items-start">
         <div className="flex-1">
           <div className="flex items-center space-x-3 mb-2">
-            <div className="w-3 h-3 bg-green-500 rounded-full" title="Active"></div>
             <h4 className="text-lg font-medium text-gray-900 dark:text-white">
               {instance.name}
             </h4>
@@ -258,11 +257,7 @@ const CompositeInstanceCard: React.FC<CompositeInstanceCardProps> = ({
           {/* Fullscreen Mode Button */}
           <button
             onClick={() => onSetFullscreen(true)}
-            className={`px-3 py-1 text-xs rounded transition-colors ${
-              instance.isFullscreen 
-                ? 'bg-green-100 text-green-800 border border-green-300'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-600 dark:text-gray-300 dark:hover:bg-gray-500'
-            }`}
+            className="px-3 py-1 text-xs rounded transition-colors bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-600 dark:text-gray-300 dark:hover:bg-gray-500"
             title="Set to Fullscreen Mode"
           >
             Fullscreen

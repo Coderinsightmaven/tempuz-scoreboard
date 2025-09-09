@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { ScoreboardComponent, ComponentType } from '../../../types/scoreboard';
@@ -8,7 +8,6 @@ import { ImageComponent } from './ImageComponent';
 import { VideoComponent } from './VideoComponent';
 import { useCanvasStore } from '../../../stores/useCanvasStore';
 import { useLiveDataStore } from '../../../stores/useLiveDataStore';
-import { useEffect } from 'react';
 
 interface DraggableComponentProps {
   component: ScoreboardComponent;
@@ -25,7 +24,6 @@ export const DraggableComponent: React.FC<DraggableComponentProps> = ({
 }) => {
   const { selectedComponents, isResizing } = useCanvasStore();
   const isSelected = selectedComponents.has(component.id);
-  const elementRef = useRef<HTMLDivElement>(null);
 
   // For tennis components, get the live data from tennis-api store
   const tennisMatch = component.type.startsWith('tennis_') ?
@@ -42,20 +40,7 @@ export const DraggableComponent: React.FC<DraggableComponentProps> = ({
       return state.getTennisApiMatch(component.id);
     })() : null;
   
-  // Animate tennis score changes in design canvas
-  useEffect(() => {
-    if (tennisMatch && elementRef.current) {
-      const element = elementRef.current;
-
-      // Simple flash animation for tennis data changes
-      element.classList.add('score-flash');
-      setTimeout(() => {
-        if (element) {
-          element.classList.remove('score-flash');
-        }
-      }, 500);
-    }
-  }, [tennisMatch]);
+  // Tennis data change animation disabled to prevent visual clutter
 
   const {
     attributes,
@@ -170,6 +155,7 @@ export const DraggableComponent: React.FC<DraggableComponentProps> = ({
       case ComponentType.TENNIS_SET_SCORE:
       case ComponentType.TENNIS_MATCH_SCORE:
       case ComponentType.TENNIS_DETAILED_SET_SCORE:
+      case ComponentType.TENNIS_SERVING_INDICATOR:
         return renderTennisComponent();
       default:
         return (
@@ -182,7 +168,7 @@ export const DraggableComponent: React.FC<DraggableComponentProps> = ({
 
   const renderTennisComponent = () => {
     // Get live data value for this component from tennis-api
-    let displayValue = component.data.text || getDefaultTennisText();
+    let displayValue = getDefaultTennisText();
 
     if (tennisMatch) {
       // Map component types to tennis match data
@@ -228,6 +214,16 @@ export const DraggableComponent: React.FC<DraggableComponentProps> = ({
             displayValue = 'No sets data';
           }
           break;
+        case ComponentType.TENNIS_SERVING_INDICATOR:
+          // Show serving indicator only for the selected player
+          const servingPlayer = tennisMatch.servingPlayer;
+          const selectedPlayer = component.data.playerNumber || 1; // Default to player 1
+          if (servingPlayer === selectedPlayer) {
+            displayValue = '●'; // Dot when selected player is serving
+          } else {
+            displayValue = ''; // Empty when selected player is not serving
+          }
+          break;
       }
     }
     
@@ -266,9 +262,6 @@ export const DraggableComponent: React.FC<DraggableComponentProps> = ({
       >
         {displayValue}
         {/* Tennis API indicator */}
-        {tennisMatch && (
-          <div className="absolute top-1 right-1 w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-        )}
       </div>
     );
   };
@@ -285,6 +278,8 @@ export const DraggableComponent: React.FC<DraggableComponentProps> = ({
         return '0';
       case ComponentType.TENNIS_DETAILED_SET_SCORE:
         return '0';
+      case ComponentType.TENNIS_SERVING_INDICATOR:
+        return '●';
       default:
         return 'Tennis Data';
     }

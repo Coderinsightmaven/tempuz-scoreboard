@@ -31,38 +31,7 @@
             height: 100%;
             object-fit: cover;
         }
-        .status-indicator {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            padding: 4px 8px;
-            background: rgba(0,255,136,0.2);
-            border: 1px solid #00ff88;
-            border-radius: 12px;
-            font-size: 0.7rem;
-            font-weight: bold;
-            color: #00ff88;
-            z-index: 1000;
-        }
-        .tennis-api-indicator {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            padding: 4px 8px;
-            background: rgba(255,136,0,0.2);
-            border: 1px solid #ff8800;
-            border-radius: 12px;
-            font-size: 0.7rem;
-            font-weight: bold;
-            color: #ff8800;
-            z-index: 1000;
-            display: none;
-        }
-        .tennis-api-indicator.connected {
-            background: rgba(0,255,136,0.2);
-            border: 1px solid #00ff88;
-            color: #00ff88;
-        }
+        /* Status indicators removed to prevent visual clutter */
         .loading-message { 
             width: 100%; 
             height: 100%; 
@@ -104,9 +73,7 @@
             overflow: hidden;
             padding: 4px;
         }
-        .tennis-component {
-            /* Specific styling for tennis components */
-        }
+        /* Tennis component styling removed to prevent visual clutter */
         .video-component {
             position: absolute;
             overflow: hidden;
@@ -127,16 +94,7 @@
             text-align: center;
             padding: 10px;
         }
-        .live-data-indicator {
-            position: absolute;
-            top: 2px;
-            right: 2px;
-            width: 8px;
-            height: 8px;
-            background: #00ff00;
-            border-radius: 50%;
-            animation: pulse 2s infinite;
-        }
+        /* Live data indicator removed to prevent visual clutter */
         
         /* Score Change Animation Styles */
         .score-change-base {
@@ -161,11 +119,7 @@
         
 
         
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-            100% { opacity: 1; }
-        }
+        /* Pulse animation removed to prevent visual clutter */
         
         @keyframes scoreIncrease {
             0% { 
@@ -236,9 +190,7 @@
         </div>
 
         <!-- Tennis API Connection Status Indicator -->
-        <div class="tennis-api-indicator" id="tennisApiIndicator">
-            <span id="tennisApiStatus">🎾 Connecting...</span>
-        </div>
+        <!-- Tennis API indicator removed to prevent visual clutter -->
     </div>
 
     <!-- Load Socket.IO client for WebSocket connections -->
@@ -475,11 +427,7 @@
                     console.log('🎾 [SCOREBOARD] This scoreboard will only receive updates for tennis API scoreboard:', tennisApiScoreboardId);
                     updateDebug(`Connecting to tennis API scoreboard: ${tennisApiScoreboardId}`);
 
-                    // Show tennis API indicator
-                    const indicator = document.getElementById('tennisApiIndicator');
-                    if (indicator) {
-                        indicator.style.display = 'block';
-                    }
+                    // Tennis API indicator display removed to prevent visual clutter
 
                     // Connect to tennis API WebSocket
                     await connectToTennisApi();
@@ -518,7 +466,7 @@
                     console.log('🎾 [SCOREBOARD] 📡 Listening for updates on tennis API scoreboard:', tennisApiScoreboardId);
                     console.log('🎾 [SCOREBOARD] 🎯 Ready to receive live tennis match data');
                     updateDebug('Connected to tennis API');
-                    updateTennisApiIndicator('🎾 Connected', true);
+                    // Tennis API indicator update removed to prevent visual clutter
                 });
 
                 tennisApiSocket.on('disconnect', (reason) => {
@@ -526,7 +474,7 @@
                     console.log('🎾 [SCOREBOARD] 📵 Disconnect reason:', reason);
                     console.log('🎾 [SCOREBOARD] 🔄 Will attempt to reconnect automatically');
                     updateDebug('Disconnected from tennis API');
-                    updateTennisApiIndicator('🎾 Disconnected', false);
+                    // Tennis API indicator update removed to prevent visual clutter
                 });
 
                 tennisApiSocket.on('connect_error', (error) => {
@@ -534,7 +482,7 @@
                     console.error('🎾 [SCOREBOARD] ❌ Error details:', error.message);
                     console.log('🎾 [SCOREBOARD] 🔄 Will retry connection automatically');
                     updateDebug(`WebSocket error: ${error.message}`);
-                    updateTennisApiIndicator('🎾 Connection Error', false);
+                    // Tennis API indicator update removed to prevent visual clutter
                 });
 
                 // Listen for tennis match updates
@@ -770,20 +718,7 @@
             console.log('🎾 [SCOREBOARD] ✅ All tennis components cleared to default values');
         }
 
-        function updateTennisApiIndicator(statusText, isConnected) {
-            const indicator = document.getElementById('tennisApiIndicator');
-            const status = document.getElementById('tennisApiStatus');
-
-            if (indicator && status) {
-                status.textContent = statusText;
-
-                if (isConnected) {
-                    indicator.classList.add('connected');
-                } else {
-                    indicator.classList.remove('connected');
-                }
-            }
-        }
+        // updateTennisApiIndicator function removed to prevent visual clutter
 
         async function setupLiveDataForComponent(element, component) {
             // Check if this component has live data binding in its data
@@ -838,11 +773,7 @@
                 return; // No live data binding
             }
             
-            // Add live data indicator
-            const indicator = document.createElement('div');
-            indicator.className = 'live-data-indicator';
-            indicator.title = 'Live Data Active';
-            element.appendChild(indicator);
+            // Live data indicator removed to prevent visual clutter
 
             // Setup polling for this component's data
             if (binding.connectionId && binding.dataPath) {

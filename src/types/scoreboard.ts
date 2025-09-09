@@ -15,7 +15,7 @@ export interface ScoreboardComponent {
 
 export const enum ComponentType {
   BACKGROUND = 'background',
-  LOGO = 'logo', 
+  LOGO = 'logo',
   TEXT = 'text',
   VIDEO = 'video',
   TENNIS_PLAYER_NAME = 'tennis_player_name',
@@ -23,6 +23,7 @@ export const enum ComponentType {
   TENNIS_SET_SCORE = 'tennis_set_score',
   TENNIS_MATCH_SCORE = 'tennis_match_score',
   TENNIS_DETAILED_SET_SCORE = 'tennis_detailed_set_score',
+  TENNIS_SERVING_INDICATOR = 'tennis_serving_indicator',
 }
 
 export interface Position {

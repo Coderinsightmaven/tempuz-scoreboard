@@ -453,22 +453,6 @@ const ScoreboardInstanceCard: React.FC<ScoreboardInstanceCardProps> = ({
           <p className="text-sm text-gray-500 dark:text-gray-400">
             Created: {instance.createdAt.toLocaleString()}
           </p>
-          {instance.tennisApiScoreboardId ? (
-            <div className="mt-2 p-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded text-xs">
-              <div className="font-medium text-green-800 dark:text-green-200 flex items-center">
-                🎾 Listening to: Tennis API Scoreboard
-              </div>
-              <div className="text-green-600 dark:text-green-400 mt-1">
-                ID: {instance.tennisApiScoreboardId}
-              </div>
-            </div>
-          ) : (
-            <div className="mt-2 p-2 bg-gray-50 dark:bg-gray-900/20 border border-gray-200 dark:border-gray-700 rounded text-xs">
-              <div className="text-gray-600 dark:text-gray-400">
-                📊 Static display (no live data)
-              </div>
-            </div>
-          )}
         </div>
         <div className="flex space-x-2">
           <button

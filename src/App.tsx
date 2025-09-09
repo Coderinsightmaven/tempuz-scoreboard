@@ -592,6 +592,15 @@ function App() {
                   Individual set scores by player
                 </div>
               </button>
+              <button
+                onClick={() => addComponent(ComponentType.TENNIS_SERVING_INDICATOR, { x: 100, y: 100 })}
+                className="w-full text-left p-3 bg-white border border-gray-200 rounded hover:bg-gray-50 transition-colors"
+              >
+                <div className="font-medium text-sm">SERVING INDICATOR</div>
+                <div className="text-xs text-gray-600">
+                  Shows which player is serving
+                </div>
+              </button>
             </div>
           </div>
         </div>

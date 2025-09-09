@@ -15,9 +15,7 @@
   animation: scoreDecrease 0.8s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.score-flash {
-  animation: scoreFlash 0.5s ease-out;
-}
+/* .score-flash animation removed to prevent visual clutter */
 
 .score-glow {
   animation: scoreGlow 1s ease-out;
@@ -47,17 +45,7 @@
   }
 }
 
-@keyframes scoreFlash {
-  0% { 
-    transform: scale(1);
-  }
-  50% { 
-    transform: scale(1.05);
-  }
-  100% { 
-    transform: scale(1);
-  }
-}
+/* @keyframes scoreFlash removed to prevent visual clutter */
 
 @keyframes scoreGlow {
   0% { 
