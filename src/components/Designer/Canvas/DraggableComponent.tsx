@@ -151,6 +151,7 @@ export const DraggableComponent: React.FC<DraggableComponentProps> = ({
           />
         );
       case ComponentType.TENNIS_PLAYER_NAME:
+      case ComponentType.TENNIS_DOUBLES_PLAYER_NAME:
       case ComponentType.TENNIS_GAME_SCORE:
       case ComponentType.TENNIS_SET_SCORE:
       case ComponentType.TENNIS_MATCH_SCORE:
@@ -175,6 +176,37 @@ export const DraggableComponent: React.FC<DraggableComponentProps> = ({
       switch (component.type) {
         case ComponentType.TENNIS_PLAYER_NAME:
           displayValue = component.data.playerNumber === 2 ? tennisMatch.player2Name || 'Player 2' : tennisMatch.player1Name || 'Player 1';
+          break;
+        case ComponentType.TENNIS_DOUBLES_PLAYER_NAME:
+          // Handle doubles player names - display as "Lastname / Lastname"
+          const extractLastName = (fullName: string) => {
+            if (!fullName) return '';
+            const parts = fullName.trim().split(' ');
+            return parts[parts.length - 1]; // Get the last part (lastname)
+          };
+
+          if (tennisMatch.doublesPlayers) {
+            // Show team format: "Player1Last / Player2Last"
+            if (component.data.playerNumber === 1 || component.data.playerNumber === 2) {
+              // Team 1
+              const player1Name = tennisMatch.doublesPlayers.team1.player1.name || 'Player1';
+              const player2Name = tennisMatch.doublesPlayers.team1.player2.name || 'Player2';
+              const player1Last = extractLastName(player1Name);
+              const player2Last = extractLastName(player2Name);
+              displayValue = `${player1Last} / ${player2Last}`;
+            } else {
+              // Team 2
+              const player1Name = tennisMatch.doublesPlayers.team2.player1.name || 'Player1';
+              const player2Name = tennisMatch.doublesPlayers.team2.player2.name || 'Player2';
+              const player1Last = extractLastName(player1Name);
+              const player2Last = extractLastName(player2Name);
+              displayValue = `${player1Last} / ${player2Last}`;
+            }
+          } else {
+            // Fallback to singles if doubles data not available
+            const playerName = component.data.playerNumber === 2 ? tennisMatch.player2Name || 'Player 2' : tennisMatch.player1Name || 'Player 1';
+            displayValue = extractLastName(playerName);
+          }
           break;
         case ComponentType.TENNIS_GAME_SCORE:
           displayValue = component.data.playerNumber === 2 ? tennisMatch.side2PointScore : tennisMatch.side1PointScore;
@@ -270,6 +302,11 @@ export const DraggableComponent: React.FC<DraggableComponentProps> = ({
     switch (component.type) {
       case ComponentType.TENNIS_PLAYER_NAME:
         return `Player ${component.data.playerNumber || 1}`;
+      case ComponentType.TENNIS_DOUBLES_PLAYER_NAME:
+        const playerNum = component.data.playerNumber || 1;
+        if (playerNum === 1 || playerNum === 2) return 'Smith / Johnson';
+        if (playerNum === 3 || playerNum === 4) return 'Williams / Brown';
+        return 'Smith / Johnson';
       case ComponentType.TENNIS_GAME_SCORE:
         return '0';
       case ComponentType.TENNIS_SET_SCORE:

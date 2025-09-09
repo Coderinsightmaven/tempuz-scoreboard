@@ -19,6 +19,7 @@ export const enum ComponentType {
   TEXT = 'text',
   VIDEO = 'video',
   TENNIS_PLAYER_NAME = 'tennis_player_name',
+  TENNIS_DOUBLES_PLAYER_NAME = 'tennis_doubles_player_name',
   TENNIS_GAME_SCORE = 'tennis_game_score',
   TENNIS_SET_SCORE = 'tennis_set_score',
   TENNIS_MATCH_SCORE = 'tennis_match_score',
@@ -243,35 +244,73 @@ export interface LiveDataConnection {
 
 export interface TennisLiveData {
   matchId: string;
-  player1: {
+  // Singles players (backward compatibility)
+  player1?: {
     name: string;
     country?: string;
     seed?: number;
   };
-  player2: {
+  player2?: {
     name: string;
     country?: string;
     seed?: number;
+  };
+  // Doubles players
+  doublesPlayers?: {
+    team1: {
+      player1: {
+        name: string;
+        country?: string;
+        seed?: number;
+      };
+      player2: {
+        name: string;
+        country?: string;
+        seed?: number;
+      };
+    };
+    team2: {
+      player1: {
+        name: string;
+        country?: string;
+        seed?: number;
+      };
+      player2: {
+        name: string;
+        country?: string;
+        seed?: number;
+      };
+    };
   };
   score: {
-    player1Sets: number;
-    player2Sets: number;
-    player1Games: number;
-    player2Games: number;
-    player1Points: string;
-    player2Points: string;
+    player1Sets?: number;
+    player2Sets?: number;
+    player1Games?: number;
+    player2Games?: number;
+    player1Points?: string;
+    player2Points?: string;
+    // Doubles scoring
+    team1Sets?: number;
+    team2Sets?: number;
+    team1Games?: number;
+    team2Games?: number;
+    team1Points?: string;
+    team2Points?: string;
   };
   sets: Record<string, {
-    player1: number;
-    player2: number;
+    player1?: number;
+    player2?: number;
+    team1?: number;
+    team2?: number;
   }>;
   serve?: {
     speed?: string;
   };
   matchStatus: 'not_started' | 'in_progress' | 'completed' | 'suspended';
-  servingPlayer: 1 | 2;
+  servingPlayer: 1 | 2 | 3 | 4; // Support for 4 players in doubles
   currentSet: number;
   isTiebreak: boolean;
+  matchType?: 'singles' | 'doubles';
 }
 
 export interface LiveDataComponentBinding {

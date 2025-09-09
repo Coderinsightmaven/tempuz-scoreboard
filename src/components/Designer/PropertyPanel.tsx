@@ -304,6 +304,8 @@ export const PropertyPanel: React.FC = () => {
         return <VideoComponentProperties />;
       case ComponentType.TENNIS_PLAYER_NAME:
         return <TennisPlayerNameProperties />;
+      case ComponentType.TENNIS_DOUBLES_PLAYER_NAME:
+        return <TennisDoublesPlayerNameProperties />;
       case ComponentType.TENNIS_GAME_SCORE:
         return <TennisGameScoreProperties />;
       case ComponentType.TENNIS_SET_SCORE:
@@ -743,6 +745,60 @@ export const PropertyPanel: React.FC = () => {
     );
   }
 
+  function TennisDoublesPlayerNameProperties() {
+    const [localText, setLocalText] = useState(selectedComponent?.data.text || '');
+
+    React.useEffect(() => {
+      setLocalText(selectedComponent?.data.text || '');
+    }, [selectedComponent?.id, selectedComponent?.data.text]);
+
+    const handleTextBlur = () => {
+      if (localText !== selectedComponent?.data.text) {
+        handleDataChange('text', localText);
+      }
+    };
+
+    return (
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Doubles Player
+          </label>
+          <select
+            value={selectedComponent?.data.playerNumber || 1}
+            onChange={(e) => handleDataChange('playerNumber', parseInt(e.target.value))}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value={1}>Team 1 (Lastname / Lastname)</option>
+            <option value={2}>Team 1 (Lastname / Lastname)</option>
+            <option value={3}>Team 2 (Lastname / Lastname)</option>
+            <option value={4}>Team 2 (Lastname / Lastname)</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Fallback Name
+          </label>
+          <input
+            type="text"
+            value={localText}
+            onChange={(e) => setLocalText(e.target.value)}
+            onBlur={handleTextBlur}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Lastname / Lastname"
+          />
+          <div className="text-xs text-gray-500 mt-1">
+            Enter team names as "Lastname1 / Lastname2" format
+          </div>
+        </div>
+
+        <TennisApiBindingSection />
+        <TextStyleSection />
+      </div>
+    );
+  }
+
   function TennisGameScoreProperties() {
     const [localText, setLocalText] = useState(selectedComponent?.data.text || '');
 
@@ -1144,6 +1200,8 @@ export const PropertyPanel: React.FC = () => {
           return 'Text';
         case ComponentType.TENNIS_PLAYER_NAME:
           return 'Tennis Player Name';
+        case ComponentType.TENNIS_DOUBLES_PLAYER_NAME:
+          return 'Tennis Doubles Player Name';
         case ComponentType.TENNIS_GAME_SCORE:
           return 'Tennis Game Score';
         case ComponentType.TENNIS_SET_SCORE:
@@ -1169,6 +1227,8 @@ export const PropertyPanel: React.FC = () => {
           return '📝';
         case ComponentType.TENNIS_PLAYER_NAME:
           return '👤';
+        case ComponentType.TENNIS_DOUBLES_PLAYER_NAME:
+          return '👥';
         case ComponentType.TENNIS_GAME_SCORE:
         case ComponentType.TENNIS_SET_SCORE:
         case ComponentType.TENNIS_MATCH_SCORE:
@@ -1190,6 +1250,11 @@ export const PropertyPanel: React.FC = () => {
       switch (component.type) {
         case ComponentType.TENNIS_PLAYER_NAME:
           return `Player ${component.data.playerNumber || 1}`;
+        case ComponentType.TENNIS_DOUBLES_PLAYER_NAME:
+          const playerNum = component.data.playerNumber || 1;
+          if (playerNum === 1 || playerNum === 2) return 'Smith / Johnson';
+          if (playerNum === 3 || playerNum === 4) return 'Williams / Brown';
+          return 'Smith / Johnson';
         case ComponentType.TENNIS_GAME_SCORE:
         case ComponentType.TENNIS_SET_SCORE:
         case ComponentType.TENNIS_MATCH_SCORE:

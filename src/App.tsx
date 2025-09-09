@@ -557,6 +557,15 @@ function App() {
                 </div>
               </button>
               <button
+                onClick={() => addComponent(ComponentType.TENNIS_DOUBLES_PLAYER_NAME, { x: 100, y: 100 })}
+                className="w-full text-left p-3 bg-white border border-gray-200 rounded hover:bg-gray-50 transition-colors mb-2"
+              >
+                <div className="font-medium text-sm">DOUBLES PLAYER NAME</div>
+                <div className="text-xs text-gray-600">
+                  Live doubles team display (Lastname / Lastname)
+                </div>
+              </button>
+              <button
                 onClick={() => addComponent(ComponentType.TENNIS_GAME_SCORE, { x: 100, y: 100 })}
                 className="w-full text-left p-3 bg-white border border-gray-200 rounded hover:bg-gray-50 transition-colors mb-2"
               >
