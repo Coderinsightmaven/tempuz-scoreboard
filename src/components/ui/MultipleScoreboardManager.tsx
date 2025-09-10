@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useAppStore } from '../../stores/useAppStore';
-import { useLiveDataStore } from '../../stores/useLiveDataStore';
 import { ScoreboardInstance } from '../../types/scoreboard';
 import { TauriAPI, TauriScoreboardConfig } from '../../lib/tauri';
 
@@ -37,11 +36,6 @@ export const MultipleScoreboardManager: React.FC<MultipleScoreboardManagerProps>
   const [selectedScoreboardId, setSelectedScoreboardId] = useState<string>('');
   const [isLoadingScoreboards, setIsLoadingScoreboards] = useState(false);
   const [courtFilter, setCourtFilter] = useState<string>('');
-
-  // Tennis API scoreboards
-  const [selectedTennisApiScoreboardId, setSelectedTennisApiScoreboardId] = useState<string>('');
-  const tennisApiConnected = useLiveDataStore((state) => state.tennisApiConnected);
-  const availableTennisApiScoreboards = useLiveDataStore((state) => state.tennisApiScoreboards);
 
   // Load saved scoreboards when dialog opens
   useEffect(() => {
@@ -81,7 +75,7 @@ export const MultipleScoreboardManager: React.FC<MultipleScoreboardManagerProps>
       newOffsetX,
       newOffsetY,
       selectedScoreboardId,
-      selectedTennisApiScoreboardId || undefined,
+      undefined,
       courtFilter.trim() || undefined
     );
 
@@ -90,7 +84,6 @@ export const MultipleScoreboardManager: React.FC<MultipleScoreboardManagerProps>
       setSelectedScoreboardId('');
       setNewOffsetX(0);
       setNewOffsetY(0);
-      setSelectedTennisApiScoreboardId('');
       setCourtFilter('');
     }
   };
@@ -323,47 +316,6 @@ export const MultipleScoreboardManager: React.FC<MultipleScoreboardManagerProps>
                   placeholder="0"
                 />
               </div>
-            </div>
-
-            {/* Tennis API Scoreboard Selection */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                🎾 Tennis API Data Source <span className="text-xs text-gray-500">(Optional)</span>
-              </label>
-              {!tennisApiConnected ? (
-                <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-md">
-                  <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                    ⚠️ Tennis API not connected. Scoreboard will display static content only.
-                  </p>
-                  <p className="text-xs text-yellow-600 dark:text-yellow-300 mt-1">
-                    Connect to tennis API in the main app to enable live data.
-                  </p>
-                </div>
-              ) : availableTennisApiScoreboards.length === 0 ? (
-                <div className="p-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-700 rounded-md">
-                  <p className="text-sm text-orange-800 dark:text-orange-200">
-                    📭 No tennis API scoreboards available.
-                  </p>
-                  <p className="text-xs text-orange-600 dark:text-orange-300 mt-1">
-                    Create scoreboards in the tennis API first.
-                  </p>
-                </div>
-              ) : (
-                <select
-                  value={selectedTennisApiScoreboardId}
-                  onChange={(e) => setSelectedTennisApiScoreboardId(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                >
-                  <option value="">-- No live data (static display) --</option>
-                  {availableTennisApiScoreboards.map((scoreboard) => (<option key={`api-${scoreboard.id}`} value={scoreboard.id}>
-                      {scoreboard.name} (ID: {scoreboard.id})
-                    </option>
-                  ))}
-                </select>
-              )}
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                Select which tennis API scoreboard this display should listen to for live data updates.
-              </p>
             </div>
 
             {/* Court Filter */}
