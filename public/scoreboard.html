@@ -180,6 +180,21 @@
         .score-change-base, .tennis-component {
             will-change: transform;
         }
+
+        /* Serving Indicator Styles - Simple solid dot */
+        .serving-side-1,
+        .serving-side-2 {
+            /* No background, shadow, or animation - just solid dot */
+        }
+
+        /* Serving indicator text styling */
+        .tennis-component.serving-side-1,
+        .tennis-component.serving-side-2,
+        .tennis-component[data-component-type="tennis_serving_indicator"] {
+            font-weight: bold;
+            font-size: 40px !important;
+            /* Simple text without shadow for cleaner look */
+        }
     </style>
 </head>
 <body>
@@ -348,7 +363,8 @@
                                component.type === 'tennis_set_score' || 
                                component.type === 'tennis_match_score' ||
                                component.type === 'tennis_serve_speed' ||
-                               component.type === 'tennis_detailed_set_score') {
+                               component.type === 'tennis_detailed_set_score' ||
+                               component.type === 'tennis_serving_indicator') {
                         renderTennisComponent(component);
                     }
                 }
@@ -538,9 +554,24 @@
                 player2Name = 'Player 2';
             }
 
-            // Calculate serving player
+            // Extract serving side information from IonCourt data
             const server = ioncourtMatch.score?.server;
-            const servingPlayer = server?.sideNumber === 1 ? 1 : (server?.sideNumber === 2 ? 2 : null);
+            console.log('🎾 [SCOREBOARD] ===== SERVING SIDE ANALYSIS =====');
+            console.log('🎾 [SCOREBOARD] Raw server data:', server);
+
+            // Extract key serving information
+            const servingSide = server?.sideNumber;
+            const servingPlayerOnSide = server?.playerNumber;
+            const returningSide = server?.returningSide;
+
+            console.log('🎾 [SCOREBOARD] Serving side:', servingSide);
+            console.log('🎾 [SCOREBOARD] Serving player on side:', servingPlayerOnSide);
+            console.log('🎾 [SCOREBOARD] Returning side:', returningSide);
+
+            // Map serving side to our player numbering (1 or 2)
+            const servingPlayer = servingSide === 1 ? 1 : (servingSide === 2 ? 2 : null);
+            console.log('🎾 [SCOREBOARD] Calculated servingPlayer (our numbering):', servingPlayer);
+            console.log('🎾 [SCOREBOARD] ================================');
 
             // Calculate sets won and detailed set information
             const sets = ioncourtMatch.score?.sets || [];
@@ -614,6 +645,7 @@
             console.log('🎾 [SCOREBOARD] Current score:', ioncourtMatch.score?.side1PointScore, '-', ioncourtMatch.score?.side2PointScore);
             console.log('🎾 [SCOREBOARD] Match score:', ioncourtMatch.score?.scoreStringSide1, '-', ioncourtMatch.score?.scoreStringSide2);
             console.log('🎾 [SCOREBOARD] Serving player:', servingPlayer);
+            console.log('🎾 [SCOREBOARD] Server details:', ioncourtMatch.score?.server);
 
             console.log('🎾 [SCOREBOARD] Sets analysis:', {
                 totalSets: sets.length,
@@ -702,8 +734,11 @@
                 scoreStringSide1: ioncourtMatch.score?.scoreStringSide1 || `${player1SetsWon}-${player2SetsWon}`,
                 scoreStringSide2: ioncourtMatch.score?.scoreStringSide2 || `${player2SetsWon}-${player1SetsWon}`,
 
-                // Serving information
+                // Enhanced serving information
                 servingPlayer: servingPlayer,
+                servingSide: servingSide,
+                servingPlayerOnSide: servingPlayerOnSide,
+                returningSide: returningSide,
 
                 // Match metadata
                 matchId: ioncourtMatch.matchId,
@@ -739,6 +774,10 @@
             console.log('🎾 [SCOREBOARD] 🏆 Score:', match.scoreStringSide1 || '0-0', '-', match.scoreStringSide2 || '0-0');
             console.log('🎾 [SCOREBOARD] 🎾 Current points:', match.side1PointScore || '0', '-', match.side2PointScore || '0');
             console.log('🎾 [SCOREBOARD] 🎯 Serving Player:', match.servingPlayer || 'Unknown');
+            console.log('🎾 [SCOREBOARD] 🔍 Serving Player type:', typeof match.servingPlayer);
+            console.log('🎾 [SCOREBOARD] 🏓 Serving Side:', match.servingSide || 'Unknown');
+            console.log('🎾 [SCOREBOARD] 🎾 Serving Player on Side:', match.servingPlayerOnSide || 'Unknown');
+            console.log('🎾 [SCOREBOARD] 🔄 Returning Side:', match.returningSide || 'Unknown');
             console.log('🎾 [SCOREBOARD] 📈 Sets Won - P1:', match.setsWon?.player1 || 0, 'P2:', match.setsWon?.player2 || 0);
             console.log('🎾 [SCOREBOARD] 🎮 Match Status:', match.matchStatus || 'Unknown', 'Type:', match.matchType || 'Unknown');
 
@@ -746,9 +785,35 @@
             const tennisComponents = document.querySelectorAll('[data-component-type^="tennis_"]');
             console.log('🎾 [SCOREBOARD] 🎯 Found', tennisComponents.length, 'tennis components to update');
 
+            // Debug: List all tennis components found by the general selector
+            console.log('🎾 [SCOREBOARD] 📋 General selector found components:');
+            tennisComponents.forEach((comp, index) => {
+                const compType = comp.getAttribute('data-component-type');
+                const compId = comp.getAttribute('data-component-id');
+                console.log(`  ${index + 1}. ${compType} (ID: ${compId})`);
+            });
+
+            // Log specifically about serving indicator components
+            const servingIndicators = document.querySelectorAll('[data-component-type="tennis_serving_indicator"]');
+            console.log('🎾 [SCOREBOARD] 🎾 Found', servingIndicators.length, 'serving indicator components');
+            servingIndicators.forEach((indicator, index) => {
+                const playerNum = indicator.getAttribute('data-player-number');
+                const componentType = indicator.getAttribute('data-component-type');
+                const currentText = indicator.textContent || '';
+                console.log(`  - Serving indicator ${index + 1}: type="${componentType}", player=${playerNum}, text="${currentText}"`);
+
+                // Check if this indicator should show serving symbol
+                const matchServingPlayer = match.servingPlayer;
+                const shouldShow = parseInt(playerNum) === matchServingPlayer;
+                const expectedSymbol = shouldShow ? '●' : '';
+                console.log(`    Expected: "${expectedSymbol}" (Player ${playerNum} ${shouldShow ? 'IS' : 'is NOT'} serving)`);
+                console.log('    All attributes:', Array.from(indicator.attributes).map(attr => `${attr.name}="${attr.value}"`).join(', '));
+            });
+
             tennisComponents.forEach(component => {
                 const componentType = component.getAttribute('data-component-type');
                 const playerNumber = parseInt(component.getAttribute('data-player-number')) || 1;
+                console.log(`🎾 [SCOREBOARD] Processing component: ${componentType}, ID: ${component.getAttribute('data-component-id')}, player: ${playerNumber}`);
 
                 let newValue = '';
 
@@ -817,7 +882,7 @@
                 player2_set5            → match.individualSets.set5.player2Score
                                         Shows Player 2's games in set 5
 
-                tennis_serving_indicator → match.servingPlayer
+                tennis_serving_indicator → match.servingPlayer, match.servingSide, match.servingPlayerOnSide, match.returningSide
                                         Shows: "●" when player is serving
 
                 tennis_current_set      → match.currentSet
@@ -961,13 +1026,30 @@
                         }
                         break;
                     case 'tennis_serving_indicator':
-                        // Maps to: match.servingPlayer
-                        // Shows serving indicator when player is serving
+                        // Enhanced serving indicator using detailed serving data
+                        console.log('🎾 [SCOREBOARD] ===== PROCESSING SERVING INDICATOR =====');
+                        console.log('🎾 [SCOREBOARD] Component element:', component);
+                        console.log('🎾 [SCOREBOARD] Component ID:', component.getAttribute('data-component-id'));
+                        console.log('🎾 [SCOREBOARD] Component playerNumber:', playerNumber);
+                        console.log('🎾 [SCOREBOARD] Match servingPlayer:', match.servingPlayer);
+                        console.log('🎾 [SCOREBOARD] Match servingSide:', match.servingSide);
+                        console.log('🎾 [SCOREBOARD] Match servingPlayerOnSide:', match.servingPlayerOnSide);
+                        console.log('🎾 [SCOREBOARD] Match returningSide:', match.returningSide);
+                        console.log('🎾 [SCOREBOARD] Component current text:', component.textContent);
+
                         if (match.servingPlayer === playerNumber) {
-                            newValue = '●'; // Or '*' or any serving indicator
+                            // Simple serving indicator - just a solid dot
+                            newValue = '●';
+
+                            console.log('  - RESULT: Showing serving indicator for player', playerNumber);
+                            console.log('  - Setting newValue to:', newValue);
                         } else {
                             newValue = '';
+                            console.log('  - RESULT: Not showing serving indicator (empty) for player', playerNumber);
+                            console.log('  - Setting newValue to:', newValue);
                         }
+
+                        console.log('🎾 [SCOREBOARD] ===== END SERVING INDICATOR PROCESSING =====');
                         break;
                     case 'tennis_current_set':
                         // Maps to: match.currentSet
@@ -1132,21 +1214,51 @@
                     console.log(`🎾 [SCOREBOARD] 🔄 Updating ${componentType} for Player ${playerNumber}`);
                     console.log(`🎾 [SCOREBOARD] 📈 Value change: "${component.textContent}" → "${newValue}"`);
                     console.log(`🎾 [SCOREBOARD] ✨ Animating component update`);
+                    console.log(`🎾 [SCOREBOARD] Component ID: ${component.getAttribute('data-component-id')}`);
+                } else {
+                    console.log(`🎾 [SCOREBOARD] ✅ ${componentType} for Player ${playerNumber} already shows: "${newValue}"`);
+                    console.log(`🎾 [SCOREBOARD] Component ID: ${component.getAttribute('data-component-id')}`);
+                }
 
-                    // Add animation class for smooth transition
-                    component.classList.add('score-flash');
+                // Only animate if there's a change
+                if (component.textContent !== newValue) {
+                    // Add animation class for smooth transition (skip for serving indicators)
+                    if (componentType !== 'tennis_serving_indicator') {
+                        component.classList.add('score-flash');
+                    }
 
                     // Update the text content
                     const textNodes = component.childNodes;
+                    console.log(`🎾 [SCOREBOARD] Component has ${textNodes.length} child nodes`);
+                    console.log(`🎾 [SCOREBOARD] Component childNodes:`, Array.from(textNodes).map(node => ({ type: node.nodeType, content: node.textContent })));
+
                     if (textNodes.length > 0) {
+                        let foundTextNode = false;
                         for (let node of textNodes) {
                             if (node.nodeType === Node.TEXT_NODE) {
+                                console.log(`🎾 [SCOREBOARD] Updating text node from "${node.textContent}" to "${newValue}"`);
                                 node.textContent = newValue;
+                                foundTextNode = true;
                                 break;
                             }
                         }
+                        if (!foundTextNode) {
+                            console.log(`🎾 [SCOREBOARD] No text nodes found, using component.textContent`);
+                            component.textContent = newValue;
+                        }
                     } else {
+                        console.log(`🎾 [SCOREBOARD] No child nodes, using component.textContent`);
                         component.textContent = newValue;
+                    }
+
+                    console.log(`🎾 [SCOREBOARD] After update, component.textContent = "${component.textContent}"`);
+
+                    // Additional debugging: Check the DOM element directly
+                    const checkElement = document.querySelector(`[data-component-id="${component.getAttribute('data-component-id')}"]`);
+                    if (checkElement) {
+                        console.log(`🎾 [SCOREBOARD] DOM element check: textContent = "${checkElement.textContent}"`);
+                        console.log(`🎾 [SCOREBOARD] DOM element check: innerHTML = "${checkElement.innerHTML}"`);
+                        console.log(`🎾 [SCOREBOARD] DOM element check: childNodes length = ${checkElement.childNodes.length}`);
                     }
 
                     // Remove animation class after animation completes
@@ -1186,6 +1298,9 @@
                         break;
                     case 'tennis_detailed_set_score':
                         defaultValue = '0'; // Single set score for specific player and set
+                        break;
+                    case 'tennis_serving_indicator':
+                        defaultValue = '●'; // Default serving indicator symbol
                         break;
                     case 'tennis_serve_speed':
                         defaultValue = ''; // Empty for serve speed when no data

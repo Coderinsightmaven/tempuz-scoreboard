@@ -1,7 +1,7 @@
 // src/stores/useScoreboardStore.ts
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
-import { ScoreboardComponent, ScoreboardConfig, GameState, ComponentType, SportType } from '../types/scoreboard';
+import { ScoreboardComponent, ScoreboardConfig, GameState, ComponentType, ComponentData, SportType } from '../types/scoreboard';
 import { v4 as uuidv4 } from 'uuid';
 
 interface ScoreboardState {
@@ -61,7 +61,7 @@ const createDefaultComponent = (
 ): ScoreboardComponent => {
   // Set default size based on component type
   let defaultSize = { width: 100, height: 100 };
-  let defaultData = { imageId: undefined, imageUrl: undefined, text: 'Sample Text' };
+  let defaultData: ComponentData = { imageId: undefined, imageUrl: undefined, text: 'Sample Text' };
   let defaultZIndex = 1;
   
   switch (type) {
