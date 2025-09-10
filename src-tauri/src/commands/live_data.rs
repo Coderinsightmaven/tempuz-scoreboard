@@ -101,6 +101,8 @@ pub struct MatchInfo {
 lazy_static::lazy_static! {
     static ref WEBSOCKET_CONNECTIONS: Arc<Mutex<HashMap<String, WebSocketConnection>>> = Arc::new(Mutex::new(HashMap::new()));
     static ref MESSAGE_LISTENERS: Arc<Mutex<HashMap<String, tokio::task::JoinHandle<()>>>> = Arc::new(Mutex::new(HashMap::new()));
+    static ref LATEST_IONCOURT_DATA: Arc<Mutex<Option<serde_json::Value>>> = Arc::new(Mutex::new(None));
+    static ref CONNECTION_COURT_FILTERS: Arc<Mutex<HashMap<String, Option<String>>>> = Arc::new(Mutex::new(HashMap::new()));
 }
 
 // Mock data for testing
@@ -158,7 +160,7 @@ fn create_mock_tennis_data() -> TennisLiveData {
 }
 
 #[tauri::command]
-pub async fn connect_websocket(ws_url: String, connection_id: String) -> Result<String, String> {
+pub async fn connect_websocket(ws_url: String, connection_id: String, court_filter: Option<String>) -> Result<String, String> {
     println!("Attempting to connect to WebSocket: {}", ws_url);
 
     // Ensure URL starts with wss://
@@ -183,6 +185,16 @@ pub async fn connect_websocket(ws_url: String, connection_id: String) -> Result<
             let mut connections = WEBSOCKET_CONNECTIONS.lock().await;
             connections.insert(connection_id.clone(), ws_stream);
 
+            // Store the court filter for this connection
+            let mut court_filters = CONNECTION_COURT_FILTERS.lock().await;
+            court_filters.insert(connection_id.clone(), court_filter.clone());
+
+            if let Some(court) = &court_filter {
+                println!("🎾 [WEBSOCKET {}] Court filter set to: {}", connection_id, court);
+            } else {
+                println!("🎾 [WEBSOCKET {}] No court filter set - listening to all matches", connection_id);
+            }
+
             Ok(format!("Connected to WebSocket: {}", ws_url))
         }
         Err(e) => {
@@ -202,6 +214,11 @@ pub async fn disconnect_websocket(connection_id: String) -> Result<String, Strin
     if let Some(mut ws_stream) = connections.remove(&connection_id) {
         // Send close frame and close the connection
         let _ = ws_stream.close(None).await;
+
+        // Clean up court filter
+        let mut court_filters = CONNECTION_COURT_FILTERS.lock().await;
+        court_filters.remove(&connection_id);
+
         Ok(format!("Disconnected WebSocket connection: {}", connection_id))
     } else {
         Err(format!("No WebSocket connection found with ID: {}", connection_id))
@@ -242,6 +259,55 @@ pub async fn start_websocket_listener(connection_id: String) -> Result<String, S
                                 match message {
                                     Message::Text(text) => {
                                         println!("📨 [WEBSOCKET {}] Received TEXT message: {}", connection_id_clone, text);
+
+                                        // Try to parse IonCourt JSON format
+                                        if let Ok(parsed_message) = serde_json::from_str::<serde_json::Value>(&text) {
+                                            if let Some(message_type) = parsed_message.get("type") {
+                                                if message_type == "MATCH" {
+                                                    if let Some(match_data) = parsed_message.get("data") {
+                                                        // Check court filter for this connection
+                                                        let court_filters = CONNECTION_COURT_FILTERS.lock().await;
+                                                        let should_process = if let Some(court_filter) = court_filters.get(&connection_id_clone) {
+                                                            match court_filter {
+                                                                Some(court_name) => {
+                                                                    // Check if the match is for the specified court
+                                                                    if let Some(match_court) = match_data.get("court") {
+                                                                        if let Some(court_str) = match_court.as_str() {
+                                                                            court_str == court_name
+                                                                        } else {
+                                                                            false
+                                                                        }
+                                                                    } else {
+                                                                        false
+                                                                    }
+                                                                }
+                                                                None => true, // No filter set, process all matches
+                                                            }
+                                                        } else {
+                                                            true // No filter configured, process all matches
+                                                        };
+
+                                                        if should_process {
+                                                            println!("🎾 [WEBSOCKET {}] Processing IonCourt MATCH message", connection_id_clone);
+
+                                                            // Store the latest match data
+                                                            let mut latest_data = LATEST_IONCOURT_DATA.lock().await;
+                                                            *latest_data = Some(match_data.clone());
+
+                                                            if let Some(court_filter) = court_filters.get(&connection_id_clone) {
+                                                                if let Some(court_name) = court_filter {
+                                                                    println!("🎾 [WEBSOCKET {}] Match for court '{}' stored", connection_id_clone, court_name);
+                                                                } else {
+                                                                    println!("🎾 [WEBSOCKET {}] Match data stored (no court filter)", connection_id_clone);
+                                                                }
+                                                            }
+                                                        } else {
+                                                            println!("🎾 [WEBSOCKET {}] Ignoring MATCH message - not for filtered court", connection_id_clone);
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
                                     }
                                     Message::Binary(data) => {
                                         println!("📨 [WEBSOCKET {}] Received BINARY message: {} bytes", connection_id_clone, data.len());
@@ -294,6 +360,13 @@ pub async fn start_websocket_listener(connection_id: String) -> Result<String, S
     listeners.insert(connection_id.clone(), listener_handle);
 
     Ok(format!("Started WebSocket message listener for: {}", connection_id))
+}
+
+#[tauri::command]
+pub async fn get_latest_ioncourt_data() -> Result<Option<serde_json::Value>, String> {
+    println!("🎾 Retrieving latest IonCourt match data");
+    let latest_data = LATEST_IONCOURT_DATA.lock().await;
+    Ok(latest_data.clone())
 }
 
 #[tauri::command]

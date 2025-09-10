@@ -64,6 +64,7 @@ pub fn run() {
             send_websocket_message,
             start_websocket_listener,
             stop_websocket_listener,
+            get_latest_ioncourt_data,
                     // Live data storage commands
         save_live_data_connections,
         load_live_data_connections,

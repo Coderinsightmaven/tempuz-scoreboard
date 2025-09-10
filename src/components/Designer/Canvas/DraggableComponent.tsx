@@ -157,6 +157,23 @@ export const DraggableComponent: React.FC<DraggableComponentProps> = ({
       case ComponentType.TENNIS_MATCH_SCORE:
       case ComponentType.TENNIS_DETAILED_SET_SCORE:
       case ComponentType.TENNIS_SERVING_INDICATOR:
+      // Player-specific set score components
+      case ComponentType.PLAYER1_SET1:
+      case ComponentType.PLAYER2_SET1:
+      case ComponentType.PLAYER1_SET2:
+      case ComponentType.PLAYER2_SET2:
+      case ComponentType.PLAYER1_SET3:
+      case ComponentType.PLAYER2_SET3:
+      case ComponentType.PLAYER1_SET4:
+      case ComponentType.PLAYER2_SET4:
+      case ComponentType.PLAYER1_SET5:
+      case ComponentType.PLAYER2_SET5:
+      // Individual set components
+      case ComponentType.TENNIS_SET_1:
+      case ComponentType.TENNIS_SET_2:
+      case ComponentType.TENNIS_SET_3:
+      case ComponentType.TENNIS_SET_4:
+      case ComponentType.TENNIS_SET_5:
         return renderTennisComponent();
       default:
         return (
@@ -229,10 +246,26 @@ export const DraggableComponent: React.FC<DraggableComponentProps> = ({
           // Keep custom fallback text for match score
           break;
         case ComponentType.TENNIS_DETAILED_SET_SCORE:
-          if (tennisMatch) {
-            displayValue = component.data.playerNumber === 2 ? tennisMatch.score.player2_sets.toString() : tennisMatch.score.player1_sets.toString();
+          if (tennisMatch && tennisMatch.sets) {
+            const playerNumber = component.data.playerNumber || 1;
+            const setNumber = component.data.setNumber || 1;
+            const setKey = setNumber.toString();
+
+            if (tennisMatch.sets[setKey]) {
+              // Get the score for the specified player in the specified set
+              const playerScore = playerNumber === 1
+                ? (tennisMatch.sets[setKey].player1 || 0)
+                : (tennisMatch.sets[setKey].player2 || 0);
+
+              displayValue = playerScore.toString();
+            } else {
+              // Set doesn't exist yet
+              displayValue = '0';
+            }
+          } else {
+            // Fallback to component text or default
+            displayValue = component.data.text || '0';
           }
-          // Keep custom fallback text for detailed set score
           break;
         case ComponentType.TENNIS_SERVING_INDICATOR:
           // Show serving indicator only for the selected player
@@ -246,6 +279,120 @@ export const DraggableComponent: React.FC<DraggableComponentProps> = ({
             }
           }
           // Keep custom fallback text for serving indicator
+          break;
+
+        // Player-specific set score components
+        case ComponentType.PLAYER1_SET1:
+          if (tennisMatch && tennisMatch.sets && tennisMatch.sets['1']) {
+            displayValue = tennisMatch.sets['1'].player1?.toString() || '0';
+          } else {
+            displayValue = component.data.text || '0';
+          }
+          break;
+        case ComponentType.PLAYER2_SET1:
+          if (tennisMatch && tennisMatch.sets && tennisMatch.sets['1']) {
+            displayValue = tennisMatch.sets['1'].player2?.toString() || '0';
+          } else {
+            displayValue = component.data.text || '0';
+          }
+          break;
+        case ComponentType.PLAYER1_SET2:
+          if (tennisMatch && tennisMatch.sets && tennisMatch.sets['2']) {
+            displayValue = tennisMatch.sets['2'].player1?.toString() || '0';
+          } else {
+            displayValue = component.data.text || '';
+          }
+          break;
+        case ComponentType.PLAYER2_SET2:
+          if (tennisMatch && tennisMatch.sets && tennisMatch.sets['2']) {
+            displayValue = tennisMatch.sets['2'].player2?.toString() || '0';
+          } else {
+            displayValue = component.data.text || '';
+          }
+          break;
+        case ComponentType.PLAYER1_SET3:
+          if (tennisMatch && tennisMatch.sets && tennisMatch.sets['3']) {
+            displayValue = tennisMatch.sets['3'].player1?.toString() || '0';
+          } else {
+            displayValue = component.data.text || '';
+          }
+          break;
+        case ComponentType.PLAYER2_SET3:
+          if (tennisMatch && tennisMatch.sets && tennisMatch.sets['3']) {
+            displayValue = tennisMatch.sets['3'].player2?.toString() || '0';
+          } else {
+            displayValue = component.data.text || '';
+          }
+          break;
+        case ComponentType.PLAYER1_SET4:
+          if (tennisMatch && tennisMatch.sets && tennisMatch.sets['4']) {
+            displayValue = tennisMatch.sets['4'].player1?.toString() || '0';
+          } else {
+            displayValue = component.data.text || '';
+          }
+          break;
+        case ComponentType.PLAYER2_SET4:
+          if (tennisMatch && tennisMatch.sets && tennisMatch.sets['4']) {
+            displayValue = tennisMatch.sets['4'].player2?.toString() || '0';
+          } else {
+            displayValue = component.data.text || '';
+          }
+          break;
+        case ComponentType.PLAYER1_SET5:
+          if (tennisMatch && tennisMatch.sets && tennisMatch.sets['5']) {
+            displayValue = tennisMatch.sets['5'].player1?.toString() || '0';
+          } else {
+            displayValue = component.data.text || '';
+          }
+          break;
+        case ComponentType.PLAYER2_SET5:
+          if (tennisMatch && tennisMatch.sets && tennisMatch.sets['5']) {
+            displayValue = tennisMatch.sets['5'].player2?.toString() || '0';
+          } else {
+            displayValue = component.data.text || '';
+          }
+          break;
+
+        // Individual set components
+        case ComponentType.TENNIS_SET_1:
+          if (tennisMatch && tennisMatch.sets && tennisMatch.sets['1']) {
+            const set = tennisMatch.sets['1'];
+            displayValue = `${set.player1 || 0}-${set.player2 || 0}`;
+          } else {
+            displayValue = component.data.text || '0-0';
+          }
+          break;
+        case ComponentType.TENNIS_SET_2:
+          if (tennisMatch && tennisMatch.sets && tennisMatch.sets['2']) {
+            const set = tennisMatch.sets['2'];
+            displayValue = `${set.player1 || 0}-${set.player2 || 0}`;
+          } else {
+            displayValue = component.data.text || '';
+          }
+          break;
+        case ComponentType.TENNIS_SET_3:
+          if (tennisMatch && tennisMatch.sets && tennisMatch.sets['3']) {
+            const set = tennisMatch.sets['3'];
+            displayValue = `${set.player1 || 0}-${set.player2 || 0}`;
+          } else {
+            displayValue = component.data.text || '';
+          }
+          break;
+        case ComponentType.TENNIS_SET_4:
+          if (tennisMatch && tennisMatch.sets && tennisMatch.sets['4']) {
+            const set = tennisMatch.sets['4'];
+            displayValue = `${set.player1 || 0}-${set.player2 || 0}`;
+          } else {
+            displayValue = component.data.text || '';
+          }
+          break;
+        case ComponentType.TENNIS_SET_5:
+          if (tennisMatch && tennisMatch.sets && tennisMatch.sets['5']) {
+            const set = tennisMatch.sets['5'];
+            displayValue = `${set.player1 || 0}-${set.player2 || 0}`;
+          } else {
+            displayValue = component.data.text || '';
+          }
           break;
       }
     }
@@ -305,9 +452,30 @@ export const DraggableComponent: React.FC<DraggableComponentProps> = ({
       case ComponentType.TENNIS_MATCH_SCORE:
         return '0';
       case ComponentType.TENNIS_DETAILED_SET_SCORE:
-        return '0';
+        return '0'; // Shows single set score for specific player and set
       case ComponentType.TENNIS_SERVING_INDICATOR:
         return '●';
+      // Player-specific set score components
+      case ComponentType.PLAYER1_SET1:
+      case ComponentType.PLAYER2_SET1:
+        return '0';
+      case ComponentType.PLAYER1_SET2:
+      case ComponentType.PLAYER2_SET2:
+      case ComponentType.PLAYER1_SET3:
+      case ComponentType.PLAYER2_SET3:
+      case ComponentType.PLAYER1_SET4:
+      case ComponentType.PLAYER2_SET4:
+      case ComponentType.PLAYER1_SET5:
+      case ComponentType.PLAYER2_SET5:
+        return '';
+      // Individual set components
+      case ComponentType.TENNIS_SET_1:
+        return '0-0';
+      case ComponentType.TENNIS_SET_2:
+      case ComponentType.TENNIS_SET_3:
+      case ComponentType.TENNIS_SET_4:
+      case ComponentType.TENNIS_SET_5:
+        return '';
       default:
         return 'Tennis Data';
     }

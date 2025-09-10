@@ -63,7 +63,8 @@ interface AppActions {
     offsetX?: number,
     offsetY?: number,
     savedScoreboardId?: string,
-    tennisApiScoreboardId?: string
+    tennisApiScoreboardId?: string,
+    courtFilter?: string
   ) => Promise<string | null>;
   closeScoreboardInstance: (instanceId: string) => Promise<void>;
   closeAllScoreboardInstances: () => Promise<void>;
@@ -174,7 +175,8 @@ export const useAppStore = create<AppState & AppActions>()(
       offsetX: number = 0,
       offsetY: number = 0,
       savedScoreboardId?: string,
-      tennisApiScoreboardId?: string
+      tennisApiScoreboardId?: string,
+      courtFilter?: string
     ) => {
       const state = get();
       if (!state.selectedMonitor) {
@@ -201,11 +203,12 @@ export const useAppStore = create<AppState & AppActions>()(
             const savedScoreboard = savedScoreboards.find(sb => sb.id === savedScoreboardId);
             if (savedScoreboard) {
               scoreboardData = savedScoreboard.data;
-              // Include tennis API scoreboard ID in the data if provided
-              if (tennisApiScoreboardId) {
+              // Include tennis API scoreboard ID and court filter in the data if provided
+              if (tennisApiScoreboardId || courtFilter) {
                 scoreboardData = {
                   ...scoreboardData,
-                  tennisApiScoreboardId: tennisApiScoreboardId
+                  tennisApiScoreboardId: tennisApiScoreboardId,
+                  courtFilter: courtFilter
                 };
               }
               // Use the saved scoreboard's name if no custom name provided
@@ -224,7 +227,8 @@ export const useAppStore = create<AppState & AppActions>()(
               config: scoreboardStoreState.config,
               components: scoreboardStoreState.components,
               gameState: scoreboardStoreState.gameState,
-              tennisApiScoreboardId: tennisApiScoreboardId // Include tennis API scoreboard ID
+              tennisApiScoreboardId: tennisApiScoreboardId, // Include tennis API scoreboard ID
+              courtFilter: courtFilter // Include court filter for WebSocket filtering
             };
           } catch (error) {
             console.warn('Failed to load live data bindings:', error);
@@ -233,7 +237,8 @@ export const useAppStore = create<AppState & AppActions>()(
               config: scoreboardStoreState.config,
               components: scoreboardStoreState.components,
               gameState: scoreboardStoreState.gameState,
-              tennisApiScoreboardId: tennisApiScoreboardId // Include tennis API scoreboard ID
+              tennisApiScoreboardId: tennisApiScoreboardId, // Include tennis API scoreboard ID
+              courtFilter: courtFilter // Include court filter for WebSocket filtering
             };
           }
         }

@@ -1,0 +1,195 @@
+{
+    "type": "MATCH",
+    "data": {
+        "id": "6899fb0b21637312ea15f0f0",
+        "matchId": "54fadcd3-61e9-4533-860f-581555c780c0",
+        "matchFormat": "SET3-S:6/TB7@6",
+        "matchStatus": "IN_PROGRESS",
+        "matchType": "SINGLES",
+        "sides": [
+            {
+                "sideNumber": 1,
+                "participant": null,
+                "players": [
+                    {
+                        "playerNumber": 1,
+                        "participant": {
+                            "_id": "6537cc4f1953c881e865d5fc",
+                            "first_name": "Tania",
+                            "last_name": "Aburto Perez",
+                            "biographicalInformation": {
+                                "sex": "F",
+                                "playingHand": "R",
+                                "doubleHandedForehand": false,
+                                "doubleHandedBackhand": true,
+                                "national": null,
+                                "itf": null,
+                                "atpwta": null,
+                                "utr": null
+                            }
+                        },
+                        "biographicalInformation": {
+                            "sex": "F",
+                            "playingHand": "R",
+                            "doubleHandedForehand": false,
+                            "doubleHandedBackhand": true,
+                            "national": null,
+                            "itf": null,
+                            "atpwta": null,
+                            "utr": null
+                        }
+                    }
+                ],
+                "_id": "6899fb0b21637312ea15f0f1"
+            },
+            {
+                "sideNumber": 2,
+                "participant": null,
+                "players": [
+                    {
+                        "playerNumber": 1,
+                        "participant": {
+                            "_id": "643f5f513cb1c2036a2000aa",
+                            "first_name": "Diego",
+                            "last_name": "Alcala",
+                            "biographicalInformation": {
+                                "sex": "M",
+                                "playingHand": "R",
+                                "doubleHandedForehand": false,
+                                "doubleHandedBackhand": true,
+                                "national": null,
+                                "itf": null,
+                                "atpwta": null,
+                                "utr": null
+                            }
+                        },
+                        "biographicalInformation": {
+                            "sex": "M",
+                            "playingHand": "R",
+                            "doubleHandedForehand": false,
+                            "doubleHandedBackhand": true,
+                            "national": null,
+                            "itf": null,
+                            "atpwta": null,
+                            "utr": null
+                        }
+                    }
+                ],
+                "_id": "6899fb0b21637312ea15f0f3"
+            }
+        ],
+        "score": {
+            "scoreStringSide1": "0-0 (15-0)",
+            "scoreStringSide2": "0-0 (0-15)",
+            "side1PointScore": "15",
+            "side2PointScore": "0",
+            "server": {
+                "sideNumber": 1,
+                "playerNumber": 1,
+                "player": "6537cc4f1953c881e865d5fc",
+                "returningSide": "AD",
+                "_id": "68c05bc933974ae5c8565e46"
+            },
+            "sets": [
+                {
+                    "setNumber": 1,
+                    "side1Score": 0,
+                    "side1TiebreakScore": null,
+                    "side2Score": 0,
+                    "side2TiebreakScore": null,
+                    "_id": "68c05bc933974ae5c8565e47",
+                    "games": [],
+                    "returnerCourtSides": [],
+                    "serverPickleballOrders": [],
+                    "isCompleted": false
+                }
+            ],
+            "_id": "68c05bc933974ae5c8565e45"
+        },
+        "clocks": [
+            {
+                "name": "DEFAULT",
+                "type": "STOPWATCH",
+                "defaultValue": 1,
+                "displayValue": "00:00",
+                "adjustTime": 1000,
+                "timePipe": "mm:ss",
+                "value": 1,
+                "isPaused": true,
+                "timeoutPerSet": 0,
+                "timeoutPerMatch": 0,
+                "_id": "6899fb0b21637312ea15f0f5"
+            }
+        ],
+        "court": "",
+        "isUndo": false,
+        "playerCourtTimeLog": {
+            "side1": [
+                {
+                    "player": {
+                        "biographicalInformation": {
+                            "sex": "F",
+                            "playingHand": "R",
+                            "doubleHandedForehand": false,
+                            "doubleHandedBackhand": true,
+                            "national": null,
+                            "itf": null,
+                            "atpwta": null,
+                            "utr": null
+                        },
+                        "_id": "6537cc4f1953c881e865d5fc",
+                        "first_name": "Tania",
+                        "last_name": "Aburto Perez"
+                    },
+                    "playerNumber": 1,
+                    "sideNumber": 1,
+                    "inTime": "2025-09-09T16:54:24.774Z",
+                    "outTime": null,
+                    "substitutedBy": null,
+                    "substitutedAt": null,
+                    "performedBy": "5d895fe8c78a5aa59898a8b1",
+                    "isReverted": false,
+                    "setNumber": 1,
+                    "inPointNumber": 1,
+                    "outSetNumber": null
+                }
+            ],
+            "side2": [
+                {
+                    "player": {
+                        "biographicalInformation": {
+                            "sex": "M",
+                            "playingHand": "R",
+                            "doubleHandedForehand": false,
+                            "doubleHandedBackhand": true,
+                            "national": null,
+                            "itf": null,
+                            "atpwta": null,
+                            "utr": null
+                        },
+                        "_id": "643f5f513cb1c2036a2000aa",
+                        "first_name": "Diego",
+                        "last_name": "Alcala"
+                    },
+                    "playerNumber": 1,
+                    "sideNumber": 2,
+                    "inTime": "2025-09-09T16:54:24.774Z",
+                    "outTime": null,
+                    "substitutedBy": null,
+                    "substitutedAt": null,
+                    "performedBy": "5d895fe8c78a5aa59898a8b1",
+                    "isReverted": false,
+                    "setNumber": 1,
+                    "inPointNumber": 1,
+                    "outSetNumber": null
+                }
+            ]
+        },
+        "substituteTracker": {
+            "side1": [],
+            "side2": []
+        },
+        "isStartPoint": false,
+        "isEndPoint": false
+    }
+}

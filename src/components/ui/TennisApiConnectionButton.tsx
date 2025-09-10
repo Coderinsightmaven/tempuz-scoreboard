@@ -133,6 +133,7 @@ export const TennisApiConnectionButton: React.FC = () => {
                     />
                   </div>
 
+
                   {(error || lastError) && (
                     <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-md">
                       <p className="text-sm text-red-800 dark:text-red-200">
@@ -164,11 +165,10 @@ export const TennisApiConnectionButton: React.FC = () => {
                   📋 Instructions
                 </h3>
                 <ol className="text-xs text-gray-600 dark:text-gray-400 space-y-1 list-decimal list-inside">
-                  <li>Start your tennis-api server: <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">cd tennis-api && yarn start:dev</code></li>
-                  <li>Enter the API URL (usually http://localhost:3000)</li>
-                  <li>Enter your API key (default: dev-api-key-12345)</li>
+                  <li>Enter your IonCourt WebSocket URL with authentication token</li>
                   <li>Click "Connect" to establish WebSocket connection</li>
-                  <li>The connection will automatically fetch available scoreboards</li>
+                  <li>Your scoreboard will automatically update with live tennis data</li>
+                  <li>Use the Multiple Scoreboard Manager to filter by specific courts</li>
                 </ol>
               </div>
             </div>

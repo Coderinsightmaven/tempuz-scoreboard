@@ -289,9 +289,9 @@ export class TauriAPI {
     }
   }
 
-  static async connectWebSocket(wsUrl: string, connectionId: string): Promise<string> {
+  static async connectWebSocket(wsUrl: string, connectionId: string, courtFilter?: string): Promise<string> {
     try {
-      return await invoke('connect_websocket', { wsUrl, connectionId });
+      return await invoke('connect_websocket', { wsUrl, connectionId, courtFilter });
     } catch (error) {
       throw error;
     }
@@ -324,6 +324,14 @@ export class TauriAPI {
   static async stopWebSocketListener(connectionId: string): Promise<string> {
     try {
       return await invoke('stop_websocket_listener', { connectionId });
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  static async getLatestIonCourtData(): Promise<any> {
+    try {
+      return await invoke('get_latest_ioncourt_data');
     } catch (error) {
       throw error;
     }

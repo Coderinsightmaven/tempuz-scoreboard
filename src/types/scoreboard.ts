@@ -25,6 +25,23 @@ export const enum ComponentType {
   TENNIS_MATCH_SCORE = 'tennis_match_score',
   TENNIS_DETAILED_SET_SCORE = 'tennis_detailed_set_score',
   TENNIS_SERVING_INDICATOR = 'tennis_serving_indicator',
+  // Player-specific set score components
+  PLAYER1_SET1 = 'player1_set1',
+  PLAYER2_SET1 = 'player2_set1',
+  PLAYER1_SET2 = 'player1_set2',
+  PLAYER2_SET2 = 'player2_set2',
+  PLAYER1_SET3 = 'player1_set3',
+  PLAYER2_SET3 = 'player2_set3',
+  PLAYER1_SET4 = 'player1_set4',
+  PLAYER2_SET4 = 'player2_set4',
+  PLAYER1_SET5 = 'player1_set5',
+  PLAYER2_SET5 = 'player2_set5',
+  // Individual set components
+  TENNIS_SET_1 = 'tennis_set_1',
+  TENNIS_SET_2 = 'tennis_set_2',
+  TENNIS_SET_3 = 'tennis_set_3',
+  TENNIS_SET_4 = 'tennis_set_4',
+  TENNIS_SET_5 = 'tennis_set_5',
 }
 
 export interface Position {

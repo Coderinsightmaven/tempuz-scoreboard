@@ -414,9 +414,74 @@
                 // WebSocket connection now handled by backend (Tauri)
                 // Frontend WebSocket connection disabled to prevent duplicate connections
                 console.log('🎾 [SCOREBOARD] WebSocket connection handled by backend - no frontend connection needed');
-                updateDebug('WebSocket handled by backend');
+
+                // Check for court filter in scoreboard data
+                if (scoreboardData.courtFilter) {
+                    console.log('🎾 [SCOREBOARD] Court filter found:', scoreboardData.courtFilter);
+                    updateDebug(`Court Filter: ${scoreboardData.courtFilter}`);
+                } else {
+                    console.log('🎾 [SCOREBOARD] No court filter - will receive all matches');
+                    updateDebug('No court filter - all matches');
+                }
+
+                // Start polling for IonCourt data updates
+                startIonCourtDataPolling();
             } catch (error) {
                 console.error('Failed to load live data connections:', error);
+            }
+        }
+
+        // Poll for IonCourt data updates
+        let ionCourtDataInterval = null;
+
+        async function startIonCourtDataPolling() {
+            console.log('🎾 [SCOREBOARD] Starting IonCourt data polling...');
+
+            if (scoreboardData.courtFilter) {
+                console.log('🎾 [SCOREBOARD] Court filter active:', scoreboardData.courtFilter);
+            } else {
+                console.log('🎾 [SCOREBOARD] No court filter - listening to all matches');
+            }
+
+            // Clear any existing interval
+            if (ionCourtDataInterval) {
+                clearInterval(ionCourtDataInterval);
+            }
+
+            // Poll every 2 seconds for new data
+            ionCourtDataInterval = setInterval(async () => {
+                try {
+                    if (!window.__TAURI__ || !window.__TAURI__.core) {
+                        return;
+                    }
+
+                    // Get latest IonCourt data from backend
+                    const latestData = await window.__TAURI__.core.invoke('get_latest_ioncourt_data');
+
+                    if (latestData) {
+                        console.log('🎾 [SCOREBOARD] Received IonCourt data update');
+                        console.log('🎾 [SCOREBOARD] Raw data:', latestData);
+
+                        // Convert and update components
+                        const convertedMatch = convertIonCourtToMatchFormat(latestData);
+                        console.log('🎾 [SCOREBOARD] Converted match data:', convertedMatch);
+
+                            updateTennisComponents(convertedMatch);
+                        }
+                    } catch (error) {
+                    // Silently handle errors - backend might not be ready yet
+                    console.log('🎾 [SCOREBOARD] No IonCourt data available yet');
+                }
+            }, 2000);
+
+            console.log('🎾 [SCOREBOARD] IonCourt data polling started');
+        }
+
+        function stopIonCourtDataPolling() {
+            if (ionCourtDataInterval) {
+                clearInterval(ionCourtDataInterval);
+                ionCourtDataInterval = null;
+                console.log('🎾 [SCOREBOARD] IonCourt data polling stopped');
             }
         }
 
@@ -425,30 +490,203 @@
         function convertIonCourtToMatchFormat(ioncourtMatch) {
             console.log('🎾 [SCOREBOARD] 🔄 Converting IonCourt data to match format');
 
-            // Extract player names
-            const player1Name = ioncourtMatch.sides?.[0]?.players?.[0]?.participant?.last_name +
-                               ', ' + ioncourtMatch.sides?.[0]?.players?.[0]?.participant?.first_name || 'Player 1';
-            const player2Name = ioncourtMatch.sides?.[1]?.players?.[0]?.participant?.last_name +
-                               ', ' + ioncourtMatch.sides?.[1]?.players?.[0]?.participant?.first_name || 'Player 2';
+            // Helper function to format player names
+            function formatPlayerName(player) {
+                if (player?.participant) {
+                    const firstName = player.participant.first_name || '';
+                    const lastName = player.participant.last_name || '';
+                    return `${lastName}, ${firstName}`.trim();
+                }
+                return 'Player';
+            }
+
+            // Helper function to format doubles player names (last names only)
+            function formatDoublesPlayerName(player) {
+                if (player?.participant) {
+                    const lastName = player.participant.last_name || '';
+                    // For doubles, take only the last part of compound last names
+                    // e.g., "Aburto Perez" becomes "Perez", "Smith" stays "Smith"
+                    const lastNameParts = lastName.trim().split(' ');
+                    const displayLastName = lastNameParts[lastNameParts.length - 1] || 'Player';
+                    return displayLastName;
+                }
+                return 'Player';
+            }
+
+            // Extract player names - handle both singles and doubles
+            let player1Name = '';
+            let player2Name = '';
+
+            if (ioncourtMatch.matchType === 'SINGLES') {
+                // Singles: each side has 1 player
+                player1Name = formatPlayerName(ioncourtMatch.sides?.[0]?.players?.[0]);
+                player2Name = formatPlayerName(ioncourtMatch.sides?.[1]?.players?.[0]);
+            } else if (ioncourtMatch.matchType === 'DOUBLES') {
+                // Doubles: each side has 2 players
+                const side1Players = ioncourtMatch.sides?.[0]?.players || [];
+                const side2Players = ioncourtMatch.sides?.[1]?.players || [];
+
+                // Format doubles names as "LastName1 / LastName2" (last names only)
+                const side1Names = side1Players.map(p => formatDoublesPlayerName(p)).filter(name => name !== 'Player');
+                const side2Names = side2Players.map(p => formatDoublesPlayerName(p)).filter(name => name !== 'Player');
+
+                player1Name = side1Names.join(' / ') || 'Team 1';
+                player2Name = side2Names.join(' / ') || 'Team 2';
+                    } else {
+                // Fallback for unknown match type
+                player1Name = 'Player 1';
+                player2Name = 'Player 2';
+            }
 
             // Calculate serving player
             const server = ioncourtMatch.score?.server;
-            const servingPlayer = server?.sideNumber === 1 ? 1 : 2;
+            const servingPlayer = server?.sideNumber === 1 ? 1 : (server?.sideNumber === 2 ? 2 : null);
 
-            // Calculate sets won
+            // Calculate sets won and detailed set information
             const sets = ioncourtMatch.score?.sets || [];
             let player1SetsWon = 0;
             let player2SetsWon = 0;
+            let detailedSetScores = [];
+            let currentSet = 1;
 
-            sets.forEach(set => {
-                if (set.isCompleted) {
-                    if (set.side1Score > set.side2Score) {
+            // Process each set for better formatting
+            sets.forEach((set, index) => {
+                const setNumber = set.setNumber || (index + 1);
+                const side1Score = set.side1Score || 0;
+                const side2Score = set.side2Score || 0;
+                const side1Tiebreak = set.side1TiebreakScore;
+                const side2Tiebreak = set.side2TiebreakScore;
+                const isCompleted = set.isCompleted || false;
+
+                // Count sets won (only for completed sets)
+                if (isCompleted) {
+                    if (side1Score > side2Score) {
                         player1SetsWon++;
-                    } else if (set.side2Score > set.side1Score) {
+                    } else if (side2Score > side1Score) {
                         player2SetsWon++;
                     }
                 }
+
+                // Format detailed set score with tiebreak handling
+                let setScoreString = `${side1Score}-${side2Score}`;
+
+                // Handle tiebreaks - show tiebreak score in parentheses if it exists
+                if (side1Tiebreak !== null && side1Tiebreak !== undefined) {
+                    setScoreString = `${side1Score}-${side2Score}(${side1Tiebreak})`;
+                } else if (side2Tiebreak !== null && side2Tiebreak !== undefined) {
+                    setScoreString = `${side1Score}-${side2Score}(${side2Tiebreak})`;
+                }
+
+                detailedSetScores.push({
+                    setNumber: setNumber,
+                    score: setScoreString,
+                    isCompleted: isCompleted,
+                    side1Score: side1Score,
+                    side2Score: side2Score,
+                    side1Tiebreak: side1Tiebreak,
+                    side2Tiebreak: side2Tiebreak
+                });
+
+                // Determine current set (first incomplete set)
+                if (!isCompleted && currentSet === 1) {
+                    currentSet = setNumber;
+                }
             });
+
+            // If all sets are complete, current set is the next one
+            if (currentSet === 1 && sets.length > 0) {
+                const lastSet = sets[sets.length - 1];
+                if (lastSet && lastSet.isCompleted) {
+                    currentSet = (lastSet.setNumber || sets.length) + 1;
+                }
+            }
+
+            console.log('🎾 [SCOREBOARD] Match type:', ioncourtMatch.matchType);
+            if (ioncourtMatch.matchType === 'DOUBLES') {
+                console.log('🎾 [SCOREBOARD] Player 1 (doubles):', player1Name, '(last names only)');
+                console.log('🎾 [SCOREBOARD] Player 2 (doubles):', player2Name, '(last names only)');
+                console.log('🎾 [SCOREBOARD] Example: "Brown / Perez" vs "Agritellley / Ahmad"');
+            } else {
+                console.log('🎾 [SCOREBOARD] Player 1 (singles):', player1Name, '(full name)');
+                console.log('🎾 [SCOREBOARD] Player 2 (singles):', player2Name, '(full name)');
+                console.log('🎾 [SCOREBOARD] Example: "Brown, Mike" vs "Agritellley, Nicolas"');
+            }
+            console.log('🎾 [SCOREBOARD] Current score:', ioncourtMatch.score?.side1PointScore, '-', ioncourtMatch.score?.side2PointScore);
+            console.log('🎾 [SCOREBOARD] Match score:', ioncourtMatch.score?.scoreStringSide1, '-', ioncourtMatch.score?.scoreStringSide2);
+            console.log('🎾 [SCOREBOARD] Serving player:', servingPlayer);
+
+            console.log('🎾 [SCOREBOARD] Sets analysis:', {
+                totalSets: sets.length,
+                player1SetsWon: player1SetsWon,
+                player2SetsWon: player2SetsWon,
+                currentSet: currentSet,
+                detailedSetScores: detailedSetScores.map(s => `${s.setNumber}: ${s.score}${s.isCompleted ? ' (completed)' : ' (in progress)'}`)
+            });
+
+            // Create individual set variables for separate display
+            const individualSets = {};
+            detailedSetScores.forEach((set, index) => {
+                const setNum = set.setNumber || (index + 1);
+                individualSets[`set${setNum}`] = {
+                    score: set.score,                    // "6-4" or "6-4(7)"
+                    player1Score: set.side1Score,         // Player 1's games in this set
+                    player2Score: set.side2Score,         // Player 2's games in this set
+                    player1Tiebreak: set.side1Tiebreak,   // Player 1's tiebreak score
+                    player2Tiebreak: set.side2Tiebreak,   // Player 2's tiebreak score
+                    side1Score: set.side1Score,           // Legacy support
+                    side2Score: set.side2Score,           // Legacy support
+                    side1Tiebreak: set.side1Tiebreak,     // Legacy support
+                    side2Tiebreak: set.side2Tiebreak,     // Legacy support
+                    isCompleted: set.isCompleted,
+                    setNumber: setNum
+                };
+            });
+
+            // Show example of how sets will display in components
+            if (detailedSetScores.length > 0) {
+                const setsDisplayExample = detailedSetScores.map(s => s.score).join(', ');
+                console.log('🎾 [SCOREBOARD] Sets display example:', setsDisplayExample);
+                console.log('🎾 [SCOREBOARD] Component examples:');
+                console.log('  - tennis_set_score (P1):', player1SetsWon);
+                console.log('  - tennis_set_score (P2):', player2SetsWon);
+                console.log('  - tennis_current_set:', currentSet);
+                console.log('  - tennis_detailed_set_score:', setsDisplayExample);
+                // Show enhanced detailed set score using individual player scores
+                console.log('  - tennis_detailed_set_score (enhanced): Single score per component');
+                console.log('    Example: Player 1 Set 1 = "6", Player 2 Set 1 = "4"');
+
+                    // Show individual set variables
+                console.log('🎾 [SCOREBOARD] Individual set variables:');
+                Object.keys(individualSets).forEach(setKey => {
+                    const setData = individualSets[setKey];
+                    console.log(`  - ${setKey}: "${setData.score}" (${setData.isCompleted ? 'completed' : 'in progress'})`);
+                });
+
+                console.log('🎾 [SCOREBOARD] Individual set component examples:');
+                for (let i = 1; i <= 5; i++) {
+                    const setKey = `set${i}`;
+                    if (individualSets[setKey]) {
+                        console.log(`  - tennis_set_${i}: "${individualSets[setKey].score}"`);
+                    } else {
+                        console.log(`  - tennis_set_${i}: "" (empty)`);
+                    }
+                }
+
+                console.log('🎾 [SCOREBOARD] Player-specific set components:');
+                console.log('🎾 [SCOREBOARD] Available components: player1_set1, player2_set1, player1_set2, player2_set2, etc.');
+                console.log('🎾 [SCOREBOARD] To test: Add <span data-component-type="player1_set1"></span> to your HTML');
+                for (let i = 1; i <= 5; i++) {
+                    const setKey = `set${i}`;
+                    if (individualSets[setKey]) {
+                        console.log(`  - player1_set${i}: "${individualSets[setKey].player1Score}"`);
+                        console.log(`  - player2_set${i}: "${individualSets[setKey].player2Score}"`);
+                    } else {
+                        console.log(`  - player1_set${i}: "${i === 1 ? '0' : ''}" (empty)`);
+                        console.log(`  - player2_set${i}: "${i === 1 ? '0' : ''}" (empty)`);
+                    }
+                }
+
+            }
 
             // Return converted match data in the format expected by updateTennisComponents
             return {
@@ -461,8 +699,8 @@
                 side2PointScore: ioncourtMatch.score?.side2PointScore || '0',
 
                 // Overall match score strings
-                scoreStringSide1: ioncourtMatch.score?.scoreStringSide1 || `${player1SetsWon}-0`,
-                scoreStringSide2: ioncourtMatch.score?.scoreStringSide2 || `${player2SetsWon}-0`,
+                scoreStringSide1: ioncourtMatch.score?.scoreStringSide1 || `${player1SetsWon}-${player2SetsWon}`,
+                scoreStringSide2: ioncourtMatch.score?.scoreStringSide2 || `${player2SetsWon}-${player1SetsWon}`,
 
                 // Serving information
                 servingPlayer: servingPlayer,
@@ -470,11 +708,20 @@
                 // Match metadata
                 matchId: ioncourtMatch.matchId,
                 matchStatus: ioncourtMatch.matchStatus,
+                matchType: ioncourtMatch.matchType,
 
-                // Additional data for compatibility
+                // Enhanced sets data
                 scoreboardId: 'ioncourt-main', // Default scoreboard ID for IonCourt
                 sets: sets,
-                currentSet: sets.length > 0 ? sets.length : 1
+                currentSet: currentSet,
+                setsWon: {
+                    player1: player1SetsWon,
+                    player2: player2SetsWon
+                },
+                detailedSetScores: detailedSetScores, // Enhanced set information for components
+
+                // Individual set variables for separate display
+                individualSets: individualSets
             };
         }
 
@@ -487,9 +734,13 @@
                 return;
             }
 
-            console.log('🎾 [SCOREBOARD] 📊 Player 1:', match.player1Name || 'Unknown', 'vs Player 2:', match.player2Name || 'Unknown');
+            console.log('🎾 [SCOREBOARD] 📊 Player 1:', match.player1Name || 'Unknown', 'vs Player 2:', match.player2Name || 'Unknown',
+                match.matchType === 'DOUBLES' ? '(doubles - last names only)' : '(singles - full names)');
             console.log('🎾 [SCOREBOARD] 🏆 Score:', match.scoreStringSide1 || '0-0', '-', match.scoreStringSide2 || '0-0');
             console.log('🎾 [SCOREBOARD] 🎾 Current points:', match.side1PointScore || '0', '-', match.side2PointScore || '0');
+            console.log('🎾 [SCOREBOARD] 🎯 Serving Player:', match.servingPlayer || 'Unknown');
+            console.log('🎾 [SCOREBOARD] 📈 Sets Won - P1:', match.setsWon?.player1 || 0, 'P2:', match.setsWon?.player2 || 0);
+            console.log('🎾 [SCOREBOARD] 🎮 Match Status:', match.matchStatus || 'Unknown', 'Type:', match.matchType || 'Unknown');
 
             // Find all tennis components and update them
             const tennisComponents = document.querySelectorAll('[data-component-type^="tennis_"]');
@@ -501,25 +752,121 @@
 
                 let newValue = '';
 
+                /*
+                IONCOURT COMPONENT TYPES - Maps to converted match data:
+
+                tennis_player_name      → match.player1Name / match.player2Name
+                                        Format: "Last, First" (singles) or "LastName1 / LastName2" (doubles)
+
+                tennis_game_score       → match.side1PointScore / match.side2PointScore
+                                        Shows: "0", "15", "30", "40"
+
+                tennis_set_score        → match.setsWon.player1 / match.setsWon.player2
+                                        Shows number of sets won (e.g., "1", "2")
+
+                tennis_match_score      → match.scoreStringSide1 / match.scoreStringSide2
+                                        Shows overall match score: "1-6 0-0 (40-40)"
+
+                tennis_detailed_set_score → match.individualSets (enhanced)
+                                        Shows single set score for specific player and set: "6"
+                                        Format: "playerScore" (single number)
+                                        Attributes: data-player-number and data-set-number
+
+                tennis_set_1            → match.individualSets.set1
+                                        Shows first set score: "6-4", "6-4(7)", "0-0"
+
+                tennis_set_2            → match.individualSets.set2
+                                        Shows second set score: "4-6", "7-6(3)", ""
+
+                tennis_set_3            → match.individualSets.set3
+                                        Shows third set score: "6-3", "", ""
+
+                tennis_set_4            → match.individualSets.set4
+                                        Shows fourth set score (for longer matches)
+
+                tennis_set_5            → match.individualSets.set5
+                                        Shows fifth set score (for 5-set matches)
+
+                player1_set1            → match.individualSets.set1.player1Score
+                                        Shows Player 1's games in set 1: "6", "4", "0"
+
+                player2_set1            → match.individualSets.set1.player2Score
+                                        Shows Player 2's games in set 1: "4", "6", "0"
+
+                player1_set2            → match.individualSets.set2.player1Score
+                                        Shows Player 1's games in set 2: "6", "", ""
+
+                player2_set2            → match.individualSets.set2.player2Score
+                                        Shows Player 2's games in set 2: "4", "", ""
+
+                player1_set3            → match.individualSets.set3.player1Score
+                                        Shows Player 1's games in set 3
+
+                player2_set3            → match.individualSets.set3.player2Score
+                                        Shows Player 2's games in set 3
+
+                player1_set4            → match.individualSets.set4.player1Score
+                                        Shows Player 1's games in set 4 (for longer matches)
+
+                player2_set4            → match.individualSets.set4.player2Score
+                                        Shows Player 2's games in set 4
+
+                player1_set5            → match.individualSets.set5.player1Score
+                                        Shows Player 1's games in set 5 (for 5-set matches)
+
+                player2_set5            → match.individualSets.set5.player2Score
+                                        Shows Player 2's games in set 5
+
+                tennis_serving_indicator → match.servingPlayer
+                                        Shows: "●" when player is serving
+
+                tennis_current_set      → match.currentSet
+                                        Shows current set number (e.g., "1", "2", "3")
+
+                tennis_match_status     → match.matchStatus
+                                        Shows: "IN_PROGRESS", "COMPLETED", etc.
+
+                tennis_match_type       → match.matchType
+                                        Shows: "SINGLES", "DOUBLES"
+
+                Usage: Add data-component-type="tennis_player_name" data-player-number="1"
+                */
                 switch (componentType) {
                     case 'tennis_player_name':
+                        // Maps to: match.player1Name / match.player2Name
+                        // Format: "Last, First" for singles, "LastName1 / LastName2" for doubles (uses only the last part of compound last names)
                         newValue = playerNumber === 1 ? (match.player1Name || 'Player 1') : (match.player2Name || 'Player 2');
                         break;
                     case 'tennis_game_score':
-                        // Show current point score (0, 15, 30, 40, etc.)
+                        // Maps to: match.side1PointScore / match.side2PointScore
+                        // Shows current game points: "0", "15", "30", "40"
                         newValue = playerNumber === 1 ? (match.side1PointScore || '0') : (match.side2PointScore || '0');
                         break;
                     case 'tennis_set_score':
-                        // Count sets won - a set is won when a player reaches 6 games and leads by at least 2
+                        // Maps to: match.setsWon.player1 / match.setsWon.player2
+                        // Shows number of sets won by this player
+                        if (match.setsWon) {
+                            newValue = (playerNumber === 1 ? match.setsWon.player1 : match.setsWon.player2).toString();
+                        } else {
+                            // Enhanced fallback: Use detailedSetScores if available, otherwise count from sets data
                         let setsWon = 0;
-                        if (match.sets) {
+                            if (match.detailedSetScores && match.detailedSetScores.length > 0) {
+                                // Use the enhanced detailedSetScores for more accurate counting
+                                match.detailedSetScores.forEach(set => {
+                                    if (set.isCompleted) {
+                                        if (playerNumber === 1 && set.side1Score > set.side2Score) {
+                                            setsWon++;
+                                        } else if (playerNumber === 2 && set.side2Score > set.side1Score) {
+                                            setsWon++;
+                                        }
+                                    }
+                                });
+                            } else if (match.sets && match.sets.length > 0) {
+                                // Original fallback logic
                             match.sets.forEach(set => {
+                                    if (set.isCompleted) {
                                 const side1Score = set.side1Score || 0;
                                 const side2Score = set.side2Score || 0;
-                                const scoreDiff = Math.abs(side1Score - side2Score);
-
-                                // A set is complete if one player has 6+ games and leads by 2+
-                                if ((side1Score >= 6 || side2Score >= 6) && scoreDiff >= 2) {
                                     if (playerNumber === 1 && side1Score > side2Score) {
                                         setsWon++;
                                     } else if (playerNumber === 2 && side2Score > side1Score) {
@@ -529,18 +876,239 @@
                             });
                         }
                         newValue = setsWon.toString();
+                        }
                         break;
                     case 'tennis_match_score':
-                        // Show overall match score strings
+                        // Maps to: match.scoreStringSide1 / match.scoreStringSide2
+                        // Shows overall match score: "1-6 0-0 (40-40)"
                         newValue = playerNumber === 1 ? (match.scoreStringSide1 || '0-0') : (match.scoreStringSide2 || '0-0');
                         break;
                     case 'tennis_detailed_set_score':
-                        // Show detailed set scores like "6-4, 3-6, 2-2"
-                        if (match.sets && match.sets.length > 0) {
-                            const setScores = match.sets.map(set => `${set.side1Score || 0}-${set.side2Score || 0}`);
-                            newValue = setScores.join(', ');
+                        // Maps to: match.individualSets with specific player and set
+                        // Shows score for ONE specific player in ONE specific set
+                        // Format: "playerScore" (single number)
+                        // Uses: data-player-number and data-set-number attributes
+                        const setNumber = parseInt(component.getAttribute('data-set-number')) || 1;
+
+                        if (match.individualSets) {
+                            const setKey = `set${setNumber}`;
+                            if (match.individualSets[setKey]) {
+                                // Get the score for the specified player in the specified set
+                                const playerScore = playerNumber === 1
+                                    ? (match.individualSets[setKey].player1Score || 0)
+                                    : (match.individualSets[setKey].player2Score || 0);
+
+                                // Handle tiebreaks - if the specified player won the tiebreak, show it
+                                let scoreString = playerScore.toString();
+                                const playerTiebreak = playerNumber === 1
+                                    ? match.individualSets[setKey].player1Tiebreak
+                                    : match.individualSets[setKey].player2Tiebreak;
+
+                                if (playerTiebreak !== null && playerTiebreak !== undefined) {
+                                    scoreString = `${scoreString}(${playerTiebreak})`;
+                                }
+
+                                newValue = scoreString;
+                            } else {
+                                // Set doesn't exist yet, show 0
+                                newValue = '0';
+                            }
+                        } else if (match.detailedSetScores && match.detailedSetScores.length >= setNumber) {
+                            // Fallback: extract from detailed set scores
+                            const setData = match.detailedSetScores[setNumber - 1];
+                            if (setData) {
+                                const scores = setData.score.split('/');
+                                newValue = playerNumber === 1 ? scores[0] : (scores[1] || scores[0]);
+                            } else {
+                                newValue = '0';
+                            }
+                        } else if (match.sets && match.sets.length >= setNumber) {
+                            // Final fallback: extract from basic sets data
+                            const setData = match.sets[setNumber - 1];
+                            if (setData) {
+                                const playerScore = playerNumber === 1
+                                    ? (setData.side1Score || 0)
+                                    : (setData.side2Score || 0);
+
+                                // Handle tiebreaks in fallback
+                                let scoreString = playerScore.toString();
+                                const playerTiebreak = playerNumber === 1
+                                    ? setData.side1TiebreakScore
+                                    : setData.side2TiebreakScore;
+
+                                if (playerTiebreak !== null && playerTiebreak !== undefined) {
+                                    scoreString = `${scoreString}(${playerTiebreak})`;
+                                }
+
+                                newValue = scoreString;
+                            } else {
+                                newValue = '0';
+                            }
+                        } else {
+                            newValue = '0';
+                        }
+                        break;
+                    case 'tennis_serving_indicator':
+                        // Maps to: match.servingPlayer
+                        // Shows serving indicator when player is serving
+                        if (match.servingPlayer === playerNumber) {
+                            newValue = '●'; // Or '*' or any serving indicator
+                        } else {
+                            newValue = '';
+                        }
+                        break;
+                    case 'tennis_current_set':
+                        // Maps to: match.currentSet
+                        // Shows current set number
+                        newValue = (match.currentSet || 1).toString();
+                        break;
+                    case 'tennis_match_status':
+                        // Maps to: match.matchStatus
+                        // Shows match status: "IN_PROGRESS", "COMPLETED", etc.
+                        newValue = match.matchStatus || 'UNKNOWN';
+                        break;
+                    case 'tennis_match_type':
+                        // Maps to: match.matchType
+                        // Shows match type: "SINGLES", "DOUBLES"
+                        newValue = match.matchType || 'UNKNOWN';
+                        break;
+
+                    // Individual set components for separate display
+                    case 'tennis_set_1':
+                        // Maps to: match.individualSets.set1
+                        // Shows first set score: "6-4", "6-4(7)", "0-0"
+                        if (match.individualSets?.set1) {
+                            newValue = match.individualSets.set1.score;
                         } else {
                             newValue = '0-0';
+                        }
+                        break;
+                    case 'tennis_set_2':
+                        // Maps to: match.individualSets.set2
+                        // Shows second set score
+                        if (match.individualSets?.set2) {
+                            newValue = match.individualSets.set2.score;
+                        } else {
+                            newValue = '';
+                        }
+                        break;
+                    case 'tennis_set_3':
+                        // Maps to: match.individualSets.set3
+                        // Shows third set score
+                        if (match.individualSets?.set3) {
+                            newValue = match.individualSets.set3.score;
+                        } else {
+                            newValue = '';
+                        }
+                        break;
+                    case 'tennis_set_4':
+                        // Maps to: match.individualSets.set4
+                        // Shows fourth set score
+                        if (match.individualSets?.set4) {
+                            newValue = match.individualSets.set4.score;
+                        } else {
+                            newValue = '';
+                        }
+                        break;
+                    case 'tennis_set_5':
+                        // Maps to: match.individualSets.set5
+                        // Shows fifth set score
+                        if (match.individualSets?.set5) {
+                            newValue = match.individualSets.set5.score;
+                        } else {
+                            newValue = '';
+                        }
+                        break;
+
+                    // Player-specific set score components for organized display
+                    case 'player1_set1':
+                        // Maps to: match.individualSets.set1.player1Score
+                        // Shows Player 1's score in set 1
+                        if (match.individualSets?.set1) {
+                            newValue = match.individualSets.set1.player1Score?.toString() || '0';
+                        } else {
+                            newValue = '0';
+                        }
+                        break;
+                    case 'player2_set1':
+                        // Maps to: match.individualSets.set1.player2Score
+                        // Shows Player 2's score in set 1
+                        if (match.individualSets?.set1) {
+                            newValue = match.individualSets.set1.player2Score?.toString() || '0';
+                        } else {
+                            newValue = '0';
+                        }
+                        break;
+                    case 'player1_set2':
+                        // Maps to: match.individualSets.set2.player1Score
+                        // Shows Player 1's score in set 2
+                        if (match.individualSets?.set2) {
+                            newValue = match.individualSets.set2.player1Score?.toString() || '0';
+                        } else {
+                            newValue = '';
+                        }
+                        break;
+                    case 'player2_set2':
+                        // Maps to: match.individualSets.set2.player2Score
+                        // Shows Player 2's score in set 2
+                        if (match.individualSets?.set2) {
+                            newValue = match.individualSets.set2.player2Score?.toString() || '0';
+                        } else {
+                            newValue = '';
+                        }
+                        break;
+                    case 'player1_set3':
+                        // Maps to: match.individualSets.set3.player1Score
+                        // Shows Player 1's score in set 3
+                        if (match.individualSets?.set3) {
+                            newValue = match.individualSets.set3.player1Score?.toString() || '0';
+                        } else {
+                            newValue = '';
+                        }
+                        break;
+                    case 'player2_set3':
+                        // Maps to: match.individualSets.set3.player2Score
+                        // Shows Player 2's score in set 3
+                        if (match.individualSets?.set3) {
+                            newValue = match.individualSets.set3.player2Score?.toString() || '0';
+                        } else {
+                            newValue = '';
+                        }
+                        break;
+                    case 'player1_set4':
+                        // Maps to: match.individualSets.set4.player1Score
+                        // Shows Player 1's score in set 4
+                        if (match.individualSets?.set4) {
+                            newValue = match.individualSets.set4.player1Score?.toString() || '0';
+                        } else {
+                            newValue = '';
+                        }
+                        break;
+                    case 'player2_set4':
+                        // Maps to: match.individualSets.set4.player2Score
+                        // Shows Player 2's score in set 4
+                        if (match.individualSets?.set4) {
+                            newValue = match.individualSets.set4.player2Score?.toString() || '0';
+                        } else {
+                            newValue = '';
+                        }
+                        break;
+                    case 'player1_set5':
+                        // Maps to: match.individualSets.set5.player1Score
+                        // Shows Player 1's score in set 5
+                        if (match.individualSets?.set5) {
+                            newValue = match.individualSets.set5.player1Score?.toString() || '0';
+                        } else {
+                            newValue = '';
+                        }
+                        break;
+                    case 'player2_set5':
+                        // Maps to: match.individualSets.set5.player2Score
+                        // Shows Player 2's score in set 5
+                        if (match.individualSets?.set5) {
+                            newValue = match.individualSets.set5.player2Score?.toString() || '0';
+                        } else {
+                            newValue = '';
                         }
                         break;
                     default:
@@ -605,7 +1173,7 @@
                         defaultValue = '0-0'; // Match score string format
                         break;
                     case 'tennis_detailed_set_score':
-                        defaultValue = '0-0'; // Set scores format
+                        defaultValue = '0'; // Single set score for specific player and set
                         break;
                     case 'tennis_serve_speed':
                         defaultValue = ''; // Empty for serve speed when no data
@@ -641,9 +1209,10 @@
                     if (component.type === 'tennis_serve_speed') {
                         dataPath = 'serve.speed';
                     } else if (component.type === 'tennis_detailed_set_score') {
-                        const setNumber = component.data.setNumber || 1;
+                        // Detailed set score shows specific set for specific player
                         const playerNumber = component.data.playerNumber || 1;
-                        dataPath = `sets.set${setNumber}.player${playerNumber}`;
+                        const setNumber = component.data.setNumber || 1;
+                        dataPath = `sets.set${setNumber}.player${playerNumber}`; // Specific set and player
                     } else if (component.data && component.data.playerNumber) {
                         const playerNumber = component.data.playerNumber || 1;
                         
@@ -868,6 +1437,9 @@
             Object.values(pollingIntervals).forEach(interval => {
                 clearInterval(interval);
             });
+
+            // Stop IonCourt data polling
+            stopIonCourtDataPolling();
 
             // WebSocket disconnect now handled by backend (Tauri)
             // Frontend WebSocket disconnect disabled to prevent duplicate disconnects
@@ -1224,7 +1796,7 @@
                 case 'tennis_serve_speed':
                     return ''; // Show nothing until data arrives
                 case 'tennis_detailed_set_score':
-                    return '0';
+                    return '0'; // Shows single set score for specific player and set 
                 default:
                     return 'Tennis Data';
             }

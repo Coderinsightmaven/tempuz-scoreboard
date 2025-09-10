@@ -36,6 +36,7 @@ export const MultipleScoreboardManager: React.FC<MultipleScoreboardManagerProps>
   const [savedScoreboards, setSavedScoreboards] = useState<TauriScoreboardConfig[]>([]);
   const [selectedScoreboardId, setSelectedScoreboardId] = useState<string>('');
   const [isLoadingScoreboards, setIsLoadingScoreboards] = useState(false);
+  const [courtFilter, setCourtFilter] = useState<string>('');
 
   // Tennis API scoreboards
   const [selectedTennisApiScoreboardId, setSelectedTennisApiScoreboardId] = useState<string>('');
@@ -80,7 +81,8 @@ export const MultipleScoreboardManager: React.FC<MultipleScoreboardManagerProps>
       newOffsetX,
       newOffsetY,
       selectedScoreboardId,
-      selectedTennisApiScoreboardId || undefined
+      selectedTennisApiScoreboardId || undefined,
+      courtFilter.trim() || undefined
     );
 
     if (instanceId) {
@@ -89,6 +91,7 @@ export const MultipleScoreboardManager: React.FC<MultipleScoreboardManagerProps>
       setNewOffsetX(0);
       setNewOffsetY(0);
       setSelectedTennisApiScoreboardId('');
+      setCourtFilter('');
     }
   };
 
@@ -360,6 +363,23 @@ export const MultipleScoreboardManager: React.FC<MultipleScoreboardManagerProps>
               )}
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                 Select which tennis API scoreboard this display should listen to for live data updates.
+              </p>
+            </div>
+
+            {/* Court Filter */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                🎾 Court Filter <span className="text-xs text-gray-500">(Optional)</span>
+              </label>
+              <input
+                type="text"
+                value={courtFilter}
+                onChange={(e) => setCourtFilter(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                placeholder="e.g., Court 1, Center Court, etc."
+              />
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Only receive matches for this specific court. Leave empty to receive all matches from all courts.
               </p>
             </div>
 

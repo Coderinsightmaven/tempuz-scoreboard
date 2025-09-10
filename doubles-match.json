@@ -1,0 +1,320 @@
+{
+    "type": "MATCH",
+    "data": {
+      "id": "6899fb2121637312ea15fc55",
+      "matchId": "87813ed3-5419-4375-a156-f390191b95e6",
+      "matchFormat": "SET3-S:6/TB7@6",
+      "matchStatus": "IN_PROGRESS",
+      "matchType": "DOUBLES",
+      "sides": [
+        {
+          "sideNumber": 1,
+          "participant": null,
+          "players": [
+            {
+              "playerNumber": 1,
+              "participant": {
+                "_id": "6704283a21e15e032cd94121",
+                "first_name": "Mike",
+                "last_name": " Brown",
+                "biographicalInformation": null
+              }
+            },
+            {
+              "playerNumber": 2,
+              "participant": {
+                "_id": "6537cc4f1953c881e865d5fc",
+                "first_name": "Tania",
+                "last_name": "Aburto Perez",
+                "biographicalInformation": {
+                  "sex": "F",
+                  "playingHand": "R",
+                  "doubleHandedForehand": false,
+                  "doubleHandedBackhand": true,
+                  "national": null,
+                  "itf": null,
+                  "atpwta": null,
+                  "utr": null
+                }
+              },
+              "biographicalInformation": {
+                "sex": "F",
+                "playingHand": "R",
+                "doubleHandedForehand": false,
+                "doubleHandedBackhand": true,
+                "national": null,
+                "itf": null,
+                "atpwta": null,
+                "utr": null
+              }
+            }
+          ],
+          "_id": "6899fb2121637312ea15fc56"
+        },
+        {
+          "sideNumber": 2,
+          "participant": null,
+          "players": [
+            {
+              "playerNumber": 1,
+              "participant": {
+                "_id": "67e1950212e58e1db8c9beeb",
+                "first_name": "Nicolas",
+                "last_name": "Agritellley",
+                "biographicalInformation": {
+                  "sex": "M"
+                }
+              },
+              "biographicalInformation": {
+                "sex": "M"
+              }
+            },
+            {
+              "playerNumber": 2,
+              "participant": {
+                "_id": "6440af9a0847d1040efca167",
+                "first_name": "Izyan",
+                "last_name": "Ahmad",
+                "biographicalInformation": {
+                  "sex": "M",
+                  "playingHand": "R",
+                  "doubleHandedForehand": false,
+                  "doubleHandedBackhand": true,
+                  "national": null,
+                  "itf": null,
+                  "atpwta": null,
+                  "utr": null
+                }
+              },
+              "biographicalInformation": {
+                "sex": "M",
+                "playingHand": "R",
+                "doubleHandedForehand": false,
+                "doubleHandedBackhand": true,
+                "national": null,
+                "itf": null,
+                "atpwta": null,
+                "utr": null
+              }
+            }
+          ],
+          "_id": "6899fb2121637312ea15fc59"
+        }
+      ],
+      "score": {
+        "scoreStringSide1": "1-6 0-0 (40-40)",
+        "scoreStringSide2": "6-1 0-0 (40-40)",
+        "side1PointScore": "40",
+        "side2PointScore": "40",
+        "server": {
+          "sideNumber": 2,
+          "playerNumber": 1,
+          "player": "67e1950212e58e1db8c9beeb",
+          "returningSide": "DEUCE",
+          "_id": "68c081107aad43b14f859780"
+        },
+        "sets": [
+          {
+            "setNumber": 1,
+            "side1Score": 1,
+            "side1TiebreakScore": null,
+            "side2Score": 6,
+            "side2TiebreakScore": null,
+            "winningSide": 2,
+            "returnerCourtSides": [
+              {
+                "courtSide": "DEUCE",
+                "player": "67e1950212e58e1db8c9beeb",
+                "sideNumber": 2,
+                "playerNumber": 1,
+                "_id": "6899fc1237b45b8973481270"
+              },
+              {
+                "courtSide": "AD",
+                "player": "6440af9a0847d1040efca167",
+                "sideNumber": 2,
+                "playerNumber": 2,
+                "_id": "6899fc1237b45b8973481271"
+              },
+              {
+                "courtSide": "DEUCE",
+                "player": "6704283a21e15e032cd94121",
+                "sideNumber": 1,
+                "playerNumber": 1,
+                "_id": "68a6299056bbe5fa05d3de65"
+              },
+              {
+                "courtSide": "AD",
+                "player": "6537cc4f1953c881e865d5fc",
+                "sideNumber": 1,
+                "playerNumber": 2,
+                "_id": "68a6299056bbe5fa05d3de66"
+              }
+            ],
+            "_id": "68c081107aad43b14f859781",
+            "games": [],
+            "serverPickleballOrders": [],
+            "isCompleted": true
+          },
+          {
+            "setNumber": 2,
+            "side1Score": 0,
+            "side1TiebreakScore": null,
+            "side2Score": 0,
+            "side2TiebreakScore": null,
+            "returnerCourtSides": [
+              {
+                "courtSide": "DEUCE",
+                "player": "67e1950212e58e1db8c9beeb",
+                "sideNumber": 2,
+                "playerNumber": 1,
+                "_id": "6899fc1237b45b8973481270"
+              },
+              {
+                "courtSide": "AD",
+                "player": "6440af9a0847d1040efca167",
+                "sideNumber": 2,
+                "playerNumber": 2,
+                "_id": "6899fc1237b45b8973481271"
+              },
+              {
+                "courtSide": "DEUCE",
+                "player": "6704283a21e15e032cd94121",
+                "sideNumber": 1,
+                "playerNumber": 1,
+                "_id": "68a62ad456bbe5fa05d45301"
+              },
+              {
+                "courtSide": "AD",
+                "player": "6537cc4f1953c881e865d5fc",
+                "sideNumber": 1,
+                "playerNumber": 2,
+                "_id": "68a62ad456bbe5fa05d45302"
+              }
+            ],
+            "_id": "68c081107aad43b14f859786",
+            "games": [],
+            "serverPickleballOrders": [],
+            "isCompleted": false
+          }
+        ],
+        "_id": "68c081107aad43b14f85977f"
+      },
+      "clocks": [
+        {
+          "name": "DEFAULT",
+          "type": "STOPWATCH",
+          "defaultValue": 1,
+          "displayValue": "00:00",
+          "adjustTime": 1000,
+          "timePipe": "mm:ss",
+          "value": 1,
+          "isPaused": true,
+          "timeoutPerSet": 0,
+          "timeoutPerMatch": 0,
+          "_id": "6899fb2121637312ea15fc5c"
+        }
+      ],
+      "court": "Court 1",
+      "isUndo": false,
+      "playerCourtTimeLog": {
+        "side1": [
+          {
+            "player": {
+              "_id": "6704283a21e15e032cd94121",
+              "first_name": "Mike",
+              "last_name": " Brown"
+            },
+            "playerNumber": 1,
+            "sideNumber": 1,
+            "inTime": "2025-08-11T14:19:26.384Z",
+            "outTime": null,
+            "substitutedBy": null,
+            "substitutedAt": null,
+            "performedBy": "5d895fe8c78a5aa59898a8b1",
+            "isReverted": false,
+            "setNumber": 1
+          },
+          {
+            "player": {
+              "biographicalInformation": {
+                "sex": "F",
+                "playingHand": "R",
+                "doubleHandedForehand": false,
+                "doubleHandedBackhand": true,
+                "national": null,
+                "itf": null,
+                "atpwta": null,
+                "utr": null
+              },
+              "_id": "6537cc4f1953c881e865d5fc",
+              "first_name": "Tania",
+              "last_name": "Aburto Perez"
+            },
+            "playerNumber": 2,
+            "sideNumber": 1,
+            "inTime": "2025-08-11T14:19:26.384Z",
+            "outTime": null,
+            "substitutedBy": null,
+            "substitutedAt": null,
+            "performedBy": "5d895fe8c78a5aa59898a8b1",
+            "isReverted": false,
+            "setNumber": 1
+          }
+        ],
+        "side2": [
+          {
+            "player": {
+              "biographicalInformation": {
+                "sex": "M"
+              },
+              "_id": "67e1950212e58e1db8c9beeb",
+              "first_name": "Nicolas",
+              "last_name": "Agritellley"
+            },
+            "playerNumber": 1,
+            "sideNumber": 2,
+            "inTime": "2025-08-11T14:19:26.384Z",
+            "outTime": null,
+            "substitutedBy": null,
+            "substitutedAt": null,
+            "performedBy": "5d895fe8c78a5aa59898a8b1",
+            "isReverted": false,
+            "setNumber": 1
+          },
+          {
+            "player": {
+              "biographicalInformation": {
+                "sex": "M",
+                "playingHand": "R",
+                "doubleHandedForehand": false,
+                "doubleHandedBackhand": true,
+                "national": null,
+                "itf": null,
+                "atpwta": null,
+                "utr": null
+              },
+              "_id": "6440af9a0847d1040efca167",
+              "first_name": "Izyan",
+              "last_name": "Ahmad"
+            },
+            "playerNumber": 2,
+            "sideNumber": 2,
+            "inTime": "2025-08-11T14:19:26.384Z",
+            "outTime": null,
+            "substitutedBy": null,
+            "substitutedAt": null,
+            "performedBy": "5d895fe8c78a5aa59898a8b1",
+            "isReverted": false,
+            "setNumber": 1
+          }
+        ]
+      },
+      "substituteTracker": {
+        "side1": [],
+        "side2": []
+      },
+      "isStartPoint": false,
+      "isEndPoint": false
+    }
+  }

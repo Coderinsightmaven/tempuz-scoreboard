@@ -617,6 +617,157 @@ function App() {
                 </div>
               </button>
             </div>
+
+            {/* Individual Set Score Components */}
+            <div className="pt-4 border-t border-gray-300">
+              <h4 className="font-medium mb-2 text-sm text-gray-700">Individual Set Scores</h4>
+
+              {/* Set 1 Components */}
+              <div className="mb-3">
+                <div className="text-xs font-medium text-gray-600 mb-1">Set 1 Scores</div>
+                <button
+                  onClick={() => addComponent(ComponentType.PLAYER1_SET1, { x: 100, y: 100 })}
+                  className="w-full text-left p-2 bg-white border border-gray-200 rounded hover:bg-gray-50 transition-colors mb-1"
+                >
+                  <div className="font-medium text-xs">PLAYER 1 SET 1</div>
+                  <div className="text-xs text-gray-500">Player 1's games in set 1</div>
+                </button>
+                <button
+                  onClick={() => addComponent(ComponentType.PLAYER2_SET1, { x: 100, y: 100 })}
+                  className="w-full text-left p-2 bg-white border border-gray-200 rounded hover:bg-gray-50 transition-colors"
+                >
+                  <div className="font-medium text-xs">PLAYER 2 SET 1</div>
+                  <div className="text-xs text-gray-500">Player 2's games in set 1</div>
+                </button>
+              </div>
+
+              {/* Set 2 Components */}
+              <div className="mb-3">
+                <div className="text-xs font-medium text-gray-600 mb-1">Set 2 Scores</div>
+                <button
+                  onClick={() => addComponent(ComponentType.PLAYER1_SET2, { x: 100, y: 100 })}
+                  className="w-full text-left p-2 bg-white border border-gray-200 rounded hover:bg-gray-50 transition-colors mb-1"
+                >
+                  <div className="font-medium text-xs">PLAYER 1 SET 2</div>
+                  <div className="text-xs text-gray-500">Player 1's games in set 2</div>
+                </button>
+                <button
+                  onClick={() => addComponent(ComponentType.PLAYER2_SET2, { x: 100, y: 100 })}
+                  className="w-full text-left p-2 bg-white border border-gray-200 rounded hover:bg-gray-50 transition-colors"
+                >
+                  <div className="font-medium text-xs">PLAYER 2 SET 2</div>
+                  <div className="text-xs text-gray-500">Player 2's games in set 2</div>
+                </button>
+              </div>
+
+              {/* Set 3 Components */}
+              <div className="mb-3">
+                <div className="text-xs font-medium text-gray-600 mb-1">Set 3 Scores</div>
+                <button
+                  onClick={() => addComponent(ComponentType.PLAYER1_SET3, { x: 100, y: 100 })}
+                  className="w-full text-left p-2 bg-white border border-gray-200 rounded hover:bg-gray-50 transition-colors mb-1"
+                >
+                  <div className="font-medium text-xs">PLAYER 1 SET 3</div>
+                  <div className="text-xs text-gray-500">Player 1's games in set 3</div>
+                </button>
+                <button
+                  onClick={() => addComponent(ComponentType.PLAYER2_SET3, { x: 100, y: 100 })}
+                  className="w-full text-left p-2 bg-white border border-gray-200 rounded hover:bg-gray-50 transition-colors"
+                >
+                  <div className="font-medium text-xs">PLAYER 2 SET 3</div>
+                  <div className="text-xs text-gray-500">Player 2's games in set 3</div>
+                </button>
+              </div>
+
+              {/* Set 4 Components */}
+              <div className="mb-3">
+                <div className="text-xs font-medium text-gray-600 mb-1">Set 4 Scores</div>
+                <button
+                  onClick={() => addComponent(ComponentType.PLAYER1_SET4, { x: 100, y: 100 })}
+                  className="w-full text-left p-2 bg-white border border-gray-200 rounded hover:bg-gray-50 transition-colors mb-1"
+                >
+                  <div className="font-medium text-xs">PLAYER 1 SET 4</div>
+                  <div className="text-xs text-gray-500">Player 1's games in set 4</div>
+                </button>
+                <button
+                  onClick={() => addComponent(ComponentType.PLAYER2_SET4, { x: 100, y: 100 })}
+                  className="w-full text-left p-2 bg-white border border-gray-200 rounded hover:bg-gray-50 transition-colors"
+                >
+                  <div className="font-medium text-xs">PLAYER 2 SET 4</div>
+                  <div className="text-xs text-gray-500">Player 2's games in set 4</div>
+                </button>
+              </div>
+
+              {/* Set 5 Components */}
+              <div className="mb-3">
+                <div className="text-xs font-medium text-gray-600 mb-1">Set 5 Scores</div>
+                <button
+                  onClick={() => addComponent(ComponentType.PLAYER1_SET5, { x: 100, y: 100 })}
+                  className="w-full text-left p-2 bg-white border border-gray-200 rounded hover:bg-gray-50 transition-colors mb-1"
+                >
+                  <div className="font-medium text-xs">PLAYER 1 SET 5</div>
+                  <div className="text-xs text-gray-500">Player 1's games in set 5</div>
+                </button>
+                <button
+                  onClick={() => addComponent(ComponentType.PLAYER2_SET5, { x: 100, y: 100 })}
+                  className="w-full text-left p-2 bg-white border border-gray-200 rounded hover:bg-gray-50 transition-colors"
+                >
+                  <div className="font-medium text-xs">PLAYER 2 SET 5</div>
+                  <div className="text-xs text-gray-500">Player 2's games in set 5</div>
+                </button>
+              </div>
+            </div>
+
+            {/* Individual Set Components */}
+            <div className="pt-4 border-t border-gray-300">
+              <h4 className="font-medium mb-2 text-sm text-gray-700">Individual Sets</h4>
+
+              <button
+                onClick={() => addComponent(ComponentType.TENNIS_SET_1, { x: 100, y: 100 })}
+                className="w-full text-left p-3 bg-white border border-gray-200 rounded hover:bg-gray-50 transition-colors mb-2"
+              >
+                <div className="font-medium text-sm">SET 1 SCORE</div>
+                <div className="text-xs text-gray-600">
+                  Combined score for set 1 (e.g., "6-4")
+                </div>
+              </button>
+              <button
+                onClick={() => addComponent(ComponentType.TENNIS_SET_2, { x: 100, y: 100 })}
+                className="w-full text-left p-3 bg-white border border-gray-200 rounded hover:bg-gray-50 transition-colors mb-2"
+              >
+                <div className="font-medium text-sm">SET 2 SCORE</div>
+                <div className="text-xs text-gray-600">
+                  Combined score for set 2 (e.g., "4-6")
+                </div>
+              </button>
+              <button
+                onClick={() => addComponent(ComponentType.TENNIS_SET_3, { x: 100, y: 100 })}
+                className="w-full text-left p-3 bg-white border border-gray-200 rounded hover:bg-gray-50 transition-colors mb-2"
+              >
+                <div className="font-medium text-sm">SET 3 SCORE</div>
+                <div className="text-xs text-gray-600">
+                  Combined score for set 3 (e.g., "6-3")
+                </div>
+              </button>
+              <button
+                onClick={() => addComponent(ComponentType.TENNIS_SET_4, { x: 100, y: 100 })}
+                className="w-full text-left p-3 bg-white border border-gray-200 rounded hover:bg-gray-50 transition-colors mb-2"
+              >
+                <div className="font-medium text-sm">SET 4 SCORE</div>
+                <div className="text-xs text-gray-600">
+                  Combined score for set 4
+                </div>
+              </button>
+              <button
+                onClick={() => addComponent(ComponentType.TENNIS_SET_5, { x: 100, y: 100 })}
+                className="w-full text-left p-3 bg-white border border-gray-200 rounded hover:bg-gray-50 transition-colors"
+              >
+                <div className="font-medium text-sm">SET 5 SCORE</div>
+                <div className="text-xs text-gray-600">
+                  Combined score for set 5
+                </div>
+              </button>
+            </div>
           </div>
         </div>
 
