@@ -69,8 +69,9 @@
             align-items: center;
             justify-content: center;
             text-align: center;
-            word-wrap: break-word;
+            white-space: nowrap;
             overflow: hidden;
+            text-overflow: ellipsis;
             padding: 4px;
         }
         /* Tennis component styling removed to prevent visual clutter */
@@ -185,6 +186,12 @@
         .serving-side-1,
         .serving-side-2 {
             /* No background, shadow, or animation - just solid dot */
+        }
+
+        /* Prevent text wrapping for tennis components */
+        .tennis-component {
+            white-space: nowrap !important;
+            text-overflow: ellipsis;
         }
 
         /* Serving indicator text styling */
@@ -511,20 +518,24 @@
                 if (player?.participant) {
                     const firstName = player.participant.first_name || '';
                     const lastName = player.participant.last_name || '';
-                    return `${lastName}, ${firstName}`.trim();
+                    return `${firstName} ${lastName}`.trim();
                 }
                 return 'Player';
             }
 
-            // Helper function to format doubles player names (last names only)
+            // Helper function to format doubles player names (first initial + last name)
             function formatDoublesPlayerName(player) {
                 if (player?.participant) {
+                    const firstName = player.participant.first_name || '';
                     const lastName = player.participant.last_name || '';
                     // For doubles, take only the last part of compound last names
                     // e.g., "Aburto Perez" becomes "Perez", "Smith" stays "Smith"
                     const lastNameParts = lastName.trim().split(' ');
                     const displayLastName = lastNameParts[lastNameParts.length - 1] || 'Player';
-                    return displayLastName;
+
+                    // Get first initial and format as "F. Lastname"
+                    const firstInitial = firstName.charAt(0).toUpperCase() || '';
+                    return firstInitial ? `${firstInitial}. ${displayLastName}` : displayLastName;
                 }
                 return 'Player';
             }
@@ -542,7 +553,7 @@
                 const side1Players = ioncourtMatch.sides?.[0]?.players || [];
                 const side2Players = ioncourtMatch.sides?.[1]?.players || [];
 
-                // Format doubles names as "LastName1 / LastName2" (last names only)
+                // Format doubles names as "F. LastName1 / F. LastName2" (first initial + last name with spaces)
                 const side1Names = side1Players.map(p => formatDoublesPlayerName(p)).filter(name => name !== 'Player');
                 const side2Names = side2Players.map(p => formatDoublesPlayerName(p)).filter(name => name !== 'Player');
 
@@ -634,13 +645,13 @@
 
             console.log('🎾 [SCOREBOARD] Match type:', ioncourtMatch.matchType);
             if (ioncourtMatch.matchType === 'DOUBLES') {
-                console.log('🎾 [SCOREBOARD] Player 1 (doubles):', player1Name, '(last names only)');
-                console.log('🎾 [SCOREBOARD] Player 2 (doubles):', player2Name, '(last names only)');
-                console.log('🎾 [SCOREBOARD] Example: "Brown / Perez" vs "Agritellley / Ahmad"');
+                console.log('🎾 [SCOREBOARD] Player 1 (doubles):', player1Name, '(first initial + last name)');
+                console.log('🎾 [SCOREBOARD] Player 2 (doubles):', player2Name, '(first initial + last name)');
+                console.log('🎾 [SCOREBOARD] Example: "M. Brown / J. Perez" vs "N. Agritellley / A. Ahmad"');
             } else {
                 console.log('🎾 [SCOREBOARD] Player 1 (singles):', player1Name, '(full name)');
                 console.log('🎾 [SCOREBOARD] Player 2 (singles):', player2Name, '(full name)');
-                console.log('🎾 [SCOREBOARD] Example: "Brown, Mike" vs "Agritellley, Nicolas"');
+                console.log('🎾 [SCOREBOARD] Example: "Mike Brown" vs "Nicolas Agritellley"');
             }
             console.log('🎾 [SCOREBOARD] Current score:', ioncourtMatch.score?.side1PointScore, '-', ioncourtMatch.score?.side2PointScore);
             console.log('🎾 [SCOREBOARD] Match score:', ioncourtMatch.score?.scoreStringSide1, '-', ioncourtMatch.score?.scoreStringSide2);
@@ -770,7 +781,7 @@
             }
 
             console.log('🎾 [SCOREBOARD] 📊 Player 1:', match.player1Name || 'Unknown', 'vs Player 2:', match.player2Name || 'Unknown',
-                match.matchType === 'DOUBLES' ? '(doubles - last names only)' : '(singles - full names)');
+                match.matchType === 'DOUBLES' ? '(doubles - first initial + last name)' : '(singles - full names)');
             console.log('🎾 [SCOREBOARD] 🏆 Score:', match.scoreStringSide1 || '0-0', '-', match.scoreStringSide2 || '0-0');
             console.log('🎾 [SCOREBOARD] 🎾 Current points:', match.side1PointScore || '0', '-', match.side2PointScore || '0');
             console.log('🎾 [SCOREBOARD] 🎯 Serving Player:', match.servingPlayer || 'Unknown');
@@ -821,7 +832,7 @@
                 IONCOURT COMPONENT TYPES - Maps to converted match data:
 
                 tennis_player_name      → match.player1Name / match.player2Name
-                                        Format: "Last, First" (singles) or "LastName1 / LastName2" (doubles)
+                                        Format: "First Last" (singles) or "F. LastName1 / F. LastName2" (doubles)
 
                 tennis_game_score       → match.side1PointScore / match.side2PointScore
                                         Shows: "0", "15", "30", "40"
@@ -899,7 +910,7 @@
                 switch (componentType) {
                     case 'tennis_player_name':
                         // Maps to: match.player1Name / match.player2Name
-                        // Format: "Last, First" for singles, "LastName1 / LastName2" for doubles (uses only the last part of compound last names)
+                        // Format: "First Last" for singles, "F. LastName1 / F. LastName2" for doubles (first initial + last part of compound last names)
                         newValue = playerNumber === 1 ? (match.player1Name || 'Player 1') : (match.player2Name || 'Player 2');
                         break;
                     case 'tennis_game_score':
@@ -1257,6 +1268,21 @@
                     }
 
                     console.log(`🎾 [SCOREBOARD] After update, component.textContent = "${component.textContent}"`);
+
+                    // Scale text to fit if it's a player name component with long text
+                    if (componentType === 'tennis_player_name' && newValue && newValue !== 'Player 1' && newValue !== 'Player 2') {
+                        const originalFontSize = parseFloat(component.style.fontSize) || 16;
+                        // Only apply scaling for very long names (conservative approach)
+                        if (newValue.length > 30) {
+                            // Get component dimensions from the element's style
+                            const componentWidth = parseFloat(component.style.width);
+                            const componentHeight = parseFloat(component.style.height);
+                            const optimalFontSize = scaleTextToFit(component, componentWidth, componentHeight);
+                            if (optimalFontSize < originalFontSize) {
+                                component.style.fontSize = optimalFontSize + 'px';
+                            }
+                        }
+                    }
 
                     // Additional debugging: Check the DOM element directly
                     const checkElement = document.querySelector(`[data-component-id="${component.getAttribute('data-component-id')}"]`);
@@ -1832,6 +1858,86 @@
             container.appendChild(element);
         }
 
+        // Helper function to scale text to fit within container
+        function scaleTextToFit(element, maxWidth, maxHeight) {
+            if (!element || !element.textContent || maxWidth <= 0 || maxHeight <= 0) {
+                return parseFloat(element?.style?.fontSize) || 16;
+            }
+
+            const originalFontSize = parseFloat(element.style.fontSize) || 16;
+            let fontSize = originalFontSize;
+            const minFontSize = 14; // Allow some scaling but maintain readability
+
+            // First check if text actually needs scaling at original size
+            element.style.fontSize = originalFontSize + 'px';
+
+            // Temporarily add to DOM to measure
+            const originalVisibility = element.style.visibility;
+            const originalPosition = element.style.position;
+            const originalLeft = element.style.left;
+            const originalTop = element.style.top;
+
+            element.style.visibility = 'hidden';
+            element.style.position = 'absolute';
+            element.style.left = '-9999px';
+            element.style.top = '-9999px';
+
+            // Ensure element is in DOM for measurement
+            if (!element.parentNode) {
+                document.body.appendChild(element);
+            }
+
+            try {
+                const textWidth = element.scrollWidth;
+                const textHeight = element.scrollHeight;
+                const containerWidth = maxWidth - 4; // Very minimal padding deduction
+                const containerHeight = maxHeight - 1; // Very minimal padding deduction
+
+                // Only scale if text is actually too big
+                if (textWidth <= containerWidth && textHeight <= containerHeight) {
+                    console.log(`🎾 [SCOREBOARD] Text fits at original size ${originalFontSize}px: "${element.textContent}"`);
+                    return originalFontSize; // No scaling needed
+                }
+
+                console.log(`🎾 [SCOREBOARD] Text too big (${textWidth}x${textHeight}), scaling from ${originalFontSize}px for: "${element.textContent}"`);
+
+                // Scale down gradually, but not too aggressively
+                fontSize = originalFontSize;
+                while (fontSize > minFontSize) {
+                    element.style.fontSize = fontSize + 'px';
+
+                    const currentTextWidth = element.scrollWidth;
+                    const currentTextHeight = element.scrollHeight;
+
+                    // If text fits within container, break
+                    if (currentTextWidth <= containerWidth && currentTextHeight <= containerHeight) {
+                        break;
+                    }
+
+                    // Reduce font size by 1px at a time for gentle scaling
+                    fontSize -= 1;
+                }
+
+                console.log(`🎾 [SCOREBOARD] Scaled to ${fontSize}px for: "${element.textContent}"`);
+            } catch (error) {
+                console.error('Error scaling text:', error);
+                fontSize = originalFontSize; // Fallback to original size
+            } finally {
+                // Restore original styles
+                element.style.visibility = originalVisibility;
+                element.style.position = originalPosition;
+                element.style.left = originalLeft;
+                element.style.top = originalTop;
+
+                // Remove from DOM if it was temporarily added
+                if (element.parentNode === document.body && originalPosition !== 'absolute') {
+                    document.body.removeChild(element);
+                }
+            }
+
+            return fontSize;
+        }
+
         function renderTennisComponent(component) {
             const container = document.getElementById('scoreboardContainer');
             
@@ -1916,7 +2022,19 @@
             if (component.type === 'tennis_detailed_set_score') {
                 element.setAttribute('data-set-number', component.data.setNumber || 1);
             }
-            
+
+            // Scale text to fit within the component bounds (only for player names with long text)
+            if (component.type === 'tennis_player_name' && element.textContent && element.textContent !== 'Player 1' && element.textContent !== 'Player 2') {
+                const originalFontSize = component.style?.fontSize || 16;
+                // Only apply scaling for very long names (conservative approach)
+                if (element.textContent.length > 30) {
+                    const optimalFontSize = scaleTextToFit(element, component.size.width, component.size.height);
+                    if (optimalFontSize < originalFontSize) {
+                        element.style.fontSize = optimalFontSize + 'px';
+                    }
+                }
+            }
+
             container.appendChild(element);
         }
 
