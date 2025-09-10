@@ -1269,19 +1269,13 @@
 
                     console.log(`🎾 [SCOREBOARD] After update, component.textContent = "${component.textContent}"`);
 
-                    // Scale text to fit if it's a player name component with long text
+                    // Scale text to maximally fill if it's a player name component
                     if (componentType === 'tennis_player_name' && newValue && newValue !== 'Player 1' && newValue !== 'Player 2') {
-                        const originalFontSize = parseFloat(component.style.fontSize) || 16;
-                        // Only apply scaling for very long names (conservative approach)
-                        if (newValue.length > 30) {
-                            // Get component dimensions from the element's style
-                            const componentWidth = parseFloat(component.style.width);
-                            const componentHeight = parseFloat(component.style.height);
-                            const optimalFontSize = scaleTextToFit(component, componentWidth, componentHeight);
-                            if (optimalFontSize < originalFontSize) {
-                                component.style.fontSize = optimalFontSize + 'px';
-                            }
-                        }
+                        // Get component dimensions from the element's style
+                        const componentWidth = parseFloat(component.style.width);
+                        const componentHeight = parseFloat(component.style.height);
+                        const optimalFontSize = scaleTextToFit(component, componentWidth, componentHeight);
+                        component.style.fontSize = optimalFontSize + 'px';
                     }
 
                     // Additional debugging: Check the DOM element directly
@@ -1809,8 +1803,9 @@
             element.style.alignItems = 'center';
             element.style.paddingLeft = '8px';
             element.style.paddingRight = '8px';
-            element.style.wordWrap = 'break-word';
+            element.style.whiteSpace = 'nowrap';
             element.style.overflow = 'hidden';
+            element.style.textOverflow = 'ellipsis';
             
             // Apply text alignment
             const textAlign = component.style ? component.style.textAlign || 'center' : 'center';
@@ -1858,20 +1853,20 @@
             container.appendChild(element);
         }
 
-        // Helper function to scale text to fit within container
+        // Helper function to scale text to maximally fit within container (grow and shrink)
         function scaleTextToFit(element, maxWidth, maxHeight) {
             if (!element || !element.textContent || maxWidth <= 0 || maxHeight <= 0) {
                 return parseFloat(element?.style?.fontSize) || 16;
             }
 
-            const originalFontSize = parseFloat(element.style.fontSize) || 16;
-            let fontSize = originalFontSize;
-            const minFontSize = 14; // Allow some scaling but maintain readability
+            // Read current font size, with fallback
+            const computed = window.getComputedStyle ? window.getComputedStyle(element) : null;
+            const currentSize = parseFloat(element.style.fontSize || (computed && computed.fontSize)) || 16;
+            let fontSize = currentSize;
+            const minFontSize = 14; // keep readable
+            const maxFontByHeight = Math.max(minFontSize, Math.floor(maxHeight)); // hard cap by box height
 
-            // First check if text actually needs scaling at original size
-            element.style.fontSize = originalFontSize + 'px';
-
-            // Temporarily add to DOM to measure
+            // Prepare for measurement
             const originalVisibility = element.style.visibility;
             const originalPosition = element.style.position;
             const originalLeft = element.style.left;
@@ -1882,54 +1877,49 @@
             element.style.left = '-9999px';
             element.style.top = '-9999px';
 
-            // Ensure element is in DOM for measurement
             if (!element.parentNode) {
                 document.body.appendChild(element);
             }
 
-            try {
-                const textWidth = element.scrollWidth;
-                const textHeight = element.scrollHeight;
-                const containerWidth = maxWidth - 4; // Very minimal padding deduction
-                const containerHeight = maxHeight - 1; // Very minimal padding deduction
+            const fits = () => {
+                // Very small safety margins
+                const containerWidth = maxWidth - 2;
+                const containerHeight = maxHeight - 1;
+                return element.scrollWidth <= containerWidth && element.scrollHeight <= containerHeight;
+            };
 
-                // Only scale if text is actually too big
-                if (textWidth <= containerWidth && textHeight <= containerHeight) {
-                    console.log(`🎾 [SCOREBOARD] Text fits at original size ${originalFontSize}px: "${element.textContent}"`);
-                    return originalFontSize; // No scaling needed
+            try {
+                // Phase 1: If overflowing at current size, shrink until it fits or we hit min
+                element.style.fontSize = fontSize + 'px';
+                while (!fits() && fontSize > minFontSize) {
+                    fontSize -= 1;
+                    element.style.fontSize = fontSize + 'px';
                 }
 
-                console.log(`🎾 [SCOREBOARD] Text too big (${textWidth}x${textHeight}), scaling from ${originalFontSize}px for: "${element.textContent}"`);
-
-                // Scale down gradually, but not too aggressively
-                fontSize = originalFontSize;
-                while (fontSize > minFontSize) {
+                // Phase 2: Try to grow to fill available space, bounded by height
+                let lastGood = fontSize;
+                while (fontSize < maxFontByHeight) {
+                    fontSize += 1;
                     element.style.fontSize = fontSize + 'px';
-
-                    const currentTextWidth = element.scrollWidth;
-                    const currentTextHeight = element.scrollHeight;
-
-                    // If text fits within container, break
-                    if (currentTextWidth <= containerWidth && currentTextHeight <= containerHeight) {
+                    if (fits()) {
+                        lastGood = fontSize;
+                        continue;
+                    } else {
+                        // Went too far, revert to last fitting size
+                        fontSize = lastGood;
+                        element.style.fontSize = fontSize + 'px';
                         break;
                     }
-
-                    // Reduce font size by 1px at a time for gentle scaling
-                    fontSize -= 1;
                 }
-
-                console.log(`🎾 [SCOREBOARD] Scaled to ${fontSize}px for: "${element.textContent}"`);
             } catch (error) {
                 console.error('Error scaling text:', error);
-                fontSize = originalFontSize; // Fallback to original size
             } finally {
-                // Restore original styles
+                // Restore styles
                 element.style.visibility = originalVisibility;
                 element.style.position = originalPosition;
                 element.style.left = originalLeft;
                 element.style.top = originalTop;
 
-                // Remove from DOM if it was temporarily added
                 if (element.parentNode === document.body && originalPosition !== 'absolute') {
                     document.body.removeChild(element);
                 }
@@ -2023,16 +2013,10 @@
                 element.setAttribute('data-set-number', component.data.setNumber || 1);
             }
 
-            // Scale text to fit within the component bounds (only for player names with long text)
+            // Scale text to maximally fill the component bounds for player names
             if (component.type === 'tennis_player_name' && element.textContent && element.textContent !== 'Player 1' && element.textContent !== 'Player 2') {
-                const originalFontSize = component.style?.fontSize || 16;
-                // Only apply scaling for very long names (conservative approach)
-                if (element.textContent.length > 30) {
-                    const optimalFontSize = scaleTextToFit(element, component.size.width, component.size.height);
-                    if (optimalFontSize < originalFontSize) {
-                        element.style.fontSize = optimalFontSize + 'px';
-                    }
-                }
+                const optimalFontSize = scaleTextToFit(element, component.size.width, component.size.height);
+                element.style.fontSize = optimalFontSize + 'px';
             }
 
             container.appendChild(element);
