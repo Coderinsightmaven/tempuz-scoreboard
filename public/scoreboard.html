@@ -904,8 +904,13 @@
                         break;
                     case 'tennis_game_score':
                         // Maps to: match.side1PointScore / match.side2PointScore
-                        // Shows current game points: "0", "15", "30", "40"
-                        newValue = playerNumber === 1 ? (match.side1PointScore || '0') : (match.side2PointScore || '0');
+                        // Shows current game points: "0", "15", "30", "40", "Ad" (advantage)
+                        let pointScore = playerNumber === 1 ? (match.side1PointScore || '0') : (match.side2PointScore || '0');
+                        // Convert "A" to "Ad" for advantage scoring
+                        if (pointScore === 'A') {
+                            pointScore = 'Ad';
+                        }
+                        newValue = pointScore;
                         break;
                     case 'tennis_set_score':
                         // Maps to: match.setsWon.player1 / match.setsWon.player2
