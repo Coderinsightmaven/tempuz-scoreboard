@@ -59,6 +59,11 @@ pub fn run() {
             inspect_live_data,
             check_websocket_status,
             test_websocket_connection,
+            connect_websocket,
+            disconnect_websocket,
+            send_websocket_message,
+            start_websocket_listener,
+            stop_websocket_listener,
                     // Live data storage commands
         save_live_data_connections,
         load_live_data_connections,

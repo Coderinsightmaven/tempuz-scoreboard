@@ -168,9 +168,7 @@ export const useLiveDataStore = create<LiveDataStoreState & LiveDataActions>()(
       }));
       
       // Auto-save after adding connection
-      console.log('⏰ Scheduling auto-save after adding connection');
       setTimeout(() => {
-        console.log('🔔 Auto-save triggered for new connection');
         get().saveConnections();
       }, 100);
       
@@ -321,13 +319,11 @@ export const useLiveDataStore = create<LiveDataStoreState & LiveDataActions>()(
           } else {
             // WebSocket connections receive data automatically via WebSocket messages
             // No manual fetching needed - data comes from the active WebSocket connection
-            console.log(`WebSocket data for ${connectionId} should come from active connection`);
             return; // Skip polling for WebSocket connections
           }
           
           get().updateLiveData(connectionId, data);
         } catch (error) {
-          console.error('Failed to fetch live data:', error);
           get().setConnectionError(connectionId, error instanceof Error ? error.message : 'Unknown error');
         }
       };
@@ -399,10 +395,8 @@ export const useLiveDataStore = create<LiveDataStoreState & LiveDataActions>()(
     // Persistence methods
     loadConnections: async () => {
       try {
-        console.log('📥 Loading live data connections...');
         const data = await TauriAPI.loadLiveDataConnections();
-        console.log('📋 Loaded data:', data);
-        
+
         // Convert the loaded data to the store format
         const connections: LiveDataConnection[] = data.connections.map(conn => ({
           id: conn.id,
@@ -430,10 +424,7 @@ export const useLiveDataStore = create<LiveDataStoreState & LiveDataActions>()(
           isLoaded: true,
           lastError: null,
         });
-
-        console.log('✅ Live data connections loaded successfully:', connections.length, 'connections');
       } catch (error) {
-        console.error('❌ Failed to load live data connections:', error);
         set({
           lastError: error instanceof Error ? error.message : 'Failed to load connections',
           isLoaded: true,
@@ -443,14 +434,8 @@ export const useLiveDataStore = create<LiveDataStoreState & LiveDataActions>()(
 
     saveConnections: async () => {
       try {
-        console.log('🔄 Starting saveConnections...');
         const state = get();
-        
-        console.log('📊 Current state:', {
-          connectionsCount: state.connections.length,
-          bindingsCount: state.componentBindings.length
-        });
-        
+
         // Convert store data to saveable format
         const saveData: LiveDataState = {
           connections: state.connections.map(conn => ({
@@ -473,11 +458,8 @@ export const useLiveDataStore = create<LiveDataStoreState & LiveDataActions>()(
           })),
         };
 
-        console.log('💾 Calling TauriAPI.saveLiveDataConnections with data:', saveData);
         await TauriAPI.saveLiveDataConnections(saveData);
-        console.log('✅ Live data connections saved successfully');
       } catch (error) {
-        console.error('❌ Failed to save live data connections:', error);
         set({
           lastError: error instanceof Error ? error.message : 'Failed to save connections',
         });
@@ -488,19 +470,15 @@ export const useLiveDataStore = create<LiveDataStoreState & LiveDataActions>()(
     // Tennis API integration methods
     connectToWebSocket: async (wsUrl: string) => {
       try {
-        console.log('🔌 [FRONTEND] Connecting to WebSocket...');
         set({ lastError: null });
 
         // For WebSocket connections, we don't need to test HTTP connection
         // The WebSocket will establish the connection directly
         if (wsUrl.startsWith('wss://') || wsUrl.startsWith('ws://')) {
-          console.log('✅ [FRONTEND] WebSocket URL detected, establishing connection...');
-          console.log('🚀 [FRONTEND] Initiating IonCourt WebSocket connection');
-          console.log('🔗 [FRONTEND] Connecting to:', wsUrl.replace(/token=[^&]*/, 'token=[HIDDEN]'));
-          console.log('🔗 [FRONTEND] Full WebSocket URL:', wsUrl);
+          // Establish the actual WebSocket connection
+          const connectResult = await import('../lib/tauri').then(m => m.TauriAPI.connectWebSocket(wsUrl, 'ioncourt-connection'));
+          console.log('🔗 WebSocket connection result:', connectResult);
 
-          // Just attempt to establish the WebSocket connection
-          // The actual connection happens asynchronously in the backend
           set({
             tennisApiConnected: true,
             tennisApiScoreboards: [{
@@ -510,33 +488,32 @@ export const useLiveDataStore = create<LiveDataStoreState & LiveDataActions>()(
             lastError: null
           });
 
-          console.log('✅ [FRONTEND] WebSocket connection initiated');
-          console.log('⏳ [FRONTEND] Waiting for backend connection confirmation...');
+          // Start the WebSocket message listener
+          try {
+            const listenerResult = await import('../lib/tauri').then(m => m.TauriAPI.startWebSocketListener('ioncourt-connection'));
+            console.log('✅ WebSocket listener started:', listenerResult);
+          } catch (error) {
+            console.warn('⚠️ Failed to start WebSocket listener:', error);
+          }
 
           // Check WebSocket status after a short delay to see if connection succeeded
           setTimeout(async () => {
             try {
               const status = await import('../lib/tauri').then(m => m.TauriAPI.checkWebSocketStatus());
-              console.log('🔍 [FRONTEND] WebSocket Status Check:');
-              console.log(status);
-
               // Parse the status to see if we're connected
               if (status.includes('WebSocket is CONNECTED and ACTIVE')) {
-                console.log('🎉 [FRONTEND] SUCCESS: WebSocket is fully connected!');
-                console.log('🎾 [FRONTEND] Ready to receive live IonCourt tennis data');
+                // Connection successful - no action needed as state is already set
               } else {
-                console.log('⚠️ [FRONTEND] WebSocket connection may not be fully established');
+                // Connection may not be fully established - could update state here if needed
               }
             } catch (error) {
-              console.warn('⚠️ [FRONTEND] Could not check WebSocket status:', error);
-              console.log('💡 [FRONTEND] Backend may still be connecting...');
+              // Could not check WebSocket status - silently handle
             }
           }, 2000);
         } else {
-          throw new Error('Invalid WebSocket URL. Must start with wss:// or ws://');
+          throw new Error('Invalid WebSocket URL. For security, use WSS:// (secure WebSocket) instead of WS:// (insecure WebSocket)');
         }
       } catch (error) {
-        console.error('❌ [FRONTEND] Failed to connect to WebSocket:', error);
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         set({
           tennisApiConnected: false,
@@ -547,8 +524,22 @@ export const useLiveDataStore = create<LiveDataStoreState & LiveDataActions>()(
       }
     },
 
-    disconnectFromTennisApi: () => {
-      console.log('🔌 Disconnecting from tennis API...');
+    disconnectFromTennisApi: async () => {
+      try {
+        // Stop the WebSocket listener
+        const stopResult = await import('../lib/tauri').then(m => m.TauriAPI.stopWebSocketListener('ioncourt-connection'));
+        console.log('🛑 WebSocket listener stopped:', stopResult);
+      } catch (error) {
+        console.warn('⚠️ Failed to stop WebSocket listener:', error);
+      }
+
+      try {
+        // Disconnect the WebSocket
+        const disconnectResult = await import('../lib/tauri').then(m => m.TauriAPI.disconnectWebSocket('ioncourt-connection'));
+        console.log('🔌 WebSocket disconnected:', disconnectResult);
+      } catch (error) {
+        console.warn('⚠️ Failed to disconnect WebSocket:', error);
+      }
 
       set({
         tennisApiConnected: false,

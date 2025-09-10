@@ -269,7 +269,6 @@ export class TauriAPI {
     try {
       return await invoke('inspect_live_data');
     } catch (error) {
-      console.error('Failed to inspect live data:', error);
       throw error;
     }
   }
@@ -278,7 +277,6 @@ export class TauriAPI {
     try {
       return await invoke('check_websocket_status');
     } catch (error) {
-      console.error('Failed to check WebSocket status:', error);
       throw error;
     }
   }
@@ -287,7 +285,46 @@ export class TauriAPI {
     try {
       return await invoke('test_websocket_connection', { wsUrl });
     } catch (error) {
-      console.error('Failed to test WebSocket connection:', error);
+      throw error;
+    }
+  }
+
+  static async connectWebSocket(wsUrl: string, connectionId: string): Promise<string> {
+    try {
+      return await invoke('connect_websocket', { wsUrl, connectionId });
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  static async disconnectWebSocket(connectionId: string): Promise<string> {
+    try {
+      return await invoke('disconnect_websocket', { connectionId });
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  static async sendWebSocketMessage(connectionId: string, message: string): Promise<string> {
+    try {
+      return await invoke('send_websocket_message', { connectionId, message });
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  static async startWebSocketListener(connectionId: string): Promise<string> {
+    try {
+      return await invoke('start_websocket_listener', { connectionId });
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  static async stopWebSocketListener(connectionId: string): Promise<string> {
+    try {
+      return await invoke('stop_websocket_listener', { connectionId });
+    } catch (error) {
       throw error;
     }
   }
@@ -297,7 +334,6 @@ export class TauriAPI {
     try {
       return await invoke('save_live_data_connections', { connectionsData });
     } catch (error) {
-      console.error('Failed to save live data connections:', error);
       throw error;
     }
   }
@@ -306,7 +342,6 @@ export class TauriAPI {
     try {
       return await invoke('load_live_data_connections');
     } catch (error) {
-      console.error('Failed to load live data connections:', error);
       throw error;
     }
   }
@@ -315,7 +350,6 @@ export class TauriAPI {
     try {
       return await invoke('delete_live_data_connections');
     } catch (error) {
-      console.error('Failed to delete live data connections:', error);
       throw error;
     }
   }
