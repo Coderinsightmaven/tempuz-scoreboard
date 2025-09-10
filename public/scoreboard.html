@@ -889,14 +889,21 @@
                         // Format: "playerScore" (single number)
                         // Uses: data-player-number and data-set-number attributes
                         const setNumber = parseInt(component.getAttribute('data-set-number')) || 1;
+                        console.log('🎾 [SCOREBOARD] tennis_detailed_set_score - component:', component.id, 'setNumber:', setNumber, 'playerNumber:', playerNumber);
+                        console.log('🎾 [SCOREBOARD] tennis_detailed_set_score - match.individualSets exists:', !!match.individualSets);
 
                         if (match.individualSets) {
+                            console.log('🎾 [SCOREBOARD] tennis_detailed_set_score - individualSets keys:', Object.keys(match.individualSets));
                             const setKey = `set${setNumber}`;
+                            console.log('🎾 [SCOREBOARD] tennis_detailed_set_score - looking for setKey:', setKey);
                             if (match.individualSets[setKey]) {
+                                console.log('🎾 [SCOREBOARD] tennis_detailed_set_score - found set data:', match.individualSets[setKey]);
                                 // Get the score for the specified player in the specified set
                                 const playerScore = playerNumber === 1
                                     ? (match.individualSets[setKey].player1Score || 0)
                                     : (match.individualSets[setKey].player2Score || 0);
+
+                                console.log('🎾 [SCOREBOARD] tennis_detailed_set_score - playerScore:', playerScore);
 
                                 // Handle tiebreaks - if the specified player won the tiebreak, show it
                                 let scoreString = playerScore.toString();
@@ -908,44 +915,49 @@
                                     scoreString = `${scoreString}(${playerTiebreak})`;
                                 }
 
+                                console.log('🎾 [SCOREBOARD] tennis_detailed_set_score - final scoreString:', scoreString);
                                 newValue = scoreString;
                             } else {
                                 // Set doesn't exist yet, show 0
-                                newValue = '0';
-                            }
-                        } else if (match.detailedSetScores && match.detailedSetScores.length >= setNumber) {
-                            // Fallback: extract from detailed set scores
-                            const setData = match.detailedSetScores[setNumber - 1];
-                            if (setData) {
-                                const scores = setData.score.split('/');
-                                newValue = playerNumber === 1 ? scores[0] : (scores[1] || scores[0]);
-                            } else {
-                                newValue = '0';
-                            }
-                        } else if (match.sets && match.sets.length >= setNumber) {
-                            // Final fallback: extract from basic sets data
-                            const setData = match.sets[setNumber - 1];
-                            if (setData) {
-                                const playerScore = playerNumber === 1
-                                    ? (setData.side1Score || 0)
-                                    : (setData.side2Score || 0);
-
-                                // Handle tiebreaks in fallback
-                                let scoreString = playerScore.toString();
-                                const playerTiebreak = playerNumber === 1
-                                    ? setData.side1TiebreakScore
-                                    : setData.side2TiebreakScore;
-
-                                if (playerTiebreak !== null && playerTiebreak !== undefined) {
-                                    scoreString = `${scoreString}(${playerTiebreak})`;
-                                }
-
-                                newValue = scoreString;
-                            } else {
+                                console.log('🎾 [SCOREBOARD] tennis_detailed_set_score - set not found, using 0');
                                 newValue = '0';
                             }
                         } else {
-                            newValue = '0';
+                            console.log('🎾 [SCOREBOARD] tennis_detailed_set_score - individualSets not found, using fallback');
+                            if (match.detailedSetScores && match.detailedSetScores.length >= setNumber) {
+                                // Fallback: extract from detailed set scores
+                                const setData = match.detailedSetScores[setNumber - 1];
+                                if (setData) {
+                                    const scores = setData.score.split('/');
+                                    newValue = playerNumber === 1 ? scores[0] : (scores[1] || scores[0]);
+                                } else {
+                                    newValue = '0';
+                                }
+                            } else if (match.sets && match.sets.length >= setNumber) {
+                                // Final fallback: extract from basic sets data
+                                const setData = match.sets[setNumber - 1];
+                                if (setData) {
+                                    const playerScore = playerNumber === 1
+                                        ? (setData.side1Score || 0)
+                                        : (setData.side2Score || 0);
+
+                                    // Handle tiebreaks in fallback
+                                    let scoreString = playerScore.toString();
+                                    const playerTiebreak = playerNumber === 1
+                                        ? setData.side1TiebreakScore
+                                        : setData.side2TiebreakScore;
+
+                                    if (playerTiebreak !== null && playerTiebreak !== undefined) {
+                                        scoreString = `${scoreString}(${playerTiebreak})`;
+                                    }
+
+                                    newValue = scoreString;
+                                } else {
+                                    newValue = '0';
+                                }
+                            } else {
+                                newValue = '0';
+                            }
                         }
                         break;
                     case 'tennis_serving_indicator':
@@ -1212,7 +1224,7 @@
                         // Detailed set score shows specific set for specific player
                         const playerNumber = component.data.playerNumber || 1;
                         const setNumber = component.data.setNumber || 1;
-                        dataPath = `sets.set${setNumber}.player${playerNumber}`; // Specific set and player
+                        dataPath = `individualSets.set${setNumber}.player${playerNumber}`; // Specific set and player from individualSets
                     } else if (component.data && component.data.playerNumber) {
                         const playerNumber = component.data.playerNumber || 1;
                         
@@ -1779,6 +1791,11 @@
             element.setAttribute('data-component-id', component.id);
             element.setAttribute('data-component-type', component.type);
             element.setAttribute('data-player-number', component.data.playerNumber || 1);
+
+            // Set data-set-number for tennis_detailed_set_score components
+            if (component.type === 'tennis_detailed_set_score') {
+                element.setAttribute('data-set-number', component.data.setNumber || 1);
+            }
             
             container.appendChild(element);
         }

@@ -604,7 +604,7 @@ function App() {
               >
                 <div className="font-medium text-sm">DETAILED SET SCORE</div>
                 <div className="text-xs text-gray-600">
-                  Individual set scores by player
+                  Individual set score for specific player and set
                 </div>
               </button>
               <button

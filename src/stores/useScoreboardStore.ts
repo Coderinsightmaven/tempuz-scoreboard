@@ -122,6 +122,8 @@ const createDefaultComponent = (
         imageId: undefined,
         imageUrl: undefined,
         text: '0',
+        playerNumber: 1,
+        setNumber: 1,
       };
       defaultZIndex = 6;
       break;
