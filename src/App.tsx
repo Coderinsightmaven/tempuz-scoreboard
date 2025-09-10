@@ -7,6 +7,7 @@ import { DesignCanvas } from './components/Designer/Canvas/DesignCanvas';
 import { PropertyPanel } from './components/Designer/PropertyPanel';
 import { CreateScoreboardDialog } from './components/ui/CreateScoreboardDialog';
 import { LoadScoreboardDialog } from './components/ui/LoadScoreboardDialog';
+import { SaveScoreboardDialog } from './components/ui/SaveScoreboardDialog';
 import { MultipleScoreboardManager } from './components/ui/MultipleScoreboardManager';
 import { ScoreboardManager } from './components/ui/ScoreboardManager';
 import { TennisApiConnectionButton } from './components/ui/TennisApiConnectionButton';
@@ -44,6 +45,7 @@ function App() {
   // UI state
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showLoadDialog, setShowLoadDialog] = useState(false);
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [showMultipleManager, setShowMultipleManager] = useState(false);
   const [showScoreboardManager, setShowScoreboardManager] = useState(false);
   const [showPropertyPanel, setShowPropertyPanel] = useState(true);
@@ -263,20 +265,25 @@ function App() {
     }
   };
 
-  const handleSaveScoreboard = async () => {
+  const handleSaveScoreboard = () => {
     if (!config || components.length === 0) {
       alert('Please create a scoreboard design with components before saving.');
       return;
     }
 
+    setShowSaveDialog(true);
+  };
+
+  const handleSaveScoreboardWithName = async (scoreboardName: string) => {
     const saveData = {
       ...config,
+      name: scoreboardName,
       components: components
     };
 
     try {
-      await TauriAPI.saveScoreboard(config.name, saveData);
-      alert(`Scoreboard "${config.name}" saved successfully!`);
+      await TauriAPI.saveScoreboard(scoreboardName, saveData);
+      alert(`Scoreboard "${scoreboardName}" saved successfully!`);
       const { markSaved } = useScoreboardStore.getState();
       markSaved();
     } catch (error) {
@@ -504,9 +511,9 @@ function App() {
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
         {/* Left Sidebar - Component Types */}
-        <div className="w-64 bg-gray-100 border-r border-gray-200 p-4">
-          <h3 className="font-medium mb-4">Components</h3>
-          <div className="space-y-2">
+        <div className="w-64 bg-gray-100 border-r border-gray-200 p-4 flex flex-col">
+          <h3 className="font-medium mb-4 flex-shrink-0">Components</h3>
+          <div className="space-y-2 overflow-y-auto flex-1 scrollbar-thin">
             <button
               onClick={() => addComponent(ComponentType.BACKGROUND, { x: 100, y: 100 })}
               className="w-full text-left p-3 bg-white border border-gray-200 rounded hover:bg-gray-50 transition-colors"
@@ -662,6 +669,13 @@ function App() {
       <LoadScoreboardDialog
         isOpen={showLoadDialog}
         onClose={() => setShowLoadDialog(false)}
+      />
+
+      <SaveScoreboardDialog
+        isOpen={showSaveDialog}
+        onClose={() => setShowSaveDialog(false)}
+        onSave={handleSaveScoreboardWithName}
+        currentName={config?.name || 'Untitled Scoreboard'}
       />
 
       <MultipleScoreboardManager

@@ -125,6 +125,24 @@ const createDefaultComponent = (
       };
       defaultZIndex = 6;
       break;
+    case ComponentType.TENNIS_DOUBLES_PLAYER_NAME:
+      defaultSize = { width: 300, height: 60 }; // Wide rectangle for doubles player names
+      defaultData = {
+        imageId: undefined,
+        imageUrl: undefined,
+        text: '', // Let getDefaultTennisText handle the default
+      };
+      defaultZIndex = 6; // Above text but below interactive elements
+      break;
+    case ComponentType.TENNIS_SERVING_INDICATOR:
+      defaultSize = { width: 50, height: 50 }; // Small square for serving indicator
+      defaultData = {
+        imageId: undefined,
+        imageUrl: undefined,
+        text: '', // Let getDefaultTennisText handle the default
+      };
+      defaultZIndex = 6;
+      break;
   }
 
   const baseComponent: ScoreboardComponent = {

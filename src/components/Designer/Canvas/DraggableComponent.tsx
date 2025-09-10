@@ -169,7 +169,8 @@ export const DraggableComponent: React.FC<DraggableComponentProps> = ({
 
   const renderTennisComponent = () => {
     // Get live data value for this component from tennis-api
-    let displayValue = getDefaultTennisText();
+    // First check for custom fallback text, then use default
+    let displayValue = component.data.text || getDefaultTennisText();
 
     if (tennisMatch) {
       // Map component types to tennis match data
@@ -209,52 +210,77 @@ export const DraggableComponent: React.FC<DraggableComponentProps> = ({
           }
           break;
         case ComponentType.TENNIS_GAME_SCORE:
-          displayValue = component.data.playerNumber === 2 ? tennisMatch.side2PointScore : tennisMatch.side1PointScore;
+          if (tennisMatch) {
+            displayValue = component.data.playerNumber === 2 ? tennisMatch.side2PointScore : tennisMatch.side1PointScore;
+          }
+          // Keep custom fallback text for game score
           break;
         case ComponentType.TENNIS_SET_SCORE:
-          // Count sets won - a set is won when a player reaches 6 games and leads by at least 2
-          let setsWon = 0;
-          if (tennisMatch.sets) {
-            tennisMatch.sets.forEach((set: { setNumber: number; side1Score: number; side2Score: number; winningSide?: number }) => {
-              const side1Score = set.side1Score || 0;
-              const side2Score = set.side2Score || 0;
-              const scoreDiff = Math.abs(side1Score - side2Score);
+          if (tennisMatch) {
+            // Count sets won - a set is won when a player reaches 6 games and leads by at least 2
+            let setsWon = 0;
+            if (tennisMatch.sets) {
+              tennisMatch.sets.forEach((set: { setNumber: number; side1Score: number; side2Score: number; winningSide?: number }) => {
+                const side1Score = set.side1Score || 0;
+                const side2Score = set.side2Score || 0;
+                const scoreDiff = Math.abs(side1Score - side2Score);
 
-              // A set is complete if one player has 6+ games and leads by 2+
-              if ((side1Score >= 6 || side2Score >= 6) && scoreDiff >= 2) {
-                if (component.data.playerNumber === 1 && side1Score > side2Score) {
-                  setsWon++;
-                } else if (component.data.playerNumber === 2 && side2Score > side1Score) {
-                  setsWon++;
+                // A set is complete if one player has 6+ games and leads by 2+
+                if ((side1Score >= 6 || side2Score >= 6) && scoreDiff >= 2) {
+                  if (component.data.playerNumber === 1 && side1Score > side2Score) {
+                    setsWon++;
+                  } else if (component.data.playerNumber === 2 && side2Score > side1Score) {
+                    setsWon++;
+                  }
                 }
-              }
-            });
+              });
+            }
+            displayValue = setsWon.toString();
           }
-          displayValue = setsWon.toString();
+          // Keep custom fallback text for set score
           break;
         case ComponentType.TENNIS_MATCH_SCORE:
-          displayValue = `${tennisMatch.scoreStringSide1} - ${tennisMatch.scoreStringSide2}`;
+          if (tennisMatch) {
+            displayValue = `${tennisMatch.scoreStringSide1} - ${tennisMatch.scoreStringSide2}`;
+          }
+          // Keep custom fallback text for match score
           break;
         case ComponentType.TENNIS_DETAILED_SET_SCORE:
-          // Show detailed set information
-          if (tennisMatch.sets && tennisMatch.sets.length > 0) {
-            const setInfo = tennisMatch.sets.map((set: { setNumber: number; side1Score: number; side2Score: number; winningSide?: number }) =>
-              `Set ${set.setNumber}: ${set.side1Score}-${set.side2Score}`
-            ).join(', ');
-            displayValue = setInfo;
-          } else {
-            displayValue = 'No sets data';
+          if (tennisMatch) {
+            // Count sets won - a set is won when a player reaches 6 games and leads by at least 2
+            let setsWon = 0;
+            if (tennisMatch.sets) {
+              tennisMatch.sets.forEach((set: { setNumber: number; side1Score: number; side2Score: number; winningSide?: number }) => {
+                const side1Score = set.side1Score || 0;
+                const side2Score = set.side2Score || 0;
+                const scoreDiff = Math.abs(side1Score - side2Score);
+
+                // A set is complete if one player has 6+ games and leads by 2+
+                if ((side1Score >= 6 || side2Score >= 6) && scoreDiff >= 2) {
+                  if (component.data.playerNumber === 1 && side1Score > side2Score) {
+                    setsWon++;
+                  } else if (component.data.playerNumber === 2 && side2Score > side1Score) {
+                    setsWon++;
+                  }
+                }
+              });
+            }
+            displayValue = setsWon.toString();
           }
+          // Keep custom fallback text for detailed set score
           break;
         case ComponentType.TENNIS_SERVING_INDICATOR:
           // Show serving indicator only for the selected player
-          const servingPlayer = tennisMatch.servingPlayer;
-          const selectedPlayer = component.data.playerNumber || 1; // Default to player 1
-          if (servingPlayer === selectedPlayer) {
-            displayValue = '●'; // Dot when selected player is serving
-          } else {
-            displayValue = ''; // Empty when selected player is not serving
+          if (tennisMatch) {
+            const servingPlayer = tennisMatch.servingPlayer;
+            const selectedPlayer = component.data.playerNumber || 1; // Default to player 1
+            if (servingPlayer === selectedPlayer) {
+              displayValue = '●'; // Dot when selected player is serving
+            } else {
+              displayValue = ''; // Empty when selected player is not serving
+            }
           }
+          // Keep custom fallback text for serving indicator
           break;
       }
     }

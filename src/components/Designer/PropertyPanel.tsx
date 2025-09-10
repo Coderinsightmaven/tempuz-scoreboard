@@ -28,20 +28,18 @@ export const PropertyPanel: React.FC = () => {
   }
 
   const handlePositionChange = (axis: 'x' | 'y', value: number) => {
-    updateComponentData(selectedComponent.id, {
-      position: {
-        ...selectedComponent.position,
-        [axis]: value
-      }
+    const { updateComponentPosition } = useScoreboardStore.getState();
+    updateComponentPosition(selectedComponent.id, {
+      ...selectedComponent.position,
+      [axis]: value
     });
   };
 
   const handleSizeChange = (dimension: 'width' | 'height', value: number) => {
-    updateComponentData(selectedComponent.id, {
-      size: {
-        ...selectedComponent.size,
-        [dimension]: Math.max(10, value) // Minimum size of 10px
-      }
+    const { updateComponentSize } = useScoreboardStore.getState();
+    updateComponentSize(selectedComponent.id, {
+      ...selectedComponent.size,
+      [dimension]: Math.max(10, value) // Minimum size of 10px
     });
   };
 
@@ -92,10 +90,10 @@ export const PropertyPanel: React.FC = () => {
                 onKeyDown={(e) => {
                   if (e.key === 'ArrowUp') {
                     e.preventDefault();
-                    handlePositionChange('x', selectedComponent.position.x + 1);
+                    handlePositionChange('x', Math.round(selectedComponent.position.x) + 1);
                   } else if (e.key === 'ArrowDown') {
                     e.preventDefault();
-                    handlePositionChange('x', selectedComponent.position.x - 1);
+                    handlePositionChange('x', Math.round(selectedComponent.position.x) - 1);
                   }
                 }}
                 className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -110,10 +108,10 @@ export const PropertyPanel: React.FC = () => {
                 onKeyDown={(e) => {
                   if (e.key === 'ArrowUp') {
                     e.preventDefault();
-                    handlePositionChange('y', selectedComponent.position.y + 1);
+                    handlePositionChange('y', Math.round(selectedComponent.position.y) + 1);
                   } else if (e.key === 'ArrowDown') {
                     e.preventDefault();
-                    handlePositionChange('y', selectedComponent.position.y - 1);
+                    handlePositionChange('y', Math.round(selectedComponent.position.y) - 1);
                   }
                 }}
                 className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -135,10 +133,10 @@ export const PropertyPanel: React.FC = () => {
                 onKeyDown={(e) => {
                   if (e.key === 'ArrowUp') {
                     e.preventDefault();
-                    handleSizeChange('width', selectedComponent.size.width + 1);
+                    handleSizeChange('width', Math.round(selectedComponent.size.width) + 1);
                   } else if (e.key === 'ArrowDown') {
                     e.preventDefault();
-                    handleSizeChange('width', Math.max(10, selectedComponent.size.width - 1));
+                    handleSizeChange('width', Math.max(10, Math.round(selectedComponent.size.width) - 1));
                   }
                 }}
                 className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -153,10 +151,10 @@ export const PropertyPanel: React.FC = () => {
                 onKeyDown={(e) => {
                   if (e.key === 'ArrowUp') {
                     e.preventDefault();
-                    handleSizeChange('height', selectedComponent.size.height + 1);
+                    handleSizeChange('height', Math.round(selectedComponent.size.height) + 1);
                   } else if (e.key === 'ArrowDown') {
                     e.preventDefault();
-                    handleSizeChange('height', Math.max(10, selectedComponent.size.height - 1));
+                    handleSizeChange('height', Math.max(10, Math.round(selectedComponent.size.height) - 1));
                   }
                 }}
                 className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
