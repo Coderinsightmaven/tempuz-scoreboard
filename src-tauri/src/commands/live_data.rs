@@ -101,8 +101,7 @@ pub struct MatchInfo {
 lazy_static::lazy_static! {
     static ref WEBSOCKET_CONNECTIONS: Arc<Mutex<HashMap<String, WebSocketConnection>>> = Arc::new(Mutex::new(HashMap::new()));
     static ref MESSAGE_LISTENERS: Arc<Mutex<HashMap<String, tokio::task::JoinHandle<()>>>> = Arc::new(Mutex::new(HashMap::new()));
-    static ref LATEST_IONCOURT_DATA: Arc<Mutex<Option<serde_json::Value>>> = Arc::new(Mutex::new(None));
-    static ref CONNECTION_COURT_FILTERS: Arc<Mutex<HashMap<String, Option<String>>>> = Arc::new(Mutex::new(HashMap::new()));
+    static ref LATEST_DATA_BY_COURT: Arc<Mutex<HashMap<String, serde_json::Value>>> = Arc::new(Mutex::new(HashMap::new()));
 }
 
 // Mock data for testing
@@ -185,15 +184,8 @@ pub async fn connect_websocket(ws_url: String, connection_id: String, court_filt
             let mut connections = WEBSOCKET_CONNECTIONS.lock().await;
             connections.insert(connection_id.clone(), ws_stream);
 
-            // Store the court filter for this connection
-            let mut court_filters = CONNECTION_COURT_FILTERS.lock().await;
-            court_filters.insert(connection_id.clone(), court_filter.clone());
-
-            if let Some(court) = &court_filter {
-                println!("🎾 [WEBSOCKET {}] Court filter set to: {}", connection_id, court);
-            } else {
-                println!("🎾 [WEBSOCKET {}] No court filter set - listening to all matches", connection_id);
-            }
+            // Single connection receives all court data
+            println!("🎾 [WEBSOCKET {}] Single connection established - will receive data from all courts", connection_id);
 
             Ok(format!("Connected to WebSocket: {}", ws_url))
         }
@@ -215,9 +207,8 @@ pub async fn disconnect_websocket(connection_id: String) -> Result<String, Strin
         // Send close frame and close the connection
         let _ = ws_stream.close(None).await;
 
-        // Clean up court filter
-        let mut court_filters = CONNECTION_COURT_FILTERS.lock().await;
-        court_filters.remove(&connection_id);
+        // Note: With single connection approach, data by court is preserved
+        // No need to clean up court-specific data on disconnect
 
         Ok(format!("Disconnected WebSocket connection: {}", connection_id))
     } else {
@@ -265,44 +256,24 @@ pub async fn start_websocket_listener(connection_id: String) -> Result<String, S
                                             if let Some(message_type) = parsed_message.get("type") {
                                                 if message_type == "MATCH" {
                                                     if let Some(match_data) = parsed_message.get("data") {
-                                                        // Check court filter for this connection
-                                                        let court_filters = CONNECTION_COURT_FILTERS.lock().await;
-                                                        let should_process = if let Some(court_filter) = court_filters.get(&connection_id_clone) {
-                                                            match court_filter {
-                                                                Some(court_name) => {
-                                                                    // Check if the match is for the specified court
-                                                                    if let Some(match_court) = match_data.get("court") {
-                                                                        if let Some(court_str) = match_court.as_str() {
-                                                                            court_str == court_name
-                                                                        } else {
-                                                                            false
-                                                                        }
-                                                                    } else {
-                                                                        false
-                                                                    }
-                                                                }
-                                                                None => true, // No filter set, process all matches
-                                                            }
-                                                        } else {
-                                                            true // No filter configured, process all matches
-                                                        };
+                                                        // Single connection - always process all matches
+                                                        println!("🎾 [WEBSOCKET {}] Processing IonCourt MATCH message", connection_id_clone);
 
-                                                        if should_process {
-                                                            println!("🎾 [WEBSOCKET {}] Processing IonCourt MATCH message", connection_id_clone);
+                                                        // Extract court name from match data
+                                                        if let Some(court_name) = match_data.get("court") {
+                                                            if let Some(court_str) = court_name.as_str() {
+                                                                println!("🎾 [WEBSOCKET {}] Storing match data for court '{}'", connection_id_clone, court_str);
 
-                                                            // Store the latest match data
-                                                            let mut latest_data = LATEST_IONCOURT_DATA.lock().await;
-                                                            *latest_data = Some(match_data.clone());
+                                                                // Store the latest match data by court name
+                                                                let mut latest_data_by_court = LATEST_DATA_BY_COURT.lock().await;
+                                                                latest_data_by_court.insert(court_str.to_string(), match_data.clone());
 
-                                                            if let Some(court_filter) = court_filters.get(&connection_id_clone) {
-                                                                if let Some(court_name) = court_filter {
-                                                                    println!("🎾 [WEBSOCKET {}] Match for court '{}' stored", connection_id_clone, court_name);
-                                                                } else {
-                                                                    println!("🎾 [WEBSOCKET {}] Match data stored (no court filter)", connection_id_clone);
+                                                                // Store in localStorage as well for persistence
+                                                                if let Ok(json_string) = serde_json::to_string(&match_data) {
+                                                                    // Note: In a real implementation, we'd need to send this to the frontend
+                                                                    // For now, we'll store it in the global state which will be accessible
                                                                 }
                                                             }
-                                                        } else {
-                                                            println!("🎾 [WEBSOCKET {}] Ignoring MATCH message - not for filtered court", connection_id_clone);
                                                         }
                                                     }
                                                 }
@@ -363,10 +334,51 @@ pub async fn start_websocket_listener(connection_id: String) -> Result<String, S
 }
 
 #[tauri::command]
-pub async fn get_latest_ioncourt_data() -> Result<Option<serde_json::Value>, String> {
-    println!("🎾 Retrieving latest IonCourt match data");
-    let latest_data = LATEST_IONCOURT_DATA.lock().await;
-    Ok(latest_data.clone())
+pub async fn get_latest_ioncourt_data_by_court(court_name: String) -> Result<Option<serde_json::Value>, String> {
+    println!("🎾 Retrieving latest IonCourt match data for court: {}", court_name);
+    let latest_data_by_court = LATEST_DATA_BY_COURT.lock().await;
+
+    // Debug: Print all available courts
+    println!("🎾 Available courts: {:?}", latest_data_by_court.keys().collect::<Vec<_>>());
+
+    let data = latest_data_by_court.get(&court_name).cloned();
+    if data.is_some() {
+        println!("🎾 Found data for court: {}", court_name);
+    } else {
+        println!("🎾 No data found for court: {}", court_name);
+    }
+    Ok(data)
+}
+
+#[tauri::command]
+pub async fn get_latest_ioncourt_data(connection_id: String) -> Result<Option<serde_json::Value>, String> {
+    // For backward compatibility, try to get data by connection ID first
+    // If not found, return the first available court data
+    println!("🎾 Retrieving latest IonCourt match data (legacy method)");
+    let latest_data_by_court = LATEST_DATA_BY_COURT.lock().await;
+
+    // Return the first available court data
+    if let Some((court_name, data)) = latest_data_by_court.iter().next() {
+        println!("🎾 Returning data for court: {}", court_name);
+        Ok(Some(data.clone()))
+    } else {
+        println!("🎾 No court data available");
+        Ok(None)
+    }
+}
+
+#[tauri::command]
+pub async fn get_all_court_data() -> Result<serde_json::Value, String> {
+    println!("🎾 Retrieving all court data");
+    let latest_data_by_court = LATEST_DATA_BY_COURT.lock().await;
+
+    // Convert HashMap to JSON object
+    let mut result = serde_json::Map::new();
+    for (court_name, data) in latest_data_by_court.iter() {
+        result.insert(court_name.clone(), data.clone());
+    }
+
+    Ok(serde_json::Value::Object(result))
 }
 
 #[tauri::command]

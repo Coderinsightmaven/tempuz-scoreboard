@@ -69,6 +69,13 @@ function App() {
       return;
     }
 
+    // Check if user has manually configured a connection (skip auto-connect)
+    const hasManualConnection = localStorage.getItem('tennisApiManualConnection') === 'true';
+    if (hasManualConnection) {
+      console.log('🎾 App: Manual connection detected, skipping auto-connection');
+      return;
+    }
+
     console.log('🎾 App: Attempting automatic connection to tennis API...');
 
     // Clear any previous errors

@@ -478,8 +478,26 @@
                         return;
                     }
 
-                    // Get latest IonCourt data from backend
-                    const latestData = await window.__TAURI__.core.invoke('get_latest_ioncourt_data');
+                    // Get latest IonCourt data directly from backend by court name
+                    let latestData = null;
+                    if (scoreboardData.courtFilter) {
+                        try {
+                            console.log('🎾 [SCOREBOARD] Requesting data for court:', scoreboardData.courtFilter);
+                            // Call backend directly to get data for this specific court
+                            latestData = await window.__TAURI__.core.invoke('get_latest_ioncourt_data_by_court', {
+                                courtName: scoreboardData.courtFilter
+                            });
+                            if (latestData) {
+                                console.log('🎾 [SCOREBOARD] Retrieved data from backend for court:', scoreboardData.courtFilter, latestData);
+                            } else {
+                                console.log('🎾 [SCOREBOARD] No data available for court:', scoreboardData.courtFilter);
+                            }
+                        } catch (error) {
+                            console.error('🎾 [SCOREBOARD] Failed to get data from backend:', error);
+                        }
+                    } else {
+                        console.log('🎾 [SCOREBOARD] No court filter set');
+                    }
 
                     if (latestData) {
                         console.log('🎾 [SCOREBOARD] Received IonCourt data update');

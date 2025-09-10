@@ -329,9 +329,25 @@ export class TauriAPI {
     }
   }
 
-  static async getLatestIonCourtData(): Promise<any> {
+  static async getLatestIonCourtData(connectionId: string): Promise<any> {
     try {
-      return await invoke('get_latest_ioncourt_data');
+      return await invoke('get_latest_ioncourt_data', { connectionId });
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  static async getLatestIonCourtDataByCourt(courtName: string): Promise<any> {
+    try {
+      return await invoke('get_latest_ioncourt_data_by_court', { courtName });
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  static async getAllCourtData(): Promise<{[courtName: string]: any}> {
+    try {
+      return await invoke('get_all_court_data');
     } catch (error) {
       throw error;
     }

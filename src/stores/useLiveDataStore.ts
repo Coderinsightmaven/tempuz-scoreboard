@@ -54,7 +54,7 @@ interface LiveDataActions {
   
 
   // Tennis API integration
-  connectToWebSocket: (wsUrl: string) => Promise<void>;
+  connectToWebSocket: (wsUrl: string, courtFilter?: string, connectionId?: string) => Promise<void>;
   disconnectFromTennisApi: () => void;
   clearError: () => void;
   getTennisApiMatch: (scoreboardId: string) => any;
@@ -468,15 +468,20 @@ export const useLiveDataStore = create<LiveDataStoreState & LiveDataActions>()(
 
 
     // Tennis API integration methods
-    connectToWebSocket: async (wsUrl: string) => {
+    connectToWebSocket: async (wsUrl: string, courtFilter?: string, connectionId?: string) => {
       try {
         set({ lastError: null });
+
+        // Use provided connection ID or generate one based on court filter
+        const finalConnectionId = connectionId || (courtFilter
+          ? `ioncourt-${courtFilter.replace(/[^a-zA-Z0-9\s]/g, '_')}`
+          : 'ioncourt-connection');
 
         // For WebSocket connections, we don't need to test HTTP connection
         // The WebSocket will establish the connection directly
         if (wsUrl.startsWith('wss://') || wsUrl.startsWith('ws://')) {
-          // Establish the actual WebSocket connection
-          const connectResult = await import('../lib/tauri').then(m => m.TauriAPI.connectWebSocket(wsUrl, 'ioncourt-connection'));
+          // Establish the actual WebSocket connection with optional court filter
+          const connectResult = await import('../lib/tauri').then(m => m.TauriAPI.connectWebSocket(wsUrl, finalConnectionId, courtFilter));
           console.log('🔗 WebSocket connection result:', connectResult);
 
           set({

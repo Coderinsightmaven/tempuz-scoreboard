@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useLiveDataStore } from '../../stores/useLiveDataStore';
+import { CourtDataSyncService } from '../../services/courtDataSync';
 
 export const TennisApiConnectionButton: React.FC = () => {
   const [showDialog, setShowDialog] = useState(false);
@@ -31,8 +32,18 @@ export const TennisApiConnectionButton: React.FC = () => {
     clearError();
 
     try {
-      // Connect to WebSocket - this will automatically fetch scoreboards
-      connectToWebSocket(wsUrl);
+      // Always use the same connection ID for single WebSocket connection
+      const connectionId = 'ioncourt-connection';
+
+      // Mark that user has manually configured a connection to prevent auto-connection
+      localStorage.setItem('tennisApiManualConnection', 'true');
+
+      // Connect to WebSocket - single connection receives all court data
+      connectToWebSocket(wsUrl, undefined, connectionId);
+
+      // Start the sync service to periodically sync data to localStorage
+      CourtDataSyncService.startSync();
+
       setShowDialog(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to connect');
@@ -42,7 +53,12 @@ export const TennisApiConnectionButton: React.FC = () => {
   };
 
   const handleDisconnect = () => {
+    // Stop the sync service
+    CourtDataSyncService.stopSync();
+
     disconnectFromTennisApi();
+    // Clear manual connection flag when disconnecting
+    localStorage.removeItem('tennisApiManualConnection');
     setError(null);
   };
 
@@ -133,6 +149,11 @@ export const TennisApiConnectionButton: React.FC = () => {
                     />
                   </div>
 
+                  <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-md">
+                    <p className="text-sm text-blue-800 dark:text-blue-200">
+                      📡 <strong>Single Connection Mode:</strong> This connection will receive live data from all courts and store it locally for fast access.
+                    </p>
+                  </div>
 
                   {(error || lastError) && (
                     <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-md">
@@ -166,9 +187,10 @@ export const TennisApiConnectionButton: React.FC = () => {
                 </h3>
                 <ol className="text-xs text-gray-600 dark:text-gray-400 space-y-1 list-decimal list-inside">
                   <li>Enter your IonCourt WebSocket URL with authentication token</li>
-                  <li>Click "Connect" to establish WebSocket connection</li>
-                  <li>Your scoreboard will automatically update with live tennis data</li>
-                  <li>Use the Multiple Scoreboard Manager to filter by specific courts</li>
+                  <li>Click "Connect" to establish single WebSocket connection</li>
+                  <li>System will receive live data from ALL courts and store locally</li>
+                  <li>Use Multiple Scoreboard Manager to create scoreboards filtered by court</li>
+                  <li>Each scoreboard retrieves its court data from localStorage for fast access</li>
                 </ol>
               </div>
             </div>
