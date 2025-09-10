@@ -37,7 +37,7 @@ function App() {
   const { loadImages } = useImageStore();
 
   const {
-    connectToTennisApi,
+    connectToWebSocket,
     tennisApiConnected,
     clearError
   } = useLiveDataStore();
@@ -75,17 +75,16 @@ function App() {
     clearError();
 
     try {
-      // Use default development settings
-      const apiUrl = 'http://localhost:3000';
-      const apiKey = 'dev-api-key-12345';
+      // Use IonCourt WebSocket URL
+      const wsUrl = 'wss://sub.ioncourt.com/?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwYXJ0bmVyX25hbWUiOiJiYXR0bGUtaW4tYmF5IiwiZXhwaXJ5IjoiMjAyNS0xMC0xMFQwMzo1OTo1OS45OTlaIiwidXNlcklkIjoiNWQ4OTVmZThjNzhhNWFhNTk4OThhOGIxIiwidG9rZW5JZCI6IjkxNTY5NjdmOTkzNjY2YTRjMTY0ZGQ0ZTllZWIyYTU0MGNiNGM3YTg5MGNlNmQwMTIzYTRkZjNiMWI3ZjdkOTAiLCJpYXQiOjE3NTc0MzY3ODEsImV4cCI6MTc2MDA2ODc5OX0.KaHcIiOKPnGl0oYwV8Iy0dHxRiUClnlV--jO2sAlwrE';
 
-      console.log('🎾 App: Connecting to:', apiUrl);
-      console.log('🎾 App: Using API key:', apiKey.substring(0, 10) + '...');
+      console.log('🎾 App: Connecting to:', wsUrl.replace(/token=[^&]*/, 'token=[HIDDEN]'));
+      console.log('🎾 App: Full WebSocket URL:', wsUrl);
 
       // Store auto-connection flag in localStorage to track attempts
       localStorage.setItem('tennisApiAutoConnecting', 'true');
 
-      connectToTennisApi(apiUrl, apiKey);
+      connectToWebSocket(wsUrl);
 
       console.log('🎾 App: Auto-connection initiated, connection will happen asynchronously');
     } catch (error) {

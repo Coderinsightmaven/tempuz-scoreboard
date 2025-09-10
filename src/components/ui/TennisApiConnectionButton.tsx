@@ -3,8 +3,7 @@ import { useLiveDataStore } from '../../stores/useLiveDataStore';
 
 export const TennisApiConnectionButton: React.FC = () => {
   const [showDialog, setShowDialog] = useState(false);
-  const [apiUrl, setApiUrl] = useState('http://localhost:3000');
-  const [apiKey, setApiKey] = useState('dev-api-key-12345');
+  const [wsUrl, setWsUrl] = useState('wss://sub.ioncourt.com/?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwYXJ0bmVyX25hbWUiOiJiYXR0bGUtaW4tYmF5IiwiZXhwaXJ5IjoiMjAyNS0xMC0xMFQwMzo1OTo1OS45OTlaIiwidXNlcklkIjoiNWQ4OTVmZThjNzhhNWFhNTk4OThhOGIxIiwidG9rZW5JZCI6IjkxNTY5NjdmOTkzNjY2YTRjMTY0ZGQ0ZTllZWIyYTU0MGNiNGM3YTg5MGNlNmQwMTIzYTRkZjNiMWI3ZjdkOTAiLCJpYXQiOjE3NTc0MzY3ODEsImV4cCI6MTc2MDA2ODc5OX0.KaHcIiOKPnGl0oYwV8Iy0dHxRiUClnlV--jO2sAlwrE');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -14,7 +13,7 @@ export const TennisApiConnectionButton: React.FC = () => {
   };
 
   const {
-    connectToTennisApi,
+    connectToWebSocket,
     disconnectFromTennisApi,
     tennisApiConnected,
     lastError,
@@ -22,8 +21,8 @@ export const TennisApiConnectionButton: React.FC = () => {
   } = useLiveDataStore();
 
   const handleConnect = async () => {
-    if (!apiUrl.trim() || !apiKey.trim()) {
-      setError('Please enter both API URL and API Key');
+    if (!wsUrl.trim()) {
+      setError('Please enter a WebSocket URL');
       return;
     }
 
@@ -33,7 +32,7 @@ export const TennisApiConnectionButton: React.FC = () => {
 
     try {
       // Connect to WebSocket - this will automatically fetch scoreboards
-      connectToTennisApi(apiUrl, apiKey);
+      connectToWebSocket(wsUrl);
       setShowDialog(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to connect');
@@ -123,27 +122,14 @@ export const TennisApiConnectionButton: React.FC = () => {
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      API URL
+                      WebSocket URL
                     </label>
                     <input
                       type="text"
-                      value={apiUrl}
-                      onChange={(e) => setApiUrl(e.target.value)}
+                      value={wsUrl}
+                      onChange={(e) => setWsUrl(e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                      placeholder="http://localhost:3000"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      API Key
-                    </label>
-                    <input
-                      type="password"
-                      value={apiKey}
-                      onChange={(e) => setApiKey(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                      placeholder="dev-api-key-12345"
+                      placeholder="wss://sub.ioncourt.com/?token=..."
                     />
                   </div>
 

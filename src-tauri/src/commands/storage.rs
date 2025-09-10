@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use std::fs;
 use serde_json;
 use std::io::{Write, Read};
-use zip::{ZipWriter, ZipArchive, CompressionMethod};
+use zip::{ZipWriter, ZipArchive};
 use zip::write::FileOptions;
 use uuid::Uuid;
 
@@ -209,8 +209,8 @@ pub async fn export_scoreboard_as_zip(
     let mut zip_data = Vec::new();
     {
         let mut zip = ZipWriter::new(std::io::Cursor::new(&mut zip_data));
-        let options = FileOptions::default()
-            .compression_method(CompressionMethod::Deflated)
+        let options: FileOptions<'_, ()> = FileOptions::default()
+            .compression_method(zip::CompressionMethod::Deflated)
             .unix_permissions(0o755);
         
         // Add the scoreboard configuration
@@ -563,8 +563,8 @@ pub struct LiveDataConnectionData {
     pub provider: String,
     #[serde(rename = "apiUrl")]
     pub api_url: String,
-    #[serde(rename = "apiKey")]
-    pub api_key: String,
+    #[serde(rename = "token")]
+    pub token: String,
     #[serde(rename = "pollInterval")]
     pub poll_interval: u32,
     #[serde(rename = "isActive")]

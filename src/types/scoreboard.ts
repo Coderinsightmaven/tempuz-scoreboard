@@ -233,7 +233,7 @@ export interface LiveDataConnection {
   name: string;
   provider: 'mock' | 'api' | 'tennis_api';
   apiUrl?: string;
-  apiKey?: string;
+  token?: string;
   pollInterval: number;
   isActive: boolean;
   createdAt?: Date;
@@ -318,6 +318,140 @@ export interface LiveDataComponentBinding {
   connectionId: string;
   dataPath: string;
   updateInterval?: number;
+}
+
+// IonCourt WebSocket payload types
+export interface IonCourtMatchMessage {
+  type: "MATCH";
+  data: IonCourtMatchData;
+}
+
+export interface IonCourtMatchData {
+  id: string;
+  matchId: string;
+  matchFormat: string;
+  matchStatus: "IN_PROGRESS" | "COMPLETED" | "NOT_STARTED" | "SUSPENDED";
+  matchType: "SINGLES" | "DOUBLES";
+  sides: IonCourtSide[];
+  score: IonCourtScore;
+  clocks: IonCourtClock[];
+  court: string;
+  isUndo: boolean;
+  playerCourtTimeLog: IonCourtTimeLog;
+  substituteTracker: IonCourtSubstituteTracker;
+  isStartPoint: boolean;
+  isEndPoint: boolean;
+}
+
+export interface IonCourtSide {
+  sideNumber: 1 | 2;
+  participant: any;
+  players: IonCourtPlayer[];
+  _id: string;
+}
+
+export interface IonCourtPlayer {
+  playerNumber: 1 | 2;
+  participant: {
+    _id: string;
+    first_name: string;
+    last_name: string;
+    biographicalInformation: {
+      sex: string;
+      playingHand: string;
+      doubleHandedForehand: boolean;
+      doubleHandedBackhand: boolean;
+      national: any;
+      itf: any;
+      atpwta: any;
+      utr: any;
+    };
+  };
+  biographicalInformation: {
+    sex: string;
+    playingHand: string;
+    doubleHandedForehand: boolean;
+    doubleHandedBackhand: boolean;
+    national: any;
+    itf: any;
+    atpwta: any;
+    utr: any;
+  };
+}
+
+export interface IonCourtScore {
+  scoreStringSide1: string;
+  scoreStringSide2: string;
+  side1PointScore: string;
+  side2PointScore: string;
+  server: IonCourtServer;
+  sets: IonCourtSet[];
+  _id: string;
+}
+
+export interface IonCourtServer {
+  sideNumber: 1 | 2;
+  playerNumber: 1 | 2;
+  player: string;
+  returningSide: "AD" | "DEUCE";
+  _id: string;
+}
+
+export interface IonCourtSet {
+  setNumber: number;
+  side1Score: number;
+  side1TiebreakScore: number | null;
+  side2Score: number;
+  side2TiebreakScore: number | null;
+  _id: string;
+  games: any[];
+  returnerCourtSides: any[];
+  serverPickleballOrders: any[];
+  isCompleted: boolean;
+}
+
+export interface IonCourtClock {
+  name: string;
+  type: string;
+  defaultValue: number;
+  displayValue: string;
+  adjustTime: number;
+  timePipe: string;
+  value: number;
+  isPaused: boolean;
+  timeoutPerSet: number;
+  timeoutPerMatch: number;
+  _id: string;
+}
+
+export interface IonCourtTimeLog {
+  side1: IonCourtPlayerTime[];
+  side2: IonCourtPlayerTime[];
+}
+
+export interface IonCourtPlayerTime {
+  player: {
+    biographicalInformation: any;
+    _id: string;
+    first_name: string;
+    last_name: string;
+  };
+  playerNumber: 1 | 2;
+  sideNumber: 1 | 2;
+  inTime: string;
+  outTime: string | null;
+  substitutedBy: any;
+  substitutedAt: any;
+  performedBy: string;
+  isReverted: boolean;
+  setNumber: number;
+  inPointNumber: number;
+  outSetNumber: number | null;
+}
+
+export interface IonCourtSubstituteTracker {
+  side1: any[];
+  side2: any[];
 }
 
 // Tennis API types are now defined in lib/tauri.ts for cleaner organization

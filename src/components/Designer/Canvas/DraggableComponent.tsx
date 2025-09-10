@@ -176,7 +176,7 @@ export const DraggableComponent: React.FC<DraggableComponentProps> = ({
       // Map component types to tennis match data
       switch (component.type) {
         case ComponentType.TENNIS_PLAYER_NAME:
-          displayValue = component.data.playerNumber === 2 ? tennisMatch.player2Name || 'Player 2' : tennisMatch.player1Name || 'Player 1';
+          displayValue = component.data.playerNumber === 2 ? tennisMatch.player2?.name || 'Player 2' : tennisMatch.player1?.name || 'Player 1';
           break;
         case ComponentType.TENNIS_DOUBLES_PLAYER_NAME:
           // Handle doubles player names - display as "Lastname / Lastname"
@@ -205,74 +205,39 @@ export const DraggableComponent: React.FC<DraggableComponentProps> = ({
             }
           } else {
             // Fallback to singles if doubles data not available
-            const playerName = component.data.playerNumber === 2 ? tennisMatch.player2Name || 'Player 2' : tennisMatch.player1Name || 'Player 1';
+            const playerName = component.data.playerNumber === 2 ? tennisMatch.player2?.name || 'Player 2' : tennisMatch.player1?.name || 'Player 1';
             displayValue = extractLastName(playerName);
           }
           break;
         case ComponentType.TENNIS_GAME_SCORE:
           if (tennisMatch) {
-            displayValue = component.data.playerNumber === 2 ? tennisMatch.side2PointScore : tennisMatch.side1PointScore;
+            displayValue = component.data.playerNumber === 2 ? tennisMatch.score.player2_points : tennisMatch.score.player1_points;
           }
           // Keep custom fallback text for game score
           break;
         case ComponentType.TENNIS_SET_SCORE:
           if (tennisMatch) {
-            // Count sets won - a set is won when a player reaches 6 games and leads by at least 2
-            let setsWon = 0;
-            if (tennisMatch.sets) {
-              tennisMatch.sets.forEach((set: { setNumber: number; side1Score: number; side2Score: number; winningSide?: number }) => {
-                const side1Score = set.side1Score || 0;
-                const side2Score = set.side2Score || 0;
-                const scoreDiff = Math.abs(side1Score - side2Score);
-
-                // A set is complete if one player has 6+ games and leads by 2+
-                if ((side1Score >= 6 || side2Score >= 6) && scoreDiff >= 2) {
-                  if (component.data.playerNumber === 1 && side1Score > side2Score) {
-                    setsWon++;
-                  } else if (component.data.playerNumber === 2 && side2Score > side1Score) {
-                    setsWon++;
-                  }
-                }
-              });
-            }
-            displayValue = setsWon.toString();
+            displayValue = component.data.playerNumber === 2 ? tennisMatch.score.player2_sets.toString() : tennisMatch.score.player1_sets.toString();
           }
           // Keep custom fallback text for set score
           break;
         case ComponentType.TENNIS_MATCH_SCORE:
           if (tennisMatch) {
-            displayValue = `${tennisMatch.scoreStringSide1} - ${tennisMatch.scoreStringSide2}`;
+            // Display overall match score as sets
+            displayValue = `${tennisMatch.score.player1_sets}-${tennisMatch.score.player2_sets}`;
           }
           // Keep custom fallback text for match score
           break;
         case ComponentType.TENNIS_DETAILED_SET_SCORE:
           if (tennisMatch) {
-            // Count sets won - a set is won when a player reaches 6 games and leads by at least 2
-            let setsWon = 0;
-            if (tennisMatch.sets) {
-              tennisMatch.sets.forEach((set: { setNumber: number; side1Score: number; side2Score: number; winningSide?: number }) => {
-                const side1Score = set.side1Score || 0;
-                const side2Score = set.side2Score || 0;
-                const scoreDiff = Math.abs(side1Score - side2Score);
-
-                // A set is complete if one player has 6+ games and leads by 2+
-                if ((side1Score >= 6 || side2Score >= 6) && scoreDiff >= 2) {
-                  if (component.data.playerNumber === 1 && side1Score > side2Score) {
-                    setsWon++;
-                  } else if (component.data.playerNumber === 2 && side2Score > side1Score) {
-                    setsWon++;
-                  }
-                }
-              });
-            }
-            displayValue = setsWon.toString();
+            displayValue = component.data.playerNumber === 2 ? tennisMatch.score.player2_sets.toString() : tennisMatch.score.player1_sets.toString();
           }
           // Keep custom fallback text for detailed set score
           break;
         case ComponentType.TENNIS_SERVING_INDICATOR:
           // Show serving indicator only for the selected player
           if (tennisMatch) {
-            const servingPlayer = tennisMatch.servingPlayer;
+            const servingPlayer = tennisMatch.serving_player;
             const selectedPlayer = component.data.playerNumber || 1; // Default to player 1
             if (servingPlayer === selectedPlayer) {
               displayValue = '●'; // Dot when selected player is serving

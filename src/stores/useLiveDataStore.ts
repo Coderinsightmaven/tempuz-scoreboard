@@ -54,7 +54,7 @@ interface LiveDataActions {
   
 
   // Tennis API integration
-  connectToTennisApi: (apiUrl: string, apiKey: string) => Promise<void>;
+  connectToWebSocket: (wsUrl: string) => Promise<void>;
   disconnectFromTennisApi: () => void;
   clearError: () => void;
   getTennisApiMatch: (scoreboardId: string) => any;
@@ -319,9 +319,10 @@ export const useLiveDataStore = create<LiveDataStoreState & LiveDataActions>()(
           if (connection.provider === 'mock') {
             data = getMockTennisDataProgressive();
           } else {
-            // Import TauriAPI dynamically to avoid circular dependencies
-            const tauriModule = await import('../lib/tauri');
-            data = await tauriModule.TauriAPI.fetchLiveData(connection.apiUrl || '', connection.apiKey || '');
+            // WebSocket connections receive data automatically via WebSocket messages
+            // No manual fetching needed - data comes from the active WebSocket connection
+            console.log(`WebSocket data for ${connectionId} should come from active connection`);
+            return; // Skip polling for WebSocket connections
           }
           
           get().updateLiveData(connectionId, data);
@@ -408,7 +409,6 @@ export const useLiveDataStore = create<LiveDataStoreState & LiveDataActions>()(
           name: conn.name,
           provider: conn.provider as LiveDataConnection['provider'],
           apiUrl: conn.apiUrl,
-          apiKey: conn.apiKey,
           pollInterval: conn.pollInterval,
           isActive: false, // Don't auto-start polling on load
           createdAt: conn.createdAt ? new Date(conn.createdAt) : undefined,
@@ -458,7 +458,6 @@ export const useLiveDataStore = create<LiveDataStoreState & LiveDataActions>()(
             name: conn.name,
             provider: conn.provider,
             apiUrl: conn.apiUrl || '',
-            apiKey: conn.apiKey || '',
             pollInterval: conn.pollInterval,
             isActive: conn.isActive,
             createdAt: conn.createdAt ? conn.createdAt.toISOString() : new Date().toISOString(),
@@ -487,32 +486,57 @@ export const useLiveDataStore = create<LiveDataStoreState & LiveDataActions>()(
 
 
     // Tennis API integration methods
-    connectToTennisApi: async (apiUrl: string, apiKey: string) => {
+    connectToWebSocket: async (wsUrl: string) => {
       try {
-        console.log('🔌 Connecting to tennis API...');
+        console.log('🔌 [FRONTEND] Connecting to WebSocket...');
         set({ lastError: null });
 
-        // Test the connection first
-        const isConnected = await TauriAPI.testApiConnection(apiUrl, apiKey);
+        // For WebSocket connections, we don't need to test HTTP connection
+        // The WebSocket will establish the connection directly
+        if (wsUrl.startsWith('wss://') || wsUrl.startsWith('ws://')) {
+          console.log('✅ [FRONTEND] WebSocket URL detected, establishing connection...');
+          console.log('🚀 [FRONTEND] Initiating IonCourt WebSocket connection');
+          console.log('🔗 [FRONTEND] Connecting to:', wsUrl.replace(/token=[^&]*/, 'token=[HIDDEN]'));
+          console.log('🔗 [FRONTEND] Full WebSocket URL:', wsUrl);
 
-        if (isConnected) {
-          console.log('✅ Connection test successful, fetching available scoreboards...');
-
-          // Fetch available scoreboards
-          const scoreboards = await TauriAPI.getAvailableScoreboards(apiUrl, apiKey);
-
+          // Just attempt to establish the WebSocket connection
+          // The actual connection happens asynchronously in the backend
           set({
             tennisApiConnected: true,
-            tennisApiScoreboards: scoreboards,
+            tennisApiScoreboards: [{
+              id: 'ioncourt-main',
+              name: 'IonCourt Live Scoreboard'
+            }],
             lastError: null
           });
 
-          console.log('✅ Successfully connected to tennis API and fetched', scoreboards.length, 'scoreboards');
+          console.log('✅ [FRONTEND] WebSocket connection initiated');
+          console.log('⏳ [FRONTEND] Waiting for backend connection confirmation...');
+
+          // Check WebSocket status after a short delay to see if connection succeeded
+          setTimeout(async () => {
+            try {
+              const status = await import('../lib/tauri').then(m => m.TauriAPI.checkWebSocketStatus());
+              console.log('🔍 [FRONTEND] WebSocket Status Check:');
+              console.log(status);
+
+              // Parse the status to see if we're connected
+              if (status.includes('WebSocket is CONNECTED and ACTIVE')) {
+                console.log('🎉 [FRONTEND] SUCCESS: WebSocket is fully connected!');
+                console.log('🎾 [FRONTEND] Ready to receive live IonCourt tennis data');
+              } else {
+                console.log('⚠️ [FRONTEND] WebSocket connection may not be fully established');
+              }
+            } catch (error) {
+              console.warn('⚠️ [FRONTEND] Could not check WebSocket status:', error);
+              console.log('💡 [FRONTEND] Backend may still be connecting...');
+            }
+          }, 2000);
         } else {
-          throw new Error('Failed to connect to tennis API');
+          throw new Error('Invalid WebSocket URL. Must start with wss:// or ws://');
         }
       } catch (error) {
-        console.error('❌ Failed to connect to tennis API:', error);
+        console.error('❌ [FRONTEND] Failed to connect to WebSocket:', error);
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         set({
           tennisApiConnected: false,

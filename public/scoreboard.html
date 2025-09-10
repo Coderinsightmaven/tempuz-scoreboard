@@ -445,10 +445,10 @@
             try {
                 console.log('🎾 [SCOREBOARD] Initializing tennis API WebSocket connection...');
 
-                // Use the same WebSocket URL as the main app
-                // For now, assume it's running on localhost:3000
-                const wsUrl = 'ws://localhost:3000';
-                console.log('🎾 [SCOREBOARD] WebSocket URL:', wsUrl);
+                // Use the IonCourt WebSocket URL with authentication token
+                const wsUrl = 'wss://sub.ioncourt.com/?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwYXJ0bmVyX25hbWUiOiJiYXR0bGUtaW4tYmF5IiwiZXhwaXJ5IjoiMjAyNS0xMC0xMFQwMzo1OTo1OS45OTlaIiwidXNlcklkIjoiNWQ4OTVmZThjNzhhNWFhNTk4OThhOGIxIiwidG9rZW5JZCI6IjkxNTY5NjdmOTkzNjY2YTRjMTY0ZGQ0ZTllZWIyYTU0MGNiNGM3YTg5MGNlNmQwMTIzYTRkZjNiMWI3ZjdkOTAiLCJpYXQiOjE3NTc0MzY3ODEsImV4cCI6MTc2MDA2ODc5OX0.KaHcIiOKPnGl0oYwV8Iy0dHxRiUClnlV--jO2sAlwrE';
+                console.log('🎾 [SCOREBOARD] WebSocket URL:', wsUrl.replace('token=', 'token=[HIDDEN]'));
+                console.log('🎾 [SCOREBOARD] Full WebSocket URL:', wsUrl);
                 console.log('🎾 [SCOREBOARD] Listening for tennis API scoreboard ID:', tennisApiScoreboardId);
 
                 // Create socket.io client
@@ -462,7 +462,8 @@
 
                 tennisApiSocket.on('connect', () => {
                     console.log('🎾 [SCOREBOARD] ✅ Successfully connected to tennis API WebSocket!');
-                    console.log('🎾 [SCOREBOARD] 🔗 WebSocket connection established to:', wsUrl);
+                    console.log('🎾 [SCOREBOARD] 🔗 WebSocket connection established to:', wsUrl.replace('token=', 'token=[HIDDEN]'));
+                    console.log('🎾 [SCOREBOARD] 🔗 Full connection URL:', wsUrl);
                     console.log('🎾 [SCOREBOARD] 📡 Listening for updates on tennis API scoreboard:', tennisApiScoreboardId);
                     console.log('🎾 [SCOREBOARD] 🎯 Ready to receive live tennis match data');
                     updateDebug('Connected to tennis API');
@@ -485,9 +486,41 @@
                     // Tennis API indicator update removed to prevent visual clutter
                 });
 
-                // Listen for tennis match updates
+                // Listen for IonCourt match updates (direct WebSocket messages)
+                tennisApiSocket.on('message', (rawMessage) => {
+                    console.log('🎾 [SCOREBOARD] 📨 Received WebSocket message');
+                    console.log('🎾 [SCOREBOARD] 📦 Raw message received:', rawMessage);
+
+                    try {
+                        // Parse the JSON message
+                        const message = JSON.parse(rawMessage);
+                        console.log('🎾 [SCOREBOARD] 📊 Parsed message:', message);
+
+                        // Check if this is an IonCourt MATCH message
+                        if (message.type === 'MATCH' && message.data) {
+                            console.log('🎾 [SCOREBOARD] 🎾 IonCourt MATCH message detected');
+                            const match = message.data;
+                            console.log('🎾 [SCOREBOARD] 📋 Match data keys:', Object.keys(match));
+
+                            // Convert IonCourt data to format expected by updateTennisComponents
+                            const convertedMatch = convertIonCourtToMatchFormat(match);
+                            console.log('🎾 [SCOREBOARD] 🔄 Converted match data:', convertedMatch);
+
+                            // Update tennis components with the converted data
+                            console.log('🎾 [SCOREBOARD] 🔄 Updating tennis components with IonCourt data');
+                            updateTennisComponents(convertedMatch);
+                        } else {
+                            console.log('🎾 [SCOREBOARD] ⚠️ Message is not an IonCourt MATCH message');
+                        }
+                    } catch (error) {
+                        console.error('🎾 [SCOREBOARD] ❌ Failed to parse WebSocket message:', error);
+                    }
+                });
+
+                // Note: Legacy HTTP API events are no longer handled
+                // Only IonCourt WebSocket connections are supported
                 tennisApiSocket.on('tennis:match:updated', (message) => {
-                    console.log('🎾 [SCOREBOARD] 📨 Received tennis:match:updated event');
+                    console.log('🎾 [SCOREBOARD] 📨 Received legacy tennis:match:updated event');
                     console.log('🎾 [SCOREBOARD] 📦 Full message received:', message);
 
                     // Extract the actual match data from the message
@@ -573,6 +606,63 @@
                 console.error('Failed to connect to tennis API:', error);
                 updateDebug(`Failed to connect: ${error.message}`);
             }
+        }
+
+        // Convert IonCourt match data to the format expected by updateTennisComponents
+        function convertIonCourtToMatchFormat(ioncourtMatch) {
+            console.log('🎾 [SCOREBOARD] 🔄 Converting IonCourt data to match format');
+
+            // Extract player names
+            const player1Name = ioncourtMatch.sides?.[0]?.players?.[0]?.participant?.last_name +
+                               ', ' + ioncourtMatch.sides?.[0]?.players?.[0]?.participant?.first_name || 'Player 1';
+            const player2Name = ioncourtMatch.sides?.[1]?.players?.[0]?.participant?.last_name +
+                               ', ' + ioncourtMatch.sides?.[1]?.players?.[0]?.participant?.first_name || 'Player 2';
+
+            // Calculate serving player
+            const server = ioncourtMatch.score?.server;
+            const servingPlayer = server?.sideNumber === 1 ? 1 : 2;
+
+            // Calculate sets won
+            const sets = ioncourtMatch.score?.sets || [];
+            let player1SetsWon = 0;
+            let player2SetsWon = 0;
+
+            sets.forEach(set => {
+                if (set.isCompleted) {
+                    if (set.side1Score > set.side2Score) {
+                        player1SetsWon++;
+                    } else if (set.side2Score > set.side1Score) {
+                        player2SetsWon++;
+                    }
+                }
+            });
+
+            // Return converted match data in the format expected by updateTennisComponents
+            return {
+                // Player information
+                player1Name: player1Name,
+                player2Name: player2Name,
+
+                // Current game score (points)
+                side1PointScore: ioncourtMatch.score?.side1PointScore || '0',
+                side2PointScore: ioncourtMatch.score?.side2PointScore || '0',
+
+                // Overall match score strings
+                scoreStringSide1: ioncourtMatch.score?.scoreStringSide1 || `${player1SetsWon}-0`,
+                scoreStringSide2: ioncourtMatch.score?.scoreStringSide2 || `${player2SetsWon}-0`,
+
+                // Serving information
+                servingPlayer: servingPlayer,
+
+                // Match metadata
+                matchId: ioncourtMatch.matchId,
+                matchStatus: ioncourtMatch.matchStatus,
+
+                // Additional data for compatibility
+                scoreboardId: 'ioncourt-main', // Default scoreboard ID for IonCourt
+                sets: sets,
+                currentSet: sets.length > 0 ? sets.length : 1
+            };
         }
 
         function updateTennisComponents(match) {

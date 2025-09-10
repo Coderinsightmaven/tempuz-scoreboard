@@ -3,7 +3,6 @@ import { invoke } from '@tauri-apps/api/core';
 import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { MonitorInfo } from '../types/tauri';
 import { GameState } from '../types/scoreboard';
-import { io, Socket } from 'socket.io-client';
 
 export interface TauriScoreboardConfig {
   id: string;
@@ -264,30 +263,31 @@ export class TauriAPI {
     return getCurrentWebviewWindow();
   }
 
-  // Live Data Commands
-  static async fetchLiveData(apiUrl: string, apiKey: string): Promise<any> {
+  // WebSocket Commands
+
+  static async inspectLiveData(): Promise<string> {
     try {
-      return await invoke('fetch_live_data', { apiUrl, apiKey });
+      return await invoke('inspect_live_data');
     } catch (error) {
-      console.error('Failed to fetch live data:', error);
+      console.error('Failed to inspect live data:', error);
       throw error;
     }
   }
 
-  static async testApiConnection(apiUrl: string, apiKey: string): Promise<boolean> {
+  static async checkWebSocketStatus(): Promise<string> {
     try {
-      return await invoke('test_api_connection', { apiUrl, apiKey });
+      return await invoke('check_websocket_status');
     } catch (error) {
-      console.error('Failed to test API connection:', error);
+      console.error('Failed to check WebSocket status:', error);
       throw error;
     }
   }
 
-  static async getAvailableScoreboards(apiUrl: string, apiKey: string): Promise<ScoreboardInfo[]> {
+  static async testWebSocketConnection(wsUrl: string): Promise<string> {
     try {
-      return await invoke('get_available_scoreboards', { apiUrl, apiKey });
+      return await invoke('test_websocket_connection', { wsUrl });
     } catch (error) {
-      console.error('Failed to get available scoreboards:', error);
+      console.error('Failed to test WebSocket connection:', error);
       throw error;
     }
   }
@@ -359,7 +359,6 @@ export interface LiveDataConnectionData {
   name: string;
   provider: string;
   apiUrl: string;
-  apiKey: string;
   pollInterval: number;
   isActive: boolean;
   createdAt: string;
@@ -380,289 +379,3 @@ export interface LiveDataState {
   componentBindings: LiveDataBinding[];
 }
 
-// WebSocket Events for tennis-api
-export enum TennisApiWebSocketEvents {
-  SCOREBOARD_CREATED = 'scoreboard:created',
-  SCOREBOARD_DELETED = 'scoreboard:deleted',
-  SCOREBOARDS_UPDATED = 'scoreboards:updated',
-  TENNIS_MATCH_CREATED = 'tennis:match:created',
-  TENNIS_MATCH_UPDATED = 'tennis:match:updated',
-  TENNIS_MATCH_DELETED = 'tennis:match:deleted',
-}
-
-export interface TennisApiScoreboard {
-  id: string;
-  name: string;
-}
-
-export interface TennisApiTennisMatch {
-  id: string;
-  scoreStringSide1: string;
-  scoreStringSide2: string;
-  side1PointScore: string;
-  side2PointScore: string;
-  sets: Array<{
-    setNumber: number;
-    side1Score: number;
-    side2Score: number;
-    winningSide?: number;
-  }>;
-  server: {
-    sideNumber: number;
-    playerNumber: number;
-    returningSide: string;
-  };
-  player1Name?: string;
-  player2Name?: string;
-  scoreboardId: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-// WebSocket Service for connecting to tennis-api
-export class TennisApiWebSocketService {
-  private socket: Socket | null = null;
-  private reconnectAttempts = 0;
-  private maxReconnectAttempts = 5;
-  private reconnectDelay = 1000; // Start with 1 second
-
-  constructor(
-    private apiUrl: string,
-    private apiKey: string,
-    private onConnected?: () => void,
-    private onDisconnected?: () => void,
-    private onScoreboardCreated?: (scoreboard: TennisApiScoreboard) => void,
-    private onScoreboardDeleted?: (data: { id: string }) => void,
-    private onScoreboardsUpdated?: (scoreboards: TennisApiScoreboard[]) => void,
-    private onTennisMatchCreated?: (match: TennisApiTennisMatch) => void,
-    private onTennisMatchUpdated?: (match: TennisApiTennisMatch) => void,
-    private onTennisMatchDeleted?: (data: { id: string }) => void,
-    private onError?: (error: any) => void
-  ) {}
-
-  connect(): void {
-    if (this.socket?.connected) {
-      console.log('WebSocket already connected');
-      return;
-    }
-
-    console.log(`Connecting to tennis-api WebSocket at ${this.apiUrl}`);
-
-    this.socket = io(this.apiUrl, {
-      auth: {
-        'x-api-key': this.apiKey
-      },
-      transports: ['websocket', 'polling'],
-      timeout: 5000,
-      forceNew: true,
-    });
-
-    this.socket.on('connect', () => {
-      console.log('Connected to tennis-api WebSocket');
-      this.reconnectAttempts = 0;
-      this.reconnectDelay = 1000;
-      this.onConnected?.();
-    });
-
-    this.socket.on('disconnect', (reason) => {
-      console.log('Disconnected from tennis-api WebSocket:', reason);
-      this.onDisconnected?.();
-
-      if (reason === 'io server disconnect' || reason === 'io client disconnect') {
-        // Server disconnected us, don't try to reconnect
-        return;
-      }
-
-      this.attemptReconnect();
-    });
-
-    this.socket.on('connect_error', (error) => {
-      console.error('WebSocket connection error:', error);
-      this.onError?.(error);
-      this.attemptReconnect();
-    });
-
-    // Event listeners
-    this.socket.on(TennisApiWebSocketEvents.SCOREBOARD_CREATED, (scoreboard: TennisApiScoreboard) => {
-      console.log('Scoreboard created:', scoreboard);
-      this.onScoreboardCreated?.(scoreboard);
-    });
-
-    this.socket.on(TennisApiWebSocketEvents.SCOREBOARD_DELETED, (data: { id: string }) => {
-      console.log('Scoreboard deleted:', data.id);
-      this.onScoreboardDeleted?.(data);
-    });
-
-    this.socket.on(TennisApiWebSocketEvents.SCOREBOARDS_UPDATED, (scoreboards: TennisApiScoreboard[]) => {
-      console.log('Scoreboards updated:', scoreboards);
-      this.onScoreboardsUpdated?.(scoreboards);
-    });
-
-    this.socket.on(TennisApiWebSocketEvents.TENNIS_MATCH_CREATED, (match: TennisApiTennisMatch) => {
-      console.log('🔌 WebSocket received TENNIS_MATCH_CREATED:', match);
-      console.log('🔌 WebSocket received match scoreboardId:', match.scoreboardId);
-      this.onTennisMatchCreated?.(match);
-    });
-
-    this.socket.on(TennisApiWebSocketEvents.TENNIS_MATCH_UPDATED, (match: TennisApiTennisMatch) => {
-      console.log('🔌 WebSocket received TENNIS_MATCH_UPDATED:', match);
-      console.log('🔌 WebSocket received match scoreboardId:', match.scoreboardId);
-      this.onTennisMatchUpdated?.(match);
-    });
-
-    this.socket.on(TennisApiWebSocketEvents.TENNIS_MATCH_DELETED, (data: { id: string }) => {
-      console.log('Tennis match deleted:', data.id);
-      this.onTennisMatchDeleted?.(data);
-    });
-  }
-
-  disconnect(): void {
-    if (this.socket) {
-      console.log('Disconnecting from tennis-api WebSocket');
-      this.socket.disconnect();
-      this.socket = null;
-    }
-  }
-
-  isConnected(): boolean {
-    return this.socket?.connected ?? false;
-  }
-
-  private attemptReconnect(): void {
-    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      console.error('Max reconnection attempts reached');
-      return;
-    }
-
-    this.reconnectAttempts++;
-    console.log(`Attempting to reconnect (${this.reconnectAttempts}/${this.maxReconnectAttempts}) in ${this.reconnectDelay}ms`);
-
-    setTimeout(() => {
-      this.connect();
-    }, this.reconnectDelay);
-
-    // Exponential backoff
-    this.reconnectDelay = Math.min(this.reconnectDelay * 2, 30000); // Max 30 seconds
-  }
-
-  // Method to manually trigger reconnection
-  reconnect(): void {
-    this.disconnect();
-    this.reconnectAttempts = 0;
-    this.reconnectDelay = 1000;
-    this.connect();
-  }
-
-  // Method to create a new scoreboard
-  async createScoreboard(name: string): Promise<TennisApiScoreboard> {
-    if (!this.isConnected()) {
-      throw new Error('WebSocket not connected');
-    }
-
-    try {
-      // Use HTTP request to create scoreboard
-      const response = await fetch(`${this.apiUrl.replace('/socket.io', '')}/scoreboards`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': this.apiKey,
-        },
-        body: JSON.stringify({ name }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const result = await response.json();
-      console.log('Scoreboard created successfully:', result);
-      return result;
-    } catch (error) {
-      console.error('Failed to create scoreboard:', error);
-      throw error;
-    }
-  }
-
-  // Method to delete a scoreboard
-  async deleteScoreboard(id: string): Promise<void> {
-    if (!this.isConnected()) {
-      throw new Error('WebSocket not connected');
-    }
-
-    try {
-      // Use HTTP request to delete scoreboard
-      const response = await fetch(`${this.apiUrl.replace('/socket.io', '')}/scoreboards/${id}`, {
-        method: 'DELETE',
-        headers: {
-          'x-api-key': this.apiKey,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const result = await response.json();
-      console.log('Scoreboard deleted successfully:', result);
-    } catch (error) {
-      console.error('Failed to delete scoreboard:', error);
-      throw error;
-    }
-  }
-
-  // Method to fetch current scoreboards from API
-  async getScoreboards(): Promise<TennisApiScoreboard[]> {
-    if (!this.isConnected()) {
-      throw new Error('WebSocket not connected');
-    }
-
-    try {
-      const response = await fetch(`${this.apiUrl.replace('/socket.io', '')}/scoreboards`, {
-        method: 'GET',
-        headers: {
-          'x-api-key': this.apiKey,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const scoreboards = await response.json();
-      console.log('Scoreboards fetched from API:', scoreboards);
-      return scoreboards;
-    } catch (error) {
-      console.error('Failed to fetch scoreboards:', error);
-      throw error;
-    }
-  }
-
-  // Method to send data to update scoreboards
-  async updateScoreboards(scoreboards: TennisApiScoreboard[]): Promise<void> {
-    if (!this.isConnected()) {
-      throw new Error('WebSocket not connected');
-    }
-
-    try {
-      // Use HTTP request to update scoreboards since WebSocket is for real-time updates
-      const response = await fetch(`${this.apiUrl.replace('/socket.io', '')}/scoreboards`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': this.apiKey,
-        },
-        body: JSON.stringify(scoreboards),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const result = await response.json();
-      console.log('Scoreboards updated via HTTP:', result);
-    } catch (error) {
-      console.error('Failed to update scoreboards:', error);
-      throw error;
-    }
-  }
-} 
