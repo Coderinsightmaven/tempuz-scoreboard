@@ -57,6 +57,7 @@ pub fn run() {
             test_api_connection,
             get_available_scoreboards,
             inspect_live_data,
+            cleanup_live_data,
             check_websocket_status,
             test_websocket_connection,
             connect_websocket,
