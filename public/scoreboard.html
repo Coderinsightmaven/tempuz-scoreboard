@@ -366,6 +366,7 @@
                     } else if (component.type === 'video') {
                         await renderVideoComponent(component);
                     } else if (component.type === 'tennis_player_name' || 
+                               component.type === 'tennis_team_names' ||
                                component.type === 'tennis_game_score' || 
                                component.type === 'tennis_set_score' || 
                                component.type === 'tennis_match_score' ||
@@ -583,6 +584,23 @@
                 player2Name = 'Player 2';
             }
 
+            // Extract team names from the 'note' field in sides
+            let team1Name = '';
+            let team2Name = '';
+
+            if (ioncourtMatch.sides && ioncourtMatch.sides.length >= 2) {
+                team1Name = ioncourtMatch.sides[0]?.note || 'Team 1';
+                team2Name = ioncourtMatch.sides[1]?.note || 'Team 2';
+                console.log('🎾 [SCOREBOARD] Extracted team names from note fields:', {
+                    team1Name,
+                    team2Name
+                });
+            } else {
+                console.log('🎾 [SCOREBOARD] No sides data available for team names, using defaults');
+                team1Name = 'Team 1';
+                team2Name = 'Team 2';
+            }
+
             // Extract serving side information from IonCourt data
             const server = ioncourtMatch.score?.server;
             console.log('🎾 [SCOREBOARD] ===== SERVING SIDE ANALYSIS =====');
@@ -754,6 +772,10 @@
                 // Player information
                 player1Name: player1Name,
                 player2Name: player2Name,
+
+                // Team names from websocket 'note' fields
+                team1Name: team1Name,
+                team2Name: team2Name,
 
                 // Current game score (points)
                 side1PointScore: ioncourtMatch.score?.side1PointScore || '0',
@@ -930,6 +952,22 @@
                         // Maps to: match.player1Name / match.player2Name
                         // Format: "First Last" for singles, "F. LastName1 / F. LastName2" for doubles (first initial + last part of compound last names)
                         newValue = playerNumber === 1 ? (match.player1Name || 'Player 1') : (match.player2Name || 'Player 2');
+                        break;
+                    case 'tennis_team_names':
+                        // Maps to: match.team1Name / match.team2Name (from websocket 'note' fields)
+                        // Format: Team names extracted from IonCourt sides[].note fields
+                        const teamSelection = parseInt(component.getAttribute('data-team-selection')) || 0;
+                        if (teamSelection === 1) {
+                            // Show only team 1
+                            newValue = match.team1Name || 'Team 1';
+                        } else if (teamSelection === 2) {
+                            // Show only team 2
+                            newValue = match.team2Name || 'Team 2';
+                        } else {
+                            // Show both teams with separator (default)
+                            const separator = component.getAttribute('data-separator') || ' vs ';
+                            newValue = `${match.team1Name || 'Team 1'}${separator}${match.team2Name || 'Team 2'}`;
+                        }
                         break;
                     case 'tennis_game_score':
                         // Maps to: match.side1PointScore / match.side2PointScore
@@ -1329,6 +1367,17 @@
                 switch (componentType) {
                     case 'tennis_player_name':
                         defaultValue = `Player ${playerNumber}`;
+                        break;
+                    case 'tennis_team_names':
+                        const teamSelection = parseInt(component.getAttribute('data-team-selection')) || 0;
+                        if (teamSelection === 1) {
+                            defaultValue = 'Team 1';
+                        } else if (teamSelection === 2) {
+                            defaultValue = 'Team 2';
+                        } else {
+                            const separator = component.getAttribute('data-separator') || ' vs ';
+                            defaultValue = `Team 1${separator}Team 2`;
+                        }
                         break;
                     case 'tennis_game_score':
                         defaultValue = '0'; // Point score starts at 0

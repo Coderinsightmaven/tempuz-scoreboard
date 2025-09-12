@@ -6,6 +6,7 @@ import { ResizeHandle } from '../../../types/canvas';
 import { ResizeHandles } from './ResizeHandles';
 import { ImageComponent } from './ImageComponent';
 import { VideoComponent } from './VideoComponent';
+import { TennisPlayerNameDisplay } from './TennisPlayerNameDisplay';
 import { useCanvasStore } from '../../../stores/useCanvasStore';
 import { useLiveDataStore } from '../../../stores/useLiveDataStore';
 
@@ -152,6 +153,7 @@ export const DraggableComponent: React.FC<DraggableComponentProps> = ({
         );
       case ComponentType.TENNIS_PLAYER_NAME:
       case ComponentType.TENNIS_DOUBLES_PLAYER_NAME:
+      case ComponentType.TENNIS_TEAM_NAMES:
       case ComponentType.TENNIS_GAME_SCORE:
       case ComponentType.TENNIS_SET_SCORE:
       case ComponentType.TENNIS_MATCH_SCORE:
@@ -189,6 +191,24 @@ export const DraggableComponent: React.FC<DraggableComponentProps> = ({
     // First check for custom fallback text, then use default
     let displayValue = component.data.text || getDefaultTennisText();
 
+    const textAlign = component.style.textAlign || 'center';
+    const getJustifyClass = () => {
+      switch (textAlign) {
+        case 'left': return 'justify-start';
+        case 'right': return 'justify-end';
+        case 'center': return 'justify-center';
+        default: return 'justify-center';
+      }
+    };
+    const getTextAlignClass = () => {
+      switch (textAlign) {
+        case 'left': return 'text-left';
+        case 'right': return 'text-right';
+        case 'center': return 'text-center';
+        default: return 'text-center';
+      }
+    };
+
     if (tennisMatch) {
       // Map component types to tennis match data
       switch (component.type) {
@@ -196,36 +216,31 @@ export const DraggableComponent: React.FC<DraggableComponentProps> = ({
           displayValue = component.data.playerNumber === 2 ? tennisMatch.player2?.name || 'Player 2' : tennisMatch.player1?.name || 'Player 1';
           break;
         case ComponentType.TENNIS_DOUBLES_PLAYER_NAME:
-          // Handle doubles player names - display as "Lastname / Lastname"
-          const extractLastName = (fullName: string) => {
-            if (!fullName) return '';
-            const parts = fullName.trim().split(' ');
-            return parts[parts.length - 1]; // Get the last part (lastname)
-          };
-
-          if (tennisMatch.doublesPlayers) {
-            // Show team format: "Player1Last / Player2Last"
-            if (component.data.playerNumber === 1 || component.data.playerNumber === 2) {
-              // Team 1
-              const player1Name = tennisMatch.doublesPlayers.team1.player1.name || 'Player1';
-              const player2Name = tennisMatch.doublesPlayers.team1.player2.name || 'Player2';
-              const player1Last = extractLastName(player1Name);
-              const player2Last = extractLastName(player2Name);
-              displayValue = `${player1Last} / ${player2Last}`;
-            } else {
-              // Team 2
-              const player1Name = tennisMatch.doublesPlayers.team2.player1.name || 'Player1';
-              const player2Name = tennisMatch.doublesPlayers.team2.player2.name || 'Player2';
-              const player1Last = extractLastName(player1Name);
-              const player2Last = extractLastName(player2Name);
-              displayValue = `${player1Last} / ${player2Last}`;
-            }
-          } else {
-            // Fallback to singles if doubles data not available
-            const playerName = component.data.playerNumber === 2 ? tennisMatch.player2?.name || 'Player 2' : tennisMatch.player1?.name || 'Player 1';
-            displayValue = extractLastName(playerName);
-          }
-          break;
+        case ComponentType.TENNIS_TEAM_NAMES:
+          // Use TennisPlayerNameDisplay for these component types
+          return (
+            <div
+              className={`w-full h-full flex items-center ${getJustifyClass()} ${getTextAlignClass()} px-2 relative score-change-base tennis-component`}
+              style={{
+                fontSize: `${component.style.fontSize || 16}px`,
+                color: component.style.textColor || '#ffffff',
+                fontWeight: component.style.fontWeight || 'bold',
+                wordWrap: 'break-word',
+                overflow: 'hidden',
+                transition: 'transform 0.2s ease',
+              }}
+              data-component-id={component.id}
+              data-component-type={component.type}
+              data-player-number={component.data.playerNumber || 1}
+            >
+              <TennisPlayerNameDisplay
+                tennisMatch={tennisMatch}
+                componentType={component.type}
+                componentData={component.data}
+                fallbackText={component.data.text || getDefaultTennisText()}
+              />
+            </div>
+          );
         case ComponentType.TENNIS_GAME_SCORE:
           if (tennisMatch) {
             displayValue = component.data.playerNumber === 2 ? tennisMatch.score.player2_points : tennisMatch.score.player1_points;
@@ -396,24 +411,6 @@ export const DraggableComponent: React.FC<DraggableComponentProps> = ({
           break;
       }
     }
-    
-    const textAlign = component.style.textAlign || 'center';
-    const getJustifyClass = () => {
-      switch (textAlign) {
-        case 'left': return 'justify-start';
-        case 'right': return 'justify-end';
-        case 'center': return 'justify-center';
-        default: return 'justify-center';
-      }
-    };
-    const getTextAlignClass = () => {
-      switch (textAlign) {
-        case 'left': return 'text-left';
-        case 'right': return 'text-right';
-        case 'center': return 'text-center';
-        default: return 'text-center';
-      }
-    };
 
     return (
       <div
@@ -445,6 +442,11 @@ export const DraggableComponent: React.FC<DraggableComponentProps> = ({
         if (playerNum === 1 || playerNum === 2) return 'Smith / Johnson';
         if (playerNum === 3 || playerNum === 4) return 'Williams / Brown';
         return 'Smith / Johnson';
+      case ComponentType.TENNIS_TEAM_NAMES:
+        const teamSelection = component.data.teamSelection || 0;
+        if (teamSelection === 1) return 'Team 1';
+        if (teamSelection === 2) return 'Team 2';
+        return 'Team 1 vs Team 2';
       case ComponentType.TENNIS_GAME_SCORE:
         return '0';
       case ComponentType.TENNIS_SET_SCORE:

@@ -304,6 +304,8 @@ export const PropertyPanel: React.FC = () => {
         return <TennisPlayerNameProperties />;
       case ComponentType.TENNIS_DOUBLES_PLAYER_NAME:
         return <TennisDoublesPlayerNameProperties />;
+      case ComponentType.TENNIS_TEAM_NAMES:
+        return <TennisTeamNamesProperties />;
       case ComponentType.TENNIS_GAME_SCORE:
         return <TennisGameScoreProperties />;
       case ComponentType.TENNIS_SET_SCORE:
@@ -797,6 +799,84 @@ export const PropertyPanel: React.FC = () => {
     );
   }
 
+  function TennisTeamNamesProperties() {
+    const [localText, setLocalText] = useState(selectedComponent?.data.text || '');
+    const [separator, setSeparator] = useState(selectedComponent?.data.separator || ' vs ');
+
+    React.useEffect(() => {
+      setLocalText(selectedComponent?.data.text || '');
+      setSeparator(selectedComponent?.data.separator || ' vs ');
+    }, [selectedComponent?.id, selectedComponent?.data.text, selectedComponent?.data.separator]);
+
+    const handleTextBlur = () => {
+      if (localText !== selectedComponent?.data.text) {
+        handleDataChange('text', localText);
+      }
+    };
+
+    const handleSeparatorBlur = () => {
+      if (separator !== selectedComponent?.data.separator) {
+        handleDataChange('separator', separator);
+      }
+    };
+
+    return (
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Team Display
+          </label>
+          <select
+            value={selectedComponent?.data.teamSelection || 0}
+            onChange={(e) => handleDataChange('teamSelection', parseInt(e.target.value))}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value={0}>Both Teams (Team 1 vs Team 2)</option>
+            <option value={1}>Team 1 Only</option>
+            <option value={2}>Team 2 Only</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Separator (for both teams)
+          </label>
+          <input
+            type="text"
+            value={separator}
+            onChange={(e) => setSeparator(e.target.value)}
+            onBlur={handleSeparatorBlur}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder=" vs "
+          />
+          <div className="text-xs text-gray-500 mt-1">
+            Text to display between team names (e.g., " vs ", " - ", " | ")
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Fallback Text
+          </label>
+          <input
+            type="text"
+            value={localText}
+            onChange={(e) => setLocalText(e.target.value)}
+            onBlur={handleTextBlur}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Team 1 vs Team 2"
+          />
+          <div className="text-xs text-gray-500 mt-1">
+            Text to show when no live data is available
+          </div>
+        </div>
+
+        <TennisApiBindingSection />
+        <TextStyleSection />
+      </div>
+    );
+  }
+
   function TennisGameScoreProperties() {
     const [localText, setLocalText] = useState(selectedComponent?.data.text || '');
 
@@ -1200,6 +1280,8 @@ export const PropertyPanel: React.FC = () => {
           return 'Tennis Player Name';
         case ComponentType.TENNIS_DOUBLES_PLAYER_NAME:
           return 'Tennis Doubles Player Name';
+        case ComponentType.TENNIS_TEAM_NAMES:
+          return 'Tennis Team Names';
         case ComponentType.TENNIS_GAME_SCORE:
           return 'Tennis Game Score';
         case ComponentType.TENNIS_SET_SCORE:

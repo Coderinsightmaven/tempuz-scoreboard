@@ -1,0 +1,170 @@
+{
+  "type": "MATCH",
+  "data": {
+    "id": "68c24cd40defadcc95fc2e46",
+    "matchId": "6877fc17-1ad5-4866-b892-e459035e8570",
+    "matchFormat": "SET1-S:8NOAD/TB7@7",
+    "matchStatus": "IN_PROGRESS",
+    "matchType": "DOUBLES",
+    "sides": [
+      {
+        "sideNumber": 1,
+        "players": [
+          {
+            "playerNumber": 1,
+            "participant": {
+              "_id": "68c0cf4936cd30e2cc19df47",
+              "first_name": "Derrick",
+              "last_name": "Chen",
+              "biographicalInformation": null
+            }
+          },
+          {
+            "playerNumber": 2,
+            "participant": {
+              "_id": "65426ad5dd5599cacbb36239",
+              "first_name": "Santiago",
+              "last_name": "Giamichelle",
+              "biographicalInformation": null
+            }
+          }
+        ],
+        "_id": "68c24cd40defadcc95fc2e47",
+        "note": "Georgia"
+      },
+      {
+        "sideNumber": 2,
+        "players": [
+          {
+            "playerNumber": 1,
+            "participant": {
+              "_id": "68c1fdc336cd30e2cc1cf7eb",
+              "first_name": "Bernardo",
+              "last_name": "Munk Mesa",
+              "biographicalInformation": null
+            }
+          },
+          {
+            "playerNumber": 2,
+            "participant": {
+              "_id": "68c0a54c36cd30e2cc195fa5",
+              "first_name": "Lenn",
+              "last_name": "Luemkemann",
+              "biographicalInformation": null
+            }
+          }
+        ],
+        "_id": "68c24cd40defadcc95fc2e4a",
+        "note": "Cal"
+      }
+    ],
+    "score": {
+      "scoreStringSide1": "2-2 (0-15)",
+      "scoreStringSide2": "2-2 (15-0)",
+      "side1PointScore": "0",
+      "side2PointScore": "15",
+      "sets": [
+        {
+          "setNumber": 1,
+          "side1Score": 2,
+          "side1TiebreakScore": null,
+          "side2Score": 2,
+          "side2TiebreakScore": null,
+          "returnerCourtSides": [],
+          "_id": "68c2f86a0e6cc65c742aedba",
+          "games": [],
+          "serverPickleballOrders": [],
+          "isCompleted": false
+        }
+      ],
+      "_id": "68c2f86a0e6cc65c742aedb9"
+    },
+    "clocks": [],
+    "court": "Court 3",
+    "isUndo": false,
+    "playerCourtTimeLog": {
+      "side1": [
+        {
+          "player": {
+            "_id": "68c0cf4936cd30e2cc19df47",
+            "first_name": "Derrick",
+            "last_name": "Chen"
+          },
+          "playerNumber": 1,
+          "sideNumber": 1,
+          "inTime": "2025-09-11T15:59:04.737Z",
+          "outTime": null,
+          "substitutedBy": null,
+          "substitutedAt": null,
+          "performedBy": "68c0b1607aad43b14fa1ed4f",
+          "isReverted": false,
+          "setNumber": 1,
+          "inPointNumber": 1,
+          "outSetNumber": null
+        },
+        {
+          "player": {
+            "_id": "65426ad5dd5599cacbb36239",
+            "first_name": "Santiago",
+            "last_name": "Giamichelle"
+          },
+          "playerNumber": 2,
+          "sideNumber": 1,
+          "inTime": "2025-09-11T15:59:04.737Z",
+          "outTime": null,
+          "substitutedBy": null,
+          "substitutedAt": null,
+          "performedBy": "68c0b1607aad43b14fa1ed4f",
+          "isReverted": false,
+          "setNumber": 1,
+          "inPointNumber": 1,
+          "outSetNumber": null
+        }
+      ],
+      "side2": [
+        {
+          "player": {
+            "_id": "68c1fdc336cd30e2cc1cf7eb",
+            "first_name": "Bernardo",
+            "last_name": "Munk Mesa"
+          },
+          "playerNumber": 1,
+          "sideNumber": 2,
+          "inTime": "2025-09-11T15:59:04.737Z",
+          "outTime": null,
+          "substitutedBy": null,
+          "substitutedAt": null,
+          "performedBy": "68c0b1607aad43b14fa1ed4f",
+          "isReverted": false,
+          "setNumber": 1,
+          "inPointNumber": 1,
+          "outSetNumber": null
+        },
+        {
+          "player": {
+            "_id": "68c0a54c36cd30e2cc195fa5",
+            "first_name": "Lenn",
+            "last_name": "Luemkemann"
+          },
+          "playerNumber": 2,
+          "sideNumber": 2,
+          "inTime": "2025-09-11T15:59:04.737Z",
+          "outTime": null,
+          "substitutedBy": null,
+          "substitutedAt": null,
+          "performedBy": "68c0b1607aad43b14fa1ed4f",
+          "isReverted": false,
+          "setNumber": 1,
+          "inPointNumber": 1,
+          "outSetNumber": null
+        }
+      ]
+    },
+    "substituteTracker": {
+      "side1": [],
+      "side2": []
+    },
+    "isStartPoint": false,
+    "isEndPoint": false
+  }
+}

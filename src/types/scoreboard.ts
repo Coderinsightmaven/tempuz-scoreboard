@@ -20,6 +20,7 @@ export const enum ComponentType {
   VIDEO = 'video',
   TENNIS_PLAYER_NAME = 'tennis_player_name',
   TENNIS_DOUBLES_PLAYER_NAME = 'tennis_doubles_player_name',
+  TENNIS_TEAM_NAMES = 'tennis_team_names',
   TENNIS_GAME_SCORE = 'tennis_game_score',
   TENNIS_SET_SCORE = 'tennis_set_score',
   TENNIS_MATCH_SCORE = 'tennis_match_score',
@@ -261,6 +262,9 @@ export interface LiveDataConnection {
 
 export interface TennisLiveData {
   matchId: string;
+  // Team names from websocket 'note' fields
+  team1Name?: string;
+  team2Name?: string;
   // Singles players (backward compatibility)
   player1?: {
     name: string;
@@ -365,6 +369,7 @@ export interface IonCourtSide {
   participant: any;
   players: IonCourtPlayer[];
   _id: string;
+  note: string; // Team name field from websocket data
 }
 
 export interface IonCourtPlayer {
