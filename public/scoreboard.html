@@ -528,6 +528,11 @@
         }
 
 
+        // Helper function to format player score - just show the games score
+        function formatPlayerScore(playerScore) {
+            return (playerScore || 0).toString();
+        }
+
         // Convert IonCourt match data to the format expected by updateTennisComponents
         function convertIonCourtToMatchFormat(ioncourtMatch) {
             console.log('🎾 [SCOREBOARD] 🔄 Converting IonCourt data to match format');
@@ -645,15 +650,8 @@
                     }
                 }
 
-                // Format detailed set score with tiebreak handling
+                // Format detailed set score - just show the final games score
                 let setScoreString = `${side1Score}-${side2Score}`;
-
-                // Handle tiebreaks - show tiebreak score in parentheses if it exists
-                if (side1Tiebreak !== null && side1Tiebreak !== undefined) {
-                    setScoreString = `${side1Score}-${side2Score}(${side1Tiebreak})`;
-                } else if (side2Tiebreak !== null && side2Tiebreak !== undefined) {
-                    setScoreString = `${side1Score}-${side2Score}(${side2Tiebreak})`;
-                }
 
                 detailedSetScores.push({
                     setNumber: setNumber,
@@ -1042,15 +1040,8 @@
 
                                 console.log('🎾 [SCOREBOARD] tennis_detailed_set_score - playerScore:', playerScore);
 
-                                // Handle tiebreaks - if the specified player won the tiebreak, show it
+                                // Just show the games score without tiebreak details
                                 let scoreString = playerScore.toString();
-                                const playerTiebreak = playerNumber === 1
-                                    ? match.individualSets[setKey].player1Tiebreak
-                                    : match.individualSets[setKey].player2Tiebreak;
-
-                                if (playerTiebreak !== null && playerTiebreak !== undefined) {
-                                    scoreString = `${scoreString}(${playerTiebreak})`;
-                                }
 
                                 console.log('🎾 [SCOREBOARD] tennis_detailed_set_score - final scoreString:', scoreString);
                                 newValue = scoreString;
@@ -1078,15 +1069,8 @@
                                         ? (setData.side1Score || 0)
                                         : (setData.side2Score || 0);
 
-                                    // Handle tiebreaks in fallback
+                                    // Just show the games score without tiebreak details
                                     let scoreString = playerScore.toString();
-                                    const playerTiebreak = playerNumber === 1
-                                        ? setData.side1TiebreakScore
-                                        : setData.side2TiebreakScore;
-
-                                    if (playerTiebreak !== null && playerTiebreak !== undefined) {
-                                        scoreString = `${scoreString}(${playerTiebreak})`;
-                                    }
 
                                     newValue = scoreString;
                                 } else {
@@ -1189,90 +1173,90 @@
                     // Player-specific set score components for organized display
                     case 'player1_set1':
                         // Maps to: match.individualSets.set1.player1Score
-                        // Shows Player 1's score in set 1
+                        // Shows Player 1's games score in set 1
                         if (match.individualSets?.set1) {
-                            newValue = match.individualSets.set1.player1Score?.toString() || '0';
+                            newValue = formatPlayerScore(match.individualSets.set1.player1Score);
                         } else {
                             newValue = '0';
                         }
                         break;
                     case 'player2_set1':
                         // Maps to: match.individualSets.set1.player2Score
-                        // Shows Player 2's score in set 1
+                        // Shows Player 2's games score in set 1
                         if (match.individualSets?.set1) {
-                            newValue = match.individualSets.set1.player2Score?.toString() || '0';
+                            newValue = formatPlayerScore(match.individualSets.set1.player2Score);
                         } else {
                             newValue = '0';
                         }
                         break;
                     case 'player1_set2':
                         // Maps to: match.individualSets.set2.player1Score
-                        // Shows Player 1's score in set 2
+                        // Shows Player 1's games score in set 2
                         if (match.individualSets?.set2) {
-                            newValue = match.individualSets.set2.player1Score?.toString() || '0';
+                            newValue = formatPlayerScore(match.individualSets.set2.player1Score);
                         } else {
                             newValue = '';
                         }
                         break;
                     case 'player2_set2':
                         // Maps to: match.individualSets.set2.player2Score
-                        // Shows Player 2's score in set 2
+                        // Shows Player 2's games score in set 2
                         if (match.individualSets?.set2) {
-                            newValue = match.individualSets.set2.player2Score?.toString() || '0';
+                            newValue = formatPlayerScore(match.individualSets.set2.player2Score);
                         } else {
                             newValue = '';
                         }
                         break;
                     case 'player1_set3':
                         // Maps to: match.individualSets.set3.player1Score
-                        // Shows Player 1's score in set 3
+                        // Shows Player 1's games score in set 3
                         if (match.individualSets?.set3) {
-                            newValue = match.individualSets.set3.player1Score?.toString() || '0';
+                            newValue = formatPlayerScore(match.individualSets.set3.player1Score);
                         } else {
                             newValue = '';
                         }
                         break;
                     case 'player2_set3':
                         // Maps to: match.individualSets.set3.player2Score
-                        // Shows Player 2's score in set 3
+                        // Shows Player 2's games score in set 3
                         if (match.individualSets?.set3) {
-                            newValue = match.individualSets.set3.player2Score?.toString() || '0';
+                            newValue = formatPlayerScore(match.individualSets.set3.player2Score);
                         } else {
                             newValue = '';
                         }
                         break;
                     case 'player1_set4':
                         // Maps to: match.individualSets.set4.player1Score
-                        // Shows Player 1's score in set 4
+                        // Shows Player 1's games score in set 4
                         if (match.individualSets?.set4) {
-                            newValue = match.individualSets.set4.player1Score?.toString() || '0';
+                            newValue = formatPlayerScore(match.individualSets.set4.player1Score);
                         } else {
                             newValue = '';
                         }
                         break;
                     case 'player2_set4':
                         // Maps to: match.individualSets.set4.player2Score
-                        // Shows Player 2's score in set 4
+                        // Shows Player 2's games score in set 4
                         if (match.individualSets?.set4) {
-                            newValue = match.individualSets.set4.player2Score?.toString() || '0';
+                            newValue = formatPlayerScore(match.individualSets.set4.player2Score);
                         } else {
                             newValue = '';
                         }
                         break;
                     case 'player1_set5':
                         // Maps to: match.individualSets.set5.player1Score
-                        // Shows Player 1's score in set 5
+                        // Shows Player 1's games score in set 5
                         if (match.individualSets?.set5) {
-                            newValue = match.individualSets.set5.player1Score?.toString() || '0';
+                            newValue = formatPlayerScore(match.individualSets.set5.player1Score);
                         } else {
                             newValue = '';
                         }
                         break;
                     case 'player2_set5':
                         // Maps to: match.individualSets.set5.player2Score
-                        // Shows Player 2's score in set 5
+                        // Shows Player 2's games score in set 5
                         if (match.individualSets?.set5) {
-                            newValue = match.individualSets.set5.player2Score?.toString() || '0';
+                            newValue = formatPlayerScore(match.individualSets.set5.player2Score);
                         } else {
                             newValue = '';
                         }
