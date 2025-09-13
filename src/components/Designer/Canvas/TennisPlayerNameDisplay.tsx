@@ -2,6 +2,7 @@ import React from 'react';
 import { ComponentType } from '../../../types/scoreboard';
 import { TennisLiveData } from '../../../types/scoreboard';
 import { TeamNames } from './TeamNames';
+import { AdaptiveTeamDisplay } from './AdaptiveTeamDisplay';
 
 interface TennisPlayerNameDisplayProps {
   tennisMatch: TennisLiveData | null;
@@ -48,6 +49,16 @@ export const TennisPlayerNameDisplay: React.FC<TennisPlayerNameDisplayProps> = (
           />
         );
 
+      case ComponentType.TENNIS_ADAPTIVE_TEAM_DISPLAY:
+        // For adaptive team display, use the AdaptiveTeamDisplay component
+        return (
+          <AdaptiveTeamDisplay
+            tennisMatch={tennisMatch}
+            teamSelection={componentData.teamSelection || 0}
+            fallbackText={fallbackText || getDefaultText()}
+          />
+        );
+
       default:
         return fallbackText || getDefaultText();
     }
@@ -66,6 +77,11 @@ export const TennisPlayerNameDisplay: React.FC<TennisPlayerNameDisplayProps> = (
         const teamSelection = componentData.teamSelection || 0;
         if (teamSelection === 1) return 'Team 1';
         if (teamSelection === 2) return 'Team 2';
+        return 'Team 1 vs Team 2';
+      case ComponentType.TENNIS_ADAPTIVE_TEAM_DISPLAY:
+        const adaptiveTeamSelection = componentData.teamSelection || 0;
+        if (adaptiveTeamSelection === 1) return 'Team 1';
+        if (adaptiveTeamSelection === 2) return 'Team 2';
         return 'Team 1 vs Team 2';
       default:
         return 'Tennis Player';

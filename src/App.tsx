@@ -588,6 +588,15 @@ function App() {
                 </div>
               </button>
               <button
+                onClick={() => addComponent(ComponentType.TENNIS_ADAPTIVE_TEAM_DISPLAY, { x: 100, y: 100 })}
+                className="w-full text-left p-3 bg-white border border-gray-200 rounded hover:bg-gray-50 transition-colors mb-2"
+              >
+                <div className="font-medium text-sm">ADAPTIVE TEAM DISPLAY</div>
+                <div className="text-xs text-gray-600">
+                  School names for doubles, school names + last names for singles
+                </div>
+              </button>
+              <button
                 onClick={() => addComponent(ComponentType.TENNIS_GAME_SCORE, { x: 100, y: 100 })}
                 className="w-full text-left p-3 bg-white border border-gray-200 rounded hover:bg-gray-50 transition-colors mb-2"
               >

@@ -365,10 +365,11 @@
                         renderTextComponent(component);
                     } else if (component.type === 'video') {
                         await renderVideoComponent(component);
-                    } else if (component.type === 'tennis_player_name' || 
+                    } else if (component.type === 'tennis_player_name' ||
                                component.type === 'tennis_team_names' ||
-                               component.type === 'tennis_game_score' || 
-                               component.type === 'tennis_set_score' || 
+                               component.type === 'tennis_adaptive_team_display' ||
+                               component.type === 'tennis_game_score' ||
+                               component.type === 'tennis_set_score' ||
                                component.type === 'tennis_match_score' ||
                                component.type === 'tennis_serve_speed' ||
                                component.type === 'tennis_detailed_set_score' ||
@@ -966,6 +967,34 @@
                             newValue = playerNumber === 1 ? (match.team1Name || 'Team 1') : (match.team2Name || 'Team 2');
                         }
                         break;
+                    case 'tennis_adaptive_team_display':
+                        // Adaptive display: shows school names for doubles, school names + player last names for singles
+                        const adaptiveTeamSelection = parseInt(component.getAttribute('data-team-selection')) || 0;
+
+                        let adaptiveTeam1Text = match.team1Name || 'Team 1';
+                        let adaptiveTeam2Text = match.team2Name || 'Team 2';
+
+                        // For singles matches, append player last names to school names
+                        if (match.matchType === 'SINGLES') {
+                            if (match.player1Name && match.player1Name.includes(' ')) {
+                                const player1LastName = match.player1Name.split(' ').pop();
+                                adaptiveTeam1Text += ' / ' + player1LastName;
+                            }
+                            if (match.player2Name && match.player2Name.includes(' ')) {
+                                const player2LastName = match.player2Name.split(' ').pop();
+                                adaptiveTeam2Text += ' / ' + player2LastName;
+                            }
+                        }
+                        // For doubles matches, just show the school names (already set above)
+
+                        if (adaptiveTeamSelection === 1) {
+                            newValue = adaptiveTeam1Text;
+                        } else if (adaptiveTeamSelection === 2) {
+                            newValue = adaptiveTeam2Text;
+                        } else {
+                            newValue = adaptiveTeam1Text + ' vs ' + adaptiveTeam2Text;
+                        }
+                        break;
                     case 'tennis_game_score':
                         // Maps to: match.side1PointScore / match.side2PointScore
                         // Shows current game points: "0", "15", "30", "40", "Ad" (advantage)
@@ -1421,6 +1450,11 @@
                         switch (component.type) {
                             case 'tennis_player_name':
                                 dataPath = `player${playerNumber}.name`;
+                                break;
+                            case 'tennis_adaptive_team_display':
+                                // For adaptive team display, handled specially in updateTennisComponents
+                                // No specific dataPath needed - uses full match data
+                                dataPath = null;
                                 break;
                             case 'tennis_game_score':
                                 dataPath = `score.player${playerNumber}Points`;
@@ -2063,6 +2097,11 @@
                 element.setAttribute('data-set-number', component.data.setNumber || 1);
             }
 
+            // Set data-team-selection for tennis_team_names and tennis_adaptive_team_display components
+            if (component.type === 'tennis_team_names' || component.type === 'tennis_adaptive_team_display') {
+                element.setAttribute('data-team-selection', component.data.teamSelection || 0);
+            }
+
             // Scale text to maximally fill the component bounds for player names
             if (component.type === 'tennis_player_name' && element.textContent && element.textContent !== 'Player 1' && element.textContent !== 'Player 2') {
                 const optimalFontSize = scaleTextToFit(element, component.size.width, component.size.height);
@@ -2085,7 +2124,9 @@
                 case 'tennis_serve_speed':
                     return ''; // Show nothing until data arrives
                 case 'tennis_detailed_set_score':
-                    return '0'; // Shows single set score for specific player and set 
+                    return '0'; // Shows single set score for specific player and set
+                case 'tennis_adaptive_team_display':
+                    return 'School A vs School B'; // Shows adaptive team display: school names for doubles, school names + last names for singles
                 default:
                     return 'Tennis Data';
             }

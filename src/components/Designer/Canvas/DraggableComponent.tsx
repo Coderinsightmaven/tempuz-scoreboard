@@ -154,6 +154,7 @@ export const DraggableComponent: React.FC<DraggableComponentProps> = ({
       case ComponentType.TENNIS_PLAYER_NAME:
       case ComponentType.TENNIS_DOUBLES_PLAYER_NAME:
       case ComponentType.TENNIS_TEAM_NAMES:
+      case ComponentType.TENNIS_ADAPTIVE_TEAM_DISPLAY:
       case ComponentType.TENNIS_GAME_SCORE:
       case ComponentType.TENNIS_SET_SCORE:
       case ComponentType.TENNIS_MATCH_SCORE:
@@ -217,6 +218,7 @@ export const DraggableComponent: React.FC<DraggableComponentProps> = ({
           break;
         case ComponentType.TENNIS_DOUBLES_PLAYER_NAME:
         case ComponentType.TENNIS_TEAM_NAMES:
+        case ComponentType.TENNIS_ADAPTIVE_TEAM_DISPLAY:
           // Use TennisPlayerNameDisplay for these component types
           return (
             <div
@@ -447,6 +449,11 @@ export const DraggableComponent: React.FC<DraggableComponentProps> = ({
         if (teamSelection === 1) return 'Team 1';
         if (teamSelection === 2) return 'Team 2';
         return 'Team 1 vs Team 2';
+      case ComponentType.TENNIS_ADAPTIVE_TEAM_DISPLAY:
+        const adaptiveTeamSelection = component.data.teamSelection || 0;
+        if (adaptiveTeamSelection === 1) return 'School A';
+        if (adaptiveTeamSelection === 2) return 'School B';
+        return 'School A vs School B';
       case ComponentType.TENNIS_GAME_SCORE:
         return '0';
       case ComponentType.TENNIS_SET_SCORE:

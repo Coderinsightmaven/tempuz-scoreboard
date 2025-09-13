@@ -306,6 +306,8 @@ export const PropertyPanel: React.FC = () => {
         return <TennisDoublesPlayerNameProperties />;
       case ComponentType.TENNIS_TEAM_NAMES:
         return <TennisTeamNamesProperties />;
+      case ComponentType.TENNIS_ADAPTIVE_TEAM_DISPLAY:
+        return <TennisAdaptiveTeamDisplayProperties />;
       case ComponentType.TENNIS_GAME_SCORE:
         return <TennisGameScoreProperties />;
       case ComponentType.TENNIS_SET_SCORE:
@@ -790,6 +792,44 @@ export const PropertyPanel: React.FC = () => {
           />
           <div className="text-xs text-gray-500 mt-1">
             Enter team names as "Lastname1 / Lastname2" format
+          </div>
+        </div>
+
+        <TennisApiBindingSection />
+        <TextStyleSection />
+      </div>
+    );
+  }
+
+  function TennisAdaptiveTeamDisplayProperties() {
+    return (
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Team Selection
+          </label>
+          <select
+            value={selectedComponent?.data.teamSelection || 0}
+            onChange={(e) => handleDataChange('teamSelection', parseInt(e.target.value))}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value={0}>Both Teams (Team 1 vs Team 2)</option>
+            <option value={1}>Team 1 Only</option>
+            <option value={2}>Team 2 Only</option>
+          </select>
+          <div className="text-xs text-gray-500 mt-1">
+            Select which team(s) to display
+          </div>
+        </div>
+
+        <div className="bg-blue-50 p-3 rounded-md">
+          <div className="text-sm text-blue-800">
+            <strong>Adaptive Display Logic:</strong>
+            <ul className="mt-2 space-y-1 text-xs">
+              <li>• <strong>Doubles:</strong> Shows school name from sides[].note</li>
+              <li>• <strong>Singles:</strong> Shows school name + player's last name</li>
+              <li>• Example: "Georgia" (doubles) or "Georgia / Smith" (singles)</li>
+            </ul>
           </div>
         </div>
 
@@ -1299,6 +1339,8 @@ export const PropertyPanel: React.FC = () => {
           return 'Tennis Doubles Player Name';
         case ComponentType.TENNIS_TEAM_NAMES:
           return 'Tennis Team Names';
+        case ComponentType.TENNIS_ADAPTIVE_TEAM_DISPLAY:
+          return 'Tennis Adaptive Team Display';
         case ComponentType.TENNIS_GAME_SCORE:
           return 'Tennis Game Score';
         case ComponentType.TENNIS_SET_SCORE:
@@ -1326,6 +1368,9 @@ export const PropertyPanel: React.FC = () => {
           return '👤';
         case ComponentType.TENNIS_DOUBLES_PLAYER_NAME:
           return '👥';
+        case ComponentType.TENNIS_TEAM_NAMES:
+        case ComponentType.TENNIS_ADAPTIVE_TEAM_DISPLAY:
+          return '🏷️';
         case ComponentType.TENNIS_GAME_SCORE:
         case ComponentType.TENNIS_SET_SCORE:
         case ComponentType.TENNIS_MATCH_SCORE:
@@ -1352,6 +1397,11 @@ export const PropertyPanel: React.FC = () => {
           if (playerNum === 1 || playerNum === 2) return 'Smith / Johnson';
           if (playerNum === 3 || playerNum === 4) return 'Williams / Brown';
           return 'Smith / Johnson';
+        case ComponentType.TENNIS_ADAPTIVE_TEAM_DISPLAY:
+          const teamSelection = component.data.teamSelection || 0;
+          if (teamSelection === 1) return 'Team 1';
+          if (teamSelection === 2) return 'Team 2';
+          return 'Team 1 / Smith vs Team 2 / Johnson';
         case ComponentType.TENNIS_GAME_SCORE:
         case ComponentType.TENNIS_SET_SCORE:
         case ComponentType.TENNIS_MATCH_SCORE:

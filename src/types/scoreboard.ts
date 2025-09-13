@@ -26,6 +26,7 @@ export const enum ComponentType {
   TENNIS_MATCH_SCORE = 'tennis_match_score',
   TENNIS_DETAILED_SET_SCORE = 'tennis_detailed_set_score',
   TENNIS_SERVING_INDICATOR = 'tennis_serving_indicator',
+  TENNIS_ADAPTIVE_TEAM_DISPLAY = 'tennis_adaptive_team_display',
   // Player-specific set score components
   PLAYER1_SET1 = 'player1_set1',
   PLAYER2_SET1 = 'player2_set1',
