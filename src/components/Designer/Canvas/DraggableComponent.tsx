@@ -453,7 +453,7 @@ export const DraggableComponent: React.FC<DraggableComponentProps> = ({
         const adaptiveTeamSelection = component.data.teamSelection || 0;
         if (adaptiveTeamSelection === 1) return 'School A';
         if (adaptiveTeamSelection === 2) return 'School B';
-        return 'School A vs School B';
+        return 'School A - Smith vs School B - Johnson';
       case ComponentType.TENNIS_GAME_SCORE:
         return '0';
       case ComponentType.TENNIS_SET_SCORE:

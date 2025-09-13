@@ -828,7 +828,7 @@ export const PropertyPanel: React.FC = () => {
             <ul className="mt-2 space-y-1 text-xs">
               <li>• <strong>Doubles:</strong> Shows school name from sides[].note</li>
               <li>• <strong>Singles:</strong> Shows school name + player's last name</li>
-              <li>• Example: "Georgia" (doubles) or "Georgia / Smith" (singles)</li>
+              <li>• Example: "Georgia" (doubles) or "Georgia - Smith" (singles)</li>
             </ul>
           </div>
         </div>

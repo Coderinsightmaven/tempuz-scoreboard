@@ -978,11 +978,11 @@
                         if (match.matchType === 'SINGLES') {
                             if (match.player1Name && match.player1Name.includes(' ')) {
                                 const player1LastName = match.player1Name.split(' ').pop();
-                                adaptiveTeam1Text += ' / ' + player1LastName;
+                                adaptiveTeam1Text += ' - ' + player1LastName;
                             }
                             if (match.player2Name && match.player2Name.includes(' ')) {
                                 const player2LastName = match.player2Name.split(' ').pop();
-                                adaptiveTeam2Text += ' / ' + player2LastName;
+                                adaptiveTeam2Text += ' - ' + player2LastName;
                             }
                         }
                         // For doubles matches, just show the school names (already set above)
@@ -1337,8 +1337,9 @@
 
                     console.log(`🎾 [SCOREBOARD] After update, component.textContent = "${component.textContent}"`);
 
-                    // Scale text to maximally fill if it's a player name component
-                    if (componentType === 'tennis_player_name' && newValue && newValue !== 'Player 1' && newValue !== 'Player 2') {
+                    // Scale text to maximally fill if it's a player name or adaptive team display component
+                    if ((componentType === 'tennis_player_name' && newValue && newValue !== 'Player 1' && newValue !== 'Player 2') ||
+                        (componentType === 'tennis_adaptive_team_display' && newValue && newValue !== 'School A - Smith vs School B - Johnson')) {
                         // Get component dimensions from the element's style
                         const componentWidth = parseFloat(component.style.width);
                         const componentHeight = parseFloat(component.style.height);
@@ -2102,8 +2103,9 @@
                 element.setAttribute('data-team-selection', component.data.teamSelection || 0);
             }
 
-            // Scale text to maximally fill the component bounds for player names
-            if (component.type === 'tennis_player_name' && element.textContent && element.textContent !== 'Player 1' && element.textContent !== 'Player 2') {
+            // Scale text to maximally fill the component bounds for player names and adaptive team display
+            if ((component.type === 'tennis_player_name' && element.textContent && element.textContent !== 'Player 1' && element.textContent !== 'Player 2') ||
+                (component.type === 'tennis_adaptive_team_display' && element.textContent && element.textContent !== 'School A - Smith vs School B - Johnson')) {
                 const optimalFontSize = scaleTextToFit(element, component.size.width, component.size.height);
                 element.style.fontSize = optimalFontSize + 'px';
             }
@@ -2126,7 +2128,7 @@
                 case 'tennis_detailed_set_score':
                     return '0'; // Shows single set score for specific player and set
                 case 'tennis_adaptive_team_display':
-                    return 'School A vs School B'; // Shows adaptive team display: school names for doubles, school names + last names for singles
+                    return 'School A - Smith vs School B - Johnson'; // Shows adaptive team display: school names for doubles, school names + last names for singles
                 default:
                     return 'Tennis Data';
             }

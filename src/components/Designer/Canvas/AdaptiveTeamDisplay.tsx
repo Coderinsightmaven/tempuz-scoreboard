@@ -38,7 +38,7 @@ export const AdaptiveTeamDisplay: React.FC<AdaptiveTeamDisplayProps> = ({
           if (player?.participant?.last_name) {
             const lastName = player.participant.last_name.trim();
             if (displayText) {
-              displayText += ` / ${lastName}`;
+              displayText += ` - ${lastName}`;
             } else {
               displayText = lastName;
             }
@@ -64,7 +64,7 @@ export const AdaptiveTeamDisplay: React.FC<AdaptiveTeamDisplayProps> = ({
         const player = sideIndex === 0 ? liveMatch.player1 : liveMatch.player2;
         if (player?.name && player.name.includes(' ')) {
           const lastName = player.name.split(' ').pop();
-          displayText += ` / ${lastName}`;
+          displayText += ` - ${lastName}`;
         }
       }
 
