@@ -347,7 +347,31 @@ export class TauriAPI {
 
   static async getAllCourtData(): Promise<{[courtName: string]: any}> {
     try {
-      return await invoke('get_all_court_data');
+      // Note: This now only returns active courts (updated within last hour)
+      return await invoke('get_active_court_data', { activeCourts: [] });
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Get data for all active courts only (courts updated within last hour)
+   * @deprecated Use getAllCourtData() instead - it now only returns active courts
+   */
+  static async getActiveCourtData(): Promise<{[courtName: string]: any}> {
+    try {
+      return await invoke('get_active_court_data', { activeCourts: [] });
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Get data for specific active courts only
+   */
+  static async getActiveCourtDataForCourts(activeCourts: string[]): Promise<{[courtName: string]: any}> {
+    try {
+      return await invoke('get_active_court_data', { activeCourts });
     } catch (error) {
       throw error;
     }

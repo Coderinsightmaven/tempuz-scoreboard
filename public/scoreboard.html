@@ -604,7 +604,7 @@
                 console.log('🎾 [SCOREBOARD] No sides data available for team names, using defaults');
                 team1Name = 'Team 1';
                 team2Name = 'Team 2';
-            }
+            } 
 
             // Extract serving side information from IonCourt data
             const server = ioncourtMatch.score?.server;
@@ -962,9 +962,8 @@
                             // Show only team 2
                             newValue = match.team2Name || 'Team 2';
                         } else {
-                            // Show both teams with separator (default)
-                            const separator = component.getAttribute('data-separator') || ' vs ';
-                            newValue = `${match.team1Name || 'Team 1'}${separator}${match.team2Name || 'Team 2'}`;
+                            // Show individual team based on player number
+                            newValue = playerNumber === 1 ? (match.team1Name || 'Team 1') : (match.team2Name || 'Team 2');
                         }
                         break;
                     case 'tennis_game_score':
@@ -1359,8 +1358,8 @@
                         } else if (teamSelection === 2) {
                             defaultValue = 'Team 2';
                         } else {
-                            const separator = component.getAttribute('data-separator') || ' vs ';
-                            defaultValue = `Team 1${separator}Team 2`;
+                            // Show individual team based on player number
+                            defaultValue = playerNumber === 1 ? 'Team 1' : 'Team 2';
                         }
                         break;
                     case 'tennis_game_score':

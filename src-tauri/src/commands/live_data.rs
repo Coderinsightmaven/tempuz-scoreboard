@@ -385,11 +385,12 @@ pub async fn start_websocket_listener(connection_id: String) -> Result<String, S
 }
 
 async fn cleanup_old_data() {
+    println!("🧹 Running automatic cleanup of old court data");
     let mut latest_data_by_court = LATEST_DATA_BY_COURT.lock().await;
     let mut last_update = LAST_DATA_UPDATE.lock().await;
 
     let now = std::time::Instant::now();
-    let timeout_duration = std::time::Duration::from_secs(3600); // 1 hour
+    let timeout_duration = std::time::Duration::from_secs(300); // 5 minutes
 
     let mut courts_to_remove = Vec::new();
 
@@ -408,7 +409,9 @@ async fn cleanup_old_data() {
     }
 
     if removed_count > 0 {
-        println!("🧹 Data cleanup completed. Removed {} old court entries", removed_count);
+        println!("🧹 Data cleanup completed. Removed {} old court entries (5+ minute timeout)", removed_count);
+    } else {
+        println!("✅ No old court data to clean up (5-minute timeout)");
     }
 }
 
@@ -482,15 +485,61 @@ pub async fn get_latest_ioncourt_data(_connection_id: String) -> Result<Option<s
 }
 
 #[tauri::command]
-pub async fn get_all_court_data() -> Result<serde_json::Value, String> {
-    println!("🎾 Retrieving all court data");
+pub async fn get_active_court_data(active_courts: Vec<String>) -> Result<serde_json::Value, String> {
+    println!("🎾 Retrieving active court data only ({} courts requested)", active_courts.len());
     let latest_data_by_court = LATEST_DATA_BY_COURT.lock().await;
+    let last_update = LAST_DATA_UPDATE.lock().await;
 
-    // Convert HashMap to JSON object
+    let now = std::time::Instant::now();
+    let active_timeout = std::time::Duration::from_secs(300); // 5 minutes
+
+    // Convert HashMap to JSON object, but only include active courts that are being displayed
     let mut result = serde_json::Map::new();
-    for (court_name, data) in latest_data_by_court.iter() {
-        result.insert(court_name.clone(), data.clone());
+    let mut active_count = 0;
+
+    // If active_courts list is provided, only include those courts
+    if !active_courts.is_empty() {
+        println!("🎯 Filtering for specific courts: {:?}", active_courts);
+        for court_name in &active_courts {
+            if let Some(data) = latest_data_by_court.get(court_name) {
+                // Check if this court has been updated recently
+                if let Some(&last_update_time) = last_update.get(court_name) {
+                    if now.duration_since(last_update_time) <= active_timeout {
+                        result.insert(court_name.clone(), data.clone());
+                        active_count += 1;
+                    } else {
+                        println!("⏰ Skipping stale court '{}' (last update: {:.2?} ago)",
+                            court_name,
+                            now.duration_since(last_update_time));
+                    }
+                } else {
+                    println!("⚠️  Skipping court '{}' with no update timestamp", court_name);
+                }
+            } else {
+                println!("📭 No data available for requested court '{}'", court_name);
+            }
+        }
+    } else {
+        // Fallback to time-based filtering if no specific courts requested
+        println!("⚠️  No active courts specified, falling back to time-based filtering");
+        for (court_name, data) in latest_data_by_court.iter() {
+            if let Some(&last_update_time) = last_update.get(court_name) {
+                if now.duration_since(last_update_time) <= active_timeout {
+                    result.insert(court_name.clone(), data.clone());
+                    active_count += 1;
+                } else {
+                    println!("⏰ Skipping inactive court '{}' (last update: {:.2?} ago)",
+                        court_name,
+                        now.duration_since(last_update_time));
+                }
+            } else {
+                println!("⚠️  Skipping court '{}' with no update timestamp", court_name);
+            }
+        }
     }
+
+    println!("🎾 Returning data for {} active courts out of {} requested courts",
+        active_count, active_courts.len().max(latest_data_by_court.len()));
 
     Ok(serde_json::Value::Object(result))
 }

@@ -83,11 +83,19 @@ export class CourtDataStorage {
   }
 
   /**
-   * Get list of available courts
+   * Get list of active courts (courts with recent data updates)
    */
   static getAvailableCourts(): string[] {
     const data = this.getCourtData();
     return data ? Object.keys(data) : [];
+  }
+
+  /**
+   * Get list of active courts (alias for getAvailableCourts)
+   * @deprecated Use getAvailableCourts() instead
+   */
+  static getActiveCourts(): string[] {
+    return this.getAvailableCourts();
   }
 
   /**

@@ -67,7 +67,7 @@ pub fn run() {
             stop_websocket_listener,
             get_latest_ioncourt_data,
             get_latest_ioncourt_data_by_court,
-            get_all_court_data,
+            get_active_court_data,
                     // Live data storage commands
         save_live_data_connections,
         load_live_data_connections,
