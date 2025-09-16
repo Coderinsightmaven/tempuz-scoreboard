@@ -1,14 +1,15 @@
 // src-tauri/src/commands/court_data_sync.rs
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
 use tokio::time::interval;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Utc, Duration as ChronoDuration};
 use thiserror::Error;
+use lazy_static::lazy_static;
 
 #[derive(Error, Debug)]
 pub enum CourtSyncError {
@@ -18,20 +19,11 @@ pub enum CourtSyncError {
     #[error("JSON serialization error: {0}")]
     Json(#[from] serde_json::Error),
 
-    #[error("Tauri invoke error: {0}")]
-    TauriInvoke(String),
-
     #[error("Sync already running")]
     AlreadyRunning,
 
     #[error("Sync not running")]
     NotRunning,
-
-    #[error("Invalid court data: {0}")]
-    InvalidData(String),
-
-    #[error("Storage error: {0}")]
-    Storage(String),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -45,7 +37,6 @@ pub struct CourtDataEntry {
 pub struct CourtDataManager {
     data: HashMap<String, CourtDataEntry>,
     storage_path: PathBuf,
-    max_age: Duration,
     has_changes: bool,
 }
 
@@ -54,7 +45,6 @@ impl CourtDataManager {
         Self {
             data: HashMap::new(),
             storage_path,
-            max_age: Duration::from_secs(300), // 5 minutes
             has_changes: false,
         }
     }
@@ -63,6 +53,7 @@ impl CourtDataManager {
         let now = Utc::now();
 
         for (court_name, data) in court_data {
+            // Update last_accessed when storing new data
             self.data.insert(court_name, CourtDataEntry {
                 data,
                 last_updated: now,
@@ -72,6 +63,30 @@ impl CourtDataManager {
 
         self.has_changes = true;
         self.persist_to_file().await?;
+        Ok(())
+    }
+
+    pub async fn cleanup_expired_data(&mut self) -> Result<(), CourtSyncError> {
+        let now = Utc::now();
+        let max_age = Duration::from_secs(300); // 5 minutes
+
+        let expired_courts: Vec<String> = self.data
+            .iter()
+            .filter(|(_, entry)| {
+                now.signed_duration_since(entry.last_accessed) > ChronoDuration::from_std(max_age).unwrap()
+            })
+            .map(|(name, _)| name.clone())
+            .collect();
+
+        if !expired_courts.is_empty() {
+            println!("🧹 Cleaning up {} expired court data entries (older than 5 minutes)", expired_courts.len());
+            for court in expired_courts {
+                self.data.remove(&court);
+                self.has_changes = true;
+            }
+            self.persist_to_file().await?;
+        }
+
         Ok(())
     }
 
@@ -89,10 +104,6 @@ impl CourtDataManager {
         self.data.keys().cloned().collect()
     }
 
-    pub fn get_court_data(&self, court_name: &str) -> Option<&CourtDataEntry> {
-        self.data.get(court_name)
-    }
-
     pub fn remove_court_data(&mut self, court_name: &str) -> bool {
         if self.data.remove(court_name).is_some() {
             self.has_changes = true;
@@ -102,31 +113,10 @@ impl CourtDataManager {
         }
     }
 
-    pub async fn cleanup_expired_data(&mut self) -> Result<(), CourtSyncError> {
-        let now = Utc::now();
-        let expired_courts: Vec<String> = self.data
-            .iter()
-            .filter(|(_, entry)| {
-                now.signed_duration_since(entry.last_accessed) > chrono::Duration::from_std(self.max_age).unwrap()
-            })
-            .map(|(name, _)| name.clone())
-            .collect();
-
-        for court in expired_courts {
-            self.data.remove(&court);
-            self.has_changes = true;
-        }
-
-        if self.has_changes {
-            self.persist_to_file().await?;
-        }
-
-        Ok(())
-    }
 }
 
 // Global state for the sync service
-lazy_static::lazy_static! {
+lazy_static! {
     static ref COURT_DATA_SYNC: Arc<Mutex<CourtDataSync>> = Arc::new(Mutex::new(
         match CourtDataSync::new() {
             Ok(sync) => sync,
@@ -316,6 +306,9 @@ impl CourtDataSync {
 
             // Cleanup undisplayed courts
             Self::cleanup_undisplayed_courts(&mut manager, active_courts).await?;
+
+            // Cleanup expired data (older than 5 minutes)
+            manager.cleanup_expired_data().await?;
         } else {
             println!("🔄 No active court data to sync");
         }
@@ -356,7 +349,7 @@ impl CourtDataSync {
         manager: &mut CourtDataManager,
         active_courts: Vec<String>,
     ) -> Result<(), CourtSyncError> {
-        let active_set: std::collections::HashSet<String> = active_courts.into_iter().collect();
+        let active_set: HashSet<String> = active_courts.into_iter().collect();
         let stored_courts = manager.get_court_names();
 
         let courts_to_remove: Vec<String> = stored_courts
