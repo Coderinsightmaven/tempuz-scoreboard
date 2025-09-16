@@ -68,19 +68,23 @@ pub fn run() {
             get_latest_ioncourt_data,
             get_latest_ioncourt_data_by_court,
             get_active_court_data,
-                    // Live data storage commands
-        save_live_data_connections,
-        load_live_data_connections,
-        delete_live_data_connections,
-        // Export/Import commands
-        export_scoreboard_as_zip,
-        import_scoreboard_from_zip,
-        // Court data sync commands
-        start_court_data_sync,
-        stop_court_data_sync,
-        trigger_manual_sync,
-        get_court_sync_status,
-        is_court_sync_running,
+            // Live data storage commands
+            save_live_data_connections,
+            load_live_data_connections,
+            delete_live_data_connections,
+            // Export/Import commands
+            export_scoreboard_as_zip,
+            import_scoreboard_from_zip,
+            // Court data sync commands
+            start_court_data_sync,
+            stop_court_data_sync,
+            trigger_manual_sync,
+            get_court_sync_status,
+            is_court_sync_running,
+            // Tennis processor commands
+            process_tennis_data,
+            process_tennis_data_batch,
+            validate_tennis_data,
         ])
         .setup(|app| {
             #[cfg(debug_assertions)]

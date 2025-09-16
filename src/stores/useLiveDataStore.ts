@@ -4,6 +4,8 @@ import { subscribeWithSelector } from 'zustand/middleware';
 import { LiveDataConnection, TennisLiveData, LiveDataComponentBinding } from '../types/scoreboard';
 import { v4 as uuidv4 } from 'uuid';
 import { TauriAPI, LiveDataState, ScoreboardInfo } from '../lib/tauri';
+import { getRustTennisProcessor, ProcessedTennisMatch } from '../services/rustTennisProcessor';
+import { RawTennisData } from '../types/tennisProcessor';
 
 interface LiveDataStoreState {
   connections: LiveDataConnection[];
@@ -17,6 +19,9 @@ interface LiveDataStoreState {
   // Tennis API integration
   tennisApiConnected: boolean;
   tennisApiScoreboards: ScoreboardInfo[];
+
+  // Rust processor integration
+  lastProcessedData: ProcessedTennisMatch | null;
 }
 
 interface LiveDataActions {
@@ -59,6 +64,10 @@ interface LiveDataActions {
   clearError: () => void;
   getTennisApiMatch: (scoreboardId: string) => any;
   getTennisApiScoreboards: () => ScoreboardInfo[];
+
+  // Rust processor integration
+  processTennisDataViaRust: (rawData: RawTennisData) => Promise<ProcessedTennisMatch>;
+  getLastProcessedData: () => ProcessedTennisMatch | null;
 }
 
 const getValueFromPath = (obj: any, path: string): any => {
@@ -150,6 +159,9 @@ export const useLiveDataStore = create<LiveDataStoreState & LiveDataActions>()(
     // Tennis API integration
     tennisApiConnected: false,
     tennisApiScoreboards: [],
+
+    // Rust processor integration
+    lastProcessedData: null,
 
     // Connection management
     addConnection: (connectionData) => {
@@ -305,35 +317,67 @@ export const useLiveDataStore = create<LiveDataStoreState & LiveDataActions>()(
     startPolling: (connectionId) => {
       const state = get();
       const connection = state.connections.find(conn => conn.id === connectionId);
-      
+
       if (!connection || state.pollingIntervals[connectionId]) return;
-      
+
       // Polling function
       const pollData = async () => {
         try {
           let data;
-          
+
           // Handle different data providers
           if (connection.provider === 'mock') {
             data = getMockTennisDataProgressive();
+
+            // Process mock data through Rust backend
+            try {
+              const processor = getRustTennisProcessor({
+                enableDebugLogging: import.meta.env.DEV
+              });
+              const processedData = await processor.processData(data as RawTennisData);
+
+              // Convert processed data back to TennisLiveData format
+              data = {
+                matchId: processedData.match_id,
+                player1: processedData.player1,
+                player2: processedData.player2,
+                score: {
+                  player1Sets: processedData.score.player1Sets,
+                  player2Sets: processedData.score.player2Sets,
+                  player1Games: processedData.score.player1Games,
+                  player2Games: processedData.score.player2Games,
+                  player1Points: processedData.score.player1Points,
+                  player2Points: processedData.score.player2Points
+                },
+                sets: processedData.sets,
+                serve: { speed: '120 MPH' },
+                matchStatus: processedData.match_status as 'not_started' | 'in_progress' | 'completed' | 'suspended',
+                servingPlayer: processedData.servingPlayer as 1 | 2 | 3 | 4,
+                currentSet: processedData.currentSet,
+                isTiebreak: processedData.isTiebreak
+              };
+            } catch (rustError) {
+              console.warn('⚠️ Rust processing failed, using raw data:', rustError);
+              // Fall back to raw data if processing fails
+            }
           } else {
             // WebSocket connections receive data automatically via WebSocket messages
             // No manual fetching needed - data comes from the active WebSocket connection
             return; // Skip polling for WebSocket connections
           }
-          
+
           get().updateLiveData(connectionId, data);
         } catch (error) {
           get().setConnectionError(connectionId, error instanceof Error ? error.message : 'Unknown error');
         }
       };
-      
+
       // Initial fetch
       pollData();
-      
+
       // Set up polling interval
       const interval = setInterval(pollData, connection.pollInterval * 1000);
-      
+
       set((state) => ({
         pollingIntervals: {
           ...state.pollingIntervals,
@@ -566,6 +610,34 @@ export const useLiveDataStore = create<LiveDataStoreState & LiveDataActions>()(
     getTennisApiScoreboards: () => {
       const state = get();
       return state.tennisApiScoreboards;
+    },
+
+    // Rust processor integration methods
+    processTennisDataViaRust: async (rawData) => {
+      try {
+        const processor = getRustTennisProcessor({
+          enableDebugLogging: import.meta.env.DEV
+        });
+        const processedData = await processor.processData(rawData);
+
+        // Update the last processed data
+        set({ lastProcessedData: processedData });
+
+        console.log('✅ Tennis data processed via Rust:', processedData.match_id);
+        return processedData;
+
+      } catch (error) {
+        console.error('❌ Rust processing failed:', error);
+        set({
+          lastError: error instanceof Error ? error.message : 'Rust processing failed'
+        });
+        throw error;
+      }
+    },
+
+    getLastProcessedData: () => {
+      const state = get();
+      return state.lastProcessedData;
     },
   }))
 );

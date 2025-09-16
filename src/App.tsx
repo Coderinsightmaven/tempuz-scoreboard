@@ -54,6 +54,9 @@ function App() {
     // Initialize the app on mount
     loadMonitors();
     loadImages();
+
+    // Note: Rust tennis processor is initialized on-demand when needed
+    console.log('🎾 App initialized - Rust tennis processor will be used on-demand');
   }, [loadMonitors, loadImages]);
 
   // Separate effect for tennis API auto-connection

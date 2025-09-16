@@ -9,6 +9,8 @@ import { VideoComponent } from './VideoComponent';
 import { TennisPlayerNameDisplay } from './TennisPlayerNameDisplay';
 import { useCanvasStore } from '../../../stores/useCanvasStore';
 import { useLiveDataStore } from '../../../stores/useLiveDataStore';
+import { getRustTennisProcessor } from '../../../services/rustTennisProcessor';
+import { RawTennisData } from '../../../types/tennisProcessor';
 
 interface DraggableComponentProps {
   component: ScoreboardComponent;
@@ -26,7 +28,7 @@ export const DraggableComponent: React.FC<DraggableComponentProps> = ({
   const { selectedComponents, isResizing } = useCanvasStore();
   const isSelected = selectedComponents.has(component.id);
 
-  // For tennis components, get the live data from tennis-api store
+  // For tennis components, get the live data from tennis-api store with Rust processing
   const tennisMatch = component.type.startsWith('tennis_') ?
     (() => {
       const state = useLiveDataStore.getState();
@@ -34,11 +36,44 @@ export const DraggableComponent: React.FC<DraggableComponentProps> = ({
       // If a specific tennis API scoreboard ID is provided (for scoreboard windows),
       // only get data from that scoreboard
       if (tennisApiScoreboardId) {
+        const rawData = state.getTennisApiMatch(tennisApiScoreboardId);
+        if (rawData) {
+          // Process data through Rust backend
+          try {
+            const processor = getRustTennisProcessor({
+              enableDebugLogging: import.meta.env.DEV
+            });
+            // Process synchronously if possible, or handle async processing
+            processor.processData(rawData as RawTennisData).then(processedData => {
+              console.log(`✅ Processed tennis data for ${component.id}:`, processedData.match_id);
+            }).catch(error => {
+              console.error(`❌ Rust processing failed for ${component.id}:`, error);
+            });
+          } catch (error) {
+            console.error(`❌ Failed to initialize Rust processor for ${component.id}:`, error);
+          }
+        }
         return state.getTennisApiMatch(tennisApiScoreboardId);
       }
 
       // For design canvas (no specific scoreboard ID), get match by component ID
-      return state.getTennisApiMatch(component.id);
+      const rawData = state.getTennisApiMatch(component.id);
+      if (rawData) {
+        // Process data through Rust backend
+        try {
+          const processor = getRustTennisProcessor({
+            enableDebugLogging: import.meta.env.DEV
+          });
+          processor.processData(rawData as RawTennisData).then(processedData => {
+            console.log(`✅ Processed tennis data for ${component.id}:`, processedData.match_id);
+          }).catch(error => {
+            console.error(`❌ Rust processing failed for ${component.id}:`, error);
+          });
+        } catch (error) {
+          console.error(`❌ Failed to initialize Rust processor for ${component.id}:`, error);
+        }
+      }
+      return rawData;
     })() : null;
   
   // Tennis data change animation disabled to prevent visual clutter
