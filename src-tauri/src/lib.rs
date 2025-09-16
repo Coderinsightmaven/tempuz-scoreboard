@@ -75,6 +75,12 @@ pub fn run() {
         // Export/Import commands
         export_scoreboard_as_zip,
         import_scoreboard_from_zip,
+        // Court data sync commands
+        start_court_data_sync,
+        stop_court_data_sync,
+        trigger_manual_sync,
+        get_court_sync_status,
+        is_court_sync_running,
         ])
         .setup(|app| {
             #[cfg(debug_assertions)]

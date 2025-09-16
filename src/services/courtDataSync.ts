@@ -1,6 +1,7 @@
 // src/services/courtDataSync.ts
-import { TauriAPI } from '../lib/tauri';
+import { invoke } from '@tauri-apps/api/core';
 import { CourtDataStorage } from '../utils/courtDataStorage';
+import { useAppStore } from '../stores/useAppStore';
 
 // Extend window interface to include Tauri
 declare global {
@@ -12,39 +13,36 @@ declare global {
 }
 
 export class CourtDataSyncService {
-  private static syncInterval: number | null = null;
   private static isRunning = false;
 
   /**
    * Start the sync service
    */
-  static startSync(intervalMs: number = 2000): void {
-    if (this.isRunning) {
-      console.log('🔄 Court data sync already running');
-      return;
+  static async startSync(intervalMs: number = 2000): Promise<void> {
+    try {
+      console.log('🚀 Starting court data sync service (Rust backend)');
+      const result = await invoke<string>('start_court_data_sync', { intervalMs });
+      console.log('✅', result);
+      this.isRunning = true;
+    } catch (error) {
+      console.error('❌ Failed to start court data sync:', error);
+      this.isRunning = false;
+      throw error;
     }
-
-    console.log('🚀 Starting active court data sync service');
-    this.isRunning = true;
-
-    // Initial sync
-    this.syncData();
-
-    // Set up periodic sync
-    this.syncInterval = window.setInterval(() => {
-      this.syncData();
-    }, intervalMs);
   }
 
   /**
    * Stop the sync service
    */
-  static stopSync(): void {
-    if (this.syncInterval) {
-      clearInterval(this.syncInterval);
-      this.syncInterval = null;
+  static async stopSync(): Promise<void> {
+    try {
+      console.log('🛑 Stopping court data sync service (Rust backend)');
+      const result = await invoke<string>('stop_court_data_sync');
+      console.log('✅', result);
       this.isRunning = false;
-      console.log('🛑 Stopped court data sync service');
+    } catch (error) {
+      console.error('❌ Failed to stop court data sync:', error);
+      throw error;
     }
   }
 
@@ -53,8 +51,7 @@ export class CourtDataSyncService {
    */
   static getActiveDisplayedCourts(): string[] {
     try {
-      // Import the app store dynamically to avoid circular dependencies
-      const { useAppStore } = require('../stores/useAppStore');
+      // Get the app state to access scoreboard instances
       const appState = useAppStore.getState();
 
       const activeCourts: string[] = [];
@@ -111,63 +108,75 @@ export class CourtDataSyncService {
    */
   static async syncData(): Promise<void> {
     try {
-      if (!window.__TAURI__ || !window.__TAURI__.core) {
-        // console.log('Tauri not available, skipping sync');
-        return;
-      }
-
-      // Get courts that are currently being displayed by scoreboards
-      const activeDisplayedCourts = this.getActiveDisplayedCourts();
-
-      let courtData: {[courtName: string]: any};
-
-      if (activeDisplayedCourts.length > 0) {
-        // Only fetch data for courts that are being actively displayed
-        console.log('🎯 Requesting data for active displayed courts:', activeDisplayedCourts);
-        courtData = await TauriAPI.getActiveCourtDataForCourts(activeDisplayedCourts);
-      } else {
-        // Fallback to time-based filtering if no courts are being displayed
-        console.log('⚠️  No active scoreboards found, falling back to time-based filtering');
-        courtData = await TauriAPI.getActiveCourtData();
-      }
-
-      if (courtData && Object.keys(courtData).length > 0) {
-        CourtDataStorage.storeCourtData(courtData);
-        console.log('🔄 Synced active court data:', Object.keys(courtData));
-
-        // Clean up data for courts that are no longer being displayed
-        this.cleanupUndisplayedCourtData(activeDisplayedCourts);
-      } else {
-        console.log('🔄 No active court data to sync');
-      }
+      console.log('🔄 Triggering manual court data sync (Rust backend)');
+      const result = await invoke<string>('trigger_manual_sync');
+      console.log('✅', result);
     } catch (error) {
-      console.error('❌ Failed to sync court data:', error);
+      console.error('❌ Failed to trigger manual sync:', error);
+      throw error;
     }
   }
 
   /**
    * Check if sync service is running
    */
-  static isSyncRunning(): boolean {
-    return this.isRunning;
+  static async isSyncRunning(): Promise<boolean> {
+    try {
+      const result = await invoke<boolean>('is_court_sync_running');
+      this.isRunning = result;
+      return result;
+    } catch (error) {
+      console.error('❌ Failed to check sync status:', error);
+      return false;
+    }
   }
 
   /**
    * Get sync status
    */
-  static getSyncStatus(): {
+  static async getSyncStatus(): Promise<{
     isRunning: boolean;
     lastUpdate: number | null;
     activeCourts: string[];
     displayedCourts: string[];
     isDataStale: boolean;
-  } {
-    return {
-      isRunning: this.isRunning,
-      lastUpdate: CourtDataStorage.getLastUpdateTimestamp(),
-      activeCourts: CourtDataStorage.getActiveCourts(),
-      displayedCourts: this.getActiveDisplayedCourts(),
-      isDataStale: CourtDataStorage.isDataStale()
-    };
+  }> {
+    try {
+      const rustStatus = await invoke<{
+        isRunning: boolean;
+        intervalMs: number;
+        lastSync: string | null;
+        activeCourts: string[];
+        storedCourts: string[];
+        errorCount: number;
+      }>('get_court_sync_status');
+
+      // Convert Rust timestamp to JavaScript timestamp
+      let lastUpdate: number | null = null;
+      if (rustStatus.lastSync) {
+        lastUpdate = new Date(rustStatus.lastSync).getTime();
+      }
+
+      // Check if data is stale (older than 5 minutes)
+      const isDataStale = lastUpdate ? (Date.now() - lastUpdate) > (5 * 60 * 1000) : true;
+
+      return {
+        isRunning: rustStatus.isRunning,
+        lastUpdate,
+        activeCourts: rustStatus.activeCourts,
+        displayedCourts: this.getActiveDisplayedCourts(),
+        isDataStale
+      };
+    } catch (error) {
+      console.error('❌ Failed to get sync status:', error);
+      // Fallback to basic status
+      return {
+        isRunning: this.isRunning,
+        lastUpdate: CourtDataStorage.getLastUpdateTimestamp(),
+        activeCourts: CourtDataStorage.getActiveCourts(),
+        displayedCourts: this.getActiveDisplayedCourts(),
+        isDataStale: CourtDataStorage.isDataStale()
+      };
+    }
   }
 }
