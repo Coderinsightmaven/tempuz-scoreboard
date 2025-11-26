@@ -1,3 +1,15 @@
+/**
+ * CourtDataSyncService - Service for synchronizing tennis court data from external sources.
+ * 
+ * This service:
+ * - Manages periodic data synchronization via Rust backend
+ * - Tracks which courts are actively being displayed
+ * - Cleans up data for courts no longer in use
+ * - Provides status information about sync operations
+ * 
+ * The sync service runs in the Rust backend and periodically fetches tennis data
+ * for courts that are currently being displayed on scoreboard windows.
+ */
 // src/services/courtDataSync.ts
 import { invoke } from '@tauri-apps/api/core';
 import { CourtDataStorage } from '../utils/courtDataStorage';
@@ -16,7 +28,19 @@ export class CourtDataSyncService {
   private static isRunning = false;
 
   /**
-   * Start the sync service
+   * Starts the court data synchronization service.
+   * 
+   * The service runs in the Rust backend and periodically fetches tennis data
+   * for active courts. Data is stored and made available to scoreboard components.
+   * 
+   * @param intervalMs - Polling interval in milliseconds (default: 2000ms = 2 seconds)
+   * 
+   * Side effects:
+   * - Starts background sync process in Rust backend
+   * - Updates isRunning flag
+   * - Begins periodic data fetching for active courts
+   * 
+   * @throws Error if sync service fails to start
    */
   static async startSync(intervalMs: number = 2000): Promise<void> {
     try {
@@ -32,7 +56,14 @@ export class CourtDataSyncService {
   }
 
   /**
-   * Stop the sync service
+   * Stops the court data synchronization service.
+   * 
+   * Side effects:
+   * - Stops background sync process in Rust backend
+   * - Updates isRunning flag
+   * - Stops periodic data fetching
+   * 
+   * @throws Error if sync service fails to stop
    */
   static async stopSync(): Promise<void> {
     try {
@@ -47,7 +78,17 @@ export class CourtDataSyncService {
   }
 
   /**
-   * Get list of courts that are currently being displayed by active scoreboards
+   * Gets a list of courts that are currently being displayed by active scoreboard windows.
+   * 
+   * This method:
+   * 1. Queries the app store for active scoreboard instances
+   * 2. Extracts court filters from each active instance
+   * 3. Returns unique court names
+   * 
+   * @returns Array of court names (strings) that are currently displayed
+   * 
+   * Note: Only returns courts from active (visible) scoreboard instances.
+   * Used to determine which courts need data synchronization.
    */
   static getActiveDisplayedCourts(): string[] {
     try {
@@ -75,7 +116,18 @@ export class CourtDataSyncService {
   }
 
   /**
-   * Clean up court data for courts that are no longer being displayed
+   * Cleans up court data for courts that are no longer being displayed.
+   * 
+   * This method:
+   * 1. Gets all stored courts from CourtDataStorage
+   * 2. Compares with actively displayed courts
+   * 3. Removes data for courts that are no longer displayed
+   * 
+   * @param activeDisplayedCourts - Array of court names currently being displayed
+   * 
+   * Side effects:
+   * - Removes court data from storage for undisplayed courts
+   * - Frees up memory by cleaning unused data
    */
   static cleanupUndisplayedCourtData(activeDisplayedCourts: string[]): void {
     try {
@@ -104,7 +156,12 @@ export class CourtDataSyncService {
   }
 
   /**
-   * Manually trigger a sync
+   * Manually triggers a court data synchronization.
+   * 
+   * Forces an immediate sync of all active courts, bypassing the normal interval.
+   * Useful for testing or when immediate data refresh is needed.
+   * 
+   * @throws Error if manual sync fails
    */
   static async syncData(): Promise<void> {
     try {
@@ -118,7 +175,9 @@ export class CourtDataSyncService {
   }
 
   /**
-   * Check if sync service is running
+   * Checks if the sync service is currently running.
+   * 
+   * @returns true if sync service is active, false otherwise
    */
   static async isSyncRunning(): Promise<boolean> {
     try {
@@ -132,7 +191,18 @@ export class CourtDataSyncService {
   }
 
   /**
-   * Get sync status
+   * Gets comprehensive status information about the sync service.
+   * 
+   * Returns:
+   * - Whether sync is running
+   * - Last update timestamp
+   * - Active courts (from Rust backend)
+   * - Displayed courts (from frontend)
+   * - Whether data is stale (older than 5 minutes)
+   * 
+   * @returns Status object with sync information
+   * 
+   * Note: Falls back to basic status if Rust backend query fails.
    */
   static async getSyncStatus(): Promise<{
     isRunning: boolean;

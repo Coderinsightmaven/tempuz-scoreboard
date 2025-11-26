@@ -1,3 +1,14 @@
+/**
+ * useImageStore - Image asset management store.
+ * 
+ * Manages:
+ * - Image uploads to Tauri backend
+ * - Image list and metadata
+ * - Image deletion
+ * - Thumbnail generation
+ * 
+ * All images are stored via Tauri filesystem API and can be used in scoreboard components.
+ */
 // src/stores/useImageStore.ts
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
@@ -34,7 +45,16 @@ export const useImageStore = create<ImageState & ImageActions>()(
     isLoading: false,
     lastError: null,
 
-    // Actions
+    // === Image Management Actions ===
+    
+    /**
+     * Loads all stored images from the Tauri backend.
+     * 
+     * Side effects:
+     * - Sets isLoading state during operation
+     * - Updates images array with loaded images
+     * - Sets lastError on failure
+     */
     loadImages: async () => {
       set({ isLoading: true, lastError: null });
       
@@ -53,6 +73,23 @@ export const useImageStore = create<ImageState & ImageActions>()(
       }
     },
 
+    /**
+     * Uploads an image file to the Tauri backend.
+     * 
+     * Process:
+     * 1. Converts file to base64
+     * 2. Sends to Tauri backend via invoke
+     * 3. Backend stores file and generates thumbnail
+     * 4. Adds to local images array
+     * 
+     * @param file - The image file to upload
+     * @returns The stored image object, or null if upload fails
+     * 
+     * Side effects:
+     * - Sets isLoading state during operation
+     * - Adds image to images array on success
+     * - Sets lastError on failure
+     */
     uploadImage: async (file: File) => {
       set({ isLoading: true, lastError: null });
       
@@ -98,6 +135,17 @@ export const useImageStore = create<ImageState & ImageActions>()(
       }
     },
 
+    /**
+     * Deletes an image from the Tauri backend and local state.
+     * 
+     * @param imageId - The ID of the image to delete
+     * @returns true if successful, false if failed
+     * 
+     * Side effects:
+     * - Deletes file from Tauri backend
+     * - Removes image from local images array
+     * - Sets lastError on failure
+     */
     deleteImage: async (imageId: string) => {
       set({ isLoading: true, lastError: null });
       
@@ -123,11 +171,20 @@ export const useImageStore = create<ImageState & ImageActions>()(
       }
     },
 
+    /**
+     * Gets an image by ID.
+     * 
+     * @param imageId - The ID of the image to retrieve
+     * @returns The image object, or null if not found
+     */
     getImage: (imageId: string) => {
       const { images } = get();
       return images.find(img => img.id === imageId) || null;
     },
 
+    /**
+     * Clears the current error state.
+     */
     clearError: () => {
       set({ lastError: null });
     },

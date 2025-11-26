@@ -1,9 +1,29 @@
+//! Tennis data processing commands for Tauri backend.
+//!
+//! This module provides high-performance tennis match data processing
+//! using Rust, which is faster than JavaScript Web Workers.
+//!
+//! Features:
+//! - Processes raw tennis data into normalized format
+//! - Handles multiple data formats (snake_case and camelCase)
+//! - Normalizes point values (0, 15, 30, 40, AD)
+//! - Batch processing support
+//! - Data validation
+//!
+//! # Example
+//! ```rust,no_run
+//! let raw_data = RawTennisData { /* ... */ };
+//! let processed = process_tennis_data(raw_data).await?;
+//! ```
 // src-tauri/src/commands/tennis_processor.rs
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tauri::command;
 
-// Data structures for tennis match processing
+/// Raw tennis data structure from API/WebSocket.
+///
+/// Supports both snake_case and camelCase property names for compatibility
+/// with different API formats.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RawTennisData {
     pub id: Option<String>,
@@ -24,6 +44,7 @@ pub struct RawTennisData {
     pub matchStatus: Option<String>,
 }
 
+/// Raw player/team data structure.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RawPlayerData {
     pub name: Option<String>,
@@ -31,6 +52,9 @@ pub struct RawPlayerData {
     pub seed: Option<i32>,
 }
 
+/// Raw score data structure.
+///
+/// Supports both snake_case (player1_sets) and camelCase (player1Sets) formats.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RawScoreData {
     pub player1_sets: Option<i32>,
@@ -47,13 +71,18 @@ pub struct RawScoreData {
     pub player2Points: Option<String>,
 }
 
+/// Raw set data structure.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RawSetData {
     pub player1: Option<i32>,
     pub player2: Option<i32>,
 }
 
-// Processed data structures
+/// Processed tennis match data in normalized format.
+///
+/// This is the standardized output format after processing raw data.
+/// All fields are guaranteed to have values (no Option types).
+/// Includes both new (snake_case) and legacy (camelCase) property names.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProcessedTennisMatch {
     pub match_id: String,
@@ -72,6 +101,7 @@ pub struct ProcessedTennisMatch {
     pub matchStatus: String,
 }
 
+/// Processed player data with guaranteed name field.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProcessedPlayerData {
     pub name: String,
@@ -79,6 +109,10 @@ pub struct ProcessedPlayerData {
     pub seed: Option<i32>,
 }
 
+/// Processed score data with normalized values.
+///
+/// Includes both new (snake_case) and legacy (camelCase) property names
+/// for backward compatibility with frontend code.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProcessedScoreData {
     // New property names
@@ -97,17 +131,39 @@ pub struct ProcessedScoreData {
     pub player2Points: String,
 }
 
+/// Processed set data with guaranteed values.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProcessedSetData {
     pub player1: i32,
     pub player2: i32,
 }
 
-// Tennis data processor
+/// Tennis data processor for normalizing raw tennis match data.
+///
+/// Handles:
+/// - Multiple data format support (snake_case, camelCase)
+/// - Player/team data extraction
+/// - Score normalization
+/// - Point value standardization
+/// - Set data processing
 pub struct TennisDataProcessor;
 
 impl TennisDataProcessor {
-    /// Process raw tennis data into a standardized format
+    /// Processes raw tennis data into a standardized format.
+    ///
+    /// # Arguments
+    /// * `raw_data` - Raw tennis data from API/WebSocket
+    ///
+    /// # Returns
+    /// * `Ok(ProcessedTennisMatch)` - Successfully processed match data
+    /// * `Err(String)` - Error message if processing fails
+    ///
+    /// # Process
+    /// 1. Extracts match ID (from match_id or id field)
+    /// 2. Processes player data (from player1/player2 or team1/team2)
+    /// 3. Normalizes score data (handles both naming conventions)
+    /// 4. Processes sets data
+    /// 5. Extracts serving player and match state
     pub fn process_data(raw_data: RawTennisData) -> Result<ProcessedTennisMatch, String> {
         // Extract and validate basic match information
         let match_id = raw_data.match_id
@@ -158,6 +214,14 @@ impl TennisDataProcessor {
         })
     }
 
+    /// Processes raw player data into normalized format.
+    ///
+    /// # Arguments
+    /// * `raw_player` - Optional raw player data
+    /// * `default_name` - Default name if player data is missing
+    ///
+    /// # Returns
+    /// Processed player data with guaranteed name field.
     fn process_player_data(raw_player: Option<RawPlayerData>, default_name: &str) -> ProcessedPlayerData {
         match raw_player {
             Some(player) => ProcessedPlayerData {
@@ -173,6 +237,16 @@ impl TennisDataProcessor {
         }
     }
 
+    /// Processes raw score data into normalized format.
+    ///
+    /// Handles both snake_case and camelCase property names.
+    /// Normalizes point values (0, 15, 30, 40, AD).
+    ///
+    /// # Arguments
+    /// * `raw_score` - Optional raw score data
+    ///
+    /// # Returns
+    /// Processed score data with all fields guaranteed to have values.
     fn process_score_data(raw_score: Option<RawScoreData>) -> ProcessedScoreData {
         let default_score = RawScoreData {
             player1_sets: Some(0),
@@ -225,6 +299,15 @@ impl TennisDataProcessor {
         }
     }
 
+    /// Processes raw sets data into normalized format.
+    ///
+    /// Converts HashMap of raw set data to processed set data.
+    ///
+    /// # Arguments
+    /// * `raw_sets` - HashMap of set keys to raw set data
+    ///
+    /// # Returns
+    /// HashMap of set keys to processed set data with guaranteed values.
     fn process_sets_data(raw_sets: HashMap<String, RawSetData>) -> HashMap<String, ProcessedSetData> {
         raw_sets.into_iter()
             .map(|(key, set_data)| {
@@ -237,6 +320,18 @@ impl TennisDataProcessor {
             .collect()
     }
 
+    /// Normalizes tennis point values to standard format.
+    ///
+    /// Converts various point representations:
+    /// - "love" -> "0"
+    /// - "a", "ad", "advantage" -> "AD"
+    /// - Numbers -> string representation
+    ///
+    /// # Arguments
+    /// * `points` - Point value string
+    ///
+    /// # Returns
+    /// Normalized point string (0, 15, 30, 40, or AD)
     fn normalize_points(points: &str) -> String {
         match points.to_lowercase().as_str() {
             "0" => "0".to_string(),
@@ -249,15 +344,39 @@ impl TennisDataProcessor {
         }
     }
 
+    /// Normalizes serving player number.
+    ///
+    /// Clamps value between 1 and 4 (valid player numbers).
+    ///
+    /// # Arguments
+    /// * `serving_player` - Optional serving player number
+    ///
+    /// # Returns
+    /// Serving player number (1-4), defaults to 1 if None
     fn normalize_serving_player(serving_player: Option<i32>) -> i32 {
         serving_player.unwrap_or(1).clamp(1, 4)
     }
 }
 
-// Batch processing for multiple tennis matches
+/// Batch processor for multiple tennis matches.
+///
+/// Processes multiple matches sequentially, continuing even if individual
+/// matches fail to process.
 pub struct BatchTennisProcessor;
 
 impl BatchTennisProcessor {
+    /// Processes a batch of raw tennis data.
+    ///
+    /// # Arguments
+    /// * `raw_data_batch` - Vector of raw tennis data to process
+    ///
+    /// # Returns
+    /// * `Ok(Vec<ProcessedTennisMatch>)` - Vector of successfully processed matches
+    /// * `Err(String)` - Error message if batch processing fails
+    ///
+    /// # Note
+    /// Individual match processing errors are logged but don't stop the batch.
+    /// Only successfully processed matches are included in the result.
     pub fn process_batch(raw_data_batch: Vec<RawTennisData>) -> Result<Vec<ProcessedTennisMatch>, String> {
         let mut results = Vec::new();
 
@@ -275,19 +394,56 @@ impl BatchTennisProcessor {
     }
 }
 
-// Tauri commands
+// === Tauri Commands ===
+
+/// Tauri command: Process a single tennis match data.
+///
+/// This is the main entry point for processing tennis data from the frontend.
+/// It processes raw tennis data through the Rust backend for high performance.
+///
+/// # Arguments
+/// * `raw_data` - Raw tennis data from frontend
+///
+/// # Returns
+/// * `Ok(ProcessedTennisMatch)` - Processed match data
+/// * `Err(String)` - Error message
 #[command]
 pub async fn process_tennis_data(raw_data: RawTennisData) -> Result<ProcessedTennisMatch, String> {
     println!("🎾 Processing tennis data via Rust backend");
     TennisDataProcessor::process_data(raw_data)
 }
 
+/// Tauri command: Process multiple tennis matches in batch.
+///
+/// Processes multiple matches efficiently, useful for bulk operations.
+///
+/// # Arguments
+/// * `raw_data_batch` - Vector of raw tennis data
+///
+/// # Returns
+/// * `Ok(Vec<ProcessedTennisMatch>)` - Vector of processed matches
+/// * `Err(String)` - Error message
 #[command]
 pub async fn process_tennis_data_batch(raw_data_batch: Vec<RawTennisData>) -> Result<Vec<ProcessedTennisMatch>, String> {
     println!("🎾 Batch processing {} tennis matches via Rust backend", raw_data_batch.len());
     BatchTennisProcessor::process_batch(raw_data_batch)
 }
 
+/// Tauri command: Validate tennis data structure.
+///
+/// Performs basic validation to check if data has required fields.
+///
+/// # Arguments
+/// * `raw_data` - Raw tennis data to validate
+///
+/// # Returns
+/// * `Ok(true)` - Data is valid
+/// * `Ok(false)` - Data is invalid (missing required fields)
+/// * `Err(String)` - Validation error
+///
+/// # Validation Rules
+/// - Must have match_id or id field
+/// - Must have at least one player (player1 or team1)
 #[command]
 pub async fn validate_tennis_data(raw_data: RawTennisData) -> Result<bool, String> {
     // Basic validation - check if required fields are present

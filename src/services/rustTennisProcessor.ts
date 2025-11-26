@@ -1,6 +1,19 @@
+/**
+ * RustTennisProcessor - Service for processing tennis data via Rust backend.
+ * 
+ * This service provides high-performance tennis data processing by leveraging
+ * the Rust backend instead of JavaScript Web Workers. The Rust backend can
+ * handle complex data transformations and validations more efficiently.
+ * 
+ * Features:
+ * - Single match processing
+ * - Batch processing for multiple matches
+ * - Data validation
+ * - Configurable debug logging
+ * 
+ * All processing happens asynchronously via Tauri's invoke system.
+ */
 // src/services/rustTennisProcessor.ts
-// Service for calling Rust backend tennis data processing instead of Web Workers
-
 import { invoke } from '@tauri-apps/api/core';
 import {
   RawTennisData,
@@ -14,12 +27,24 @@ import {
 export type { ProcessedTennisMatch };
 
 export interface RustProcessorConfig {
+  /** Enable debug logging for processing operations */
   enableDebugLogging?: boolean;
 }
 
+/**
+ * RustTennisProcessor class for processing tennis match data via Rust backend.
+ * 
+ * This class provides methods to process, validate, and batch process tennis data.
+ * All operations are performed in the Rust backend for better performance.
+ */
 export class RustTennisProcessor {
   private config: Required<RustProcessorConfig>;
 
+  /**
+   * Creates a new RustTennisProcessor instance.
+   * 
+   * @param config - Configuration options for the processor
+   */
   constructor(config: RustProcessorConfig = {}) {
     this.config = {
       enableDebugLogging: false,
@@ -28,7 +53,18 @@ export class RustTennisProcessor {
   }
 
   /**
-   * Process a single tennis match data through the Rust backend
+   * Processes a single tennis match data through the Rust backend.
+   * 
+   * The Rust backend:
+   * - Validates the data structure
+   * - Transforms raw data into processed format
+   * - Calculates derived values (set scores, match status, etc.)
+   * - Returns structured ProcessedTennisMatch object
+   * 
+   * @param rawData - Raw tennis data from API/WebSocket
+   * @returns Processed tennis match data
+   * 
+   * @throws Error if processing fails
    */
   async processData(rawData: RawTennisData): Promise<ProcessedTennisMatch> {
     try {
@@ -54,7 +90,14 @@ export class RustTennisProcessor {
   }
 
   /**
-   * Process multiple tennis matches in batch through the Rust backend
+   * Processes multiple tennis matches in batch through the Rust backend.
+   * 
+   * More efficient than processing matches individually, especially for large datasets.
+   * 
+   * @param rawDataBatch - Array of raw tennis data objects
+   * @returns Array of processed tennis match data
+   * 
+   * @throws Error if batch processing fails
    */
   async processBatch(rawDataBatch: RawTennisData[]): Promise<ProcessedTennisMatch[]> {
     try {
@@ -80,7 +123,14 @@ export class RustTennisProcessor {
   }
 
   /**
-   * Validate tennis data structure through the Rust backend
+   * Validates tennis data structure through the Rust backend.
+   * 
+   * Checks that the data has required fields and valid structure before processing.
+   * 
+   * @param rawData - Raw tennis data to validate
+   * @returns true if data is valid, false otherwise
+   * 
+   * Note: Returns false if validation fails or throws an error.
    */
   async validateData(rawData: RawTennisData): Promise<boolean> {
     try {
@@ -98,7 +148,9 @@ export class RustTennisProcessor {
 
 
   /**
-   * Update processor configuration
+   * Updates the processor configuration.
+   * 
+   * @param newConfig - Partial configuration object to merge with existing config
    */
   updateConfig(newConfig: Partial<RustProcessorConfig>): void {
     this.config = { ...this.config, ...newConfig };
@@ -109,11 +161,20 @@ export class RustTennisProcessor {
   }
 }
 
-// Singleton instance
+// === Singleton Instance Management ===
+
+/**
+ * Singleton instance of RustTennisProcessor.
+ * Ensures only one processor instance exists for efficiency.
+ */
 let rustProcessorInstance: RustTennisProcessor | null = null;
 
 /**
- * Get the singleton Rust tennis processor instance
+ * Gets the singleton Rust tennis processor instance.
+ * Creates a new instance if one doesn't exist.
+ * 
+ * @param config - Optional configuration (only used on first creation)
+ * @returns The singleton RustTennisProcessor instance
  */
 export const getRustTennisProcessor = (config?: RustProcessorConfig): RustTennisProcessor => {
   if (!rustProcessorInstance) {
@@ -123,14 +184,24 @@ export const getRustTennisProcessor = (config?: RustProcessorConfig): RustTennis
 };
 
 /**
- * Initialize the Rust tennis processor with default configuration
+ * Initializes the Rust tennis processor with default configuration.
+ * Alias for getRustTennisProcessor for clarity.
+ * 
+ * @param config - Optional configuration
+ * @returns The RustTennisProcessor instance
  */
 export const initializeRustTennisProcessor = (config?: RustProcessorConfig): RustTennisProcessor => {
   return getRustTennisProcessor(config);
 };
 
+// === Convenience Functions ===
+
 /**
- * Process tennis data using the Rust backend
+ * Processes tennis data using the Rust backend (convenience function).
+ * Uses the singleton processor instance.
+ * 
+ * @param rawData - Raw tennis data to process
+ * @returns Processed tennis match data
  */
 export const processTennisDataViaRust = async (rawData: RawTennisData): Promise<ProcessedTennisMatch> => {
   const processor = getRustTennisProcessor();
@@ -138,7 +209,11 @@ export const processTennisDataViaRust = async (rawData: RawTennisData): Promise<
 };
 
 /**
- * Process multiple tennis matches using the Rust backend
+ * Processes multiple tennis matches using the Rust backend (convenience function).
+ * Uses the singleton processor instance.
+ * 
+ * @param rawDataBatch - Array of raw tennis data to process
+ * @returns Array of processed tennis match data
  */
 export const processTennisDataBatchViaRust = async (rawDataBatch: RawTennisData[]): Promise<ProcessedTennisMatch[]> => {
   const processor = getRustTennisProcessor();
@@ -146,7 +221,11 @@ export const processTennisDataBatchViaRust = async (rawDataBatch: RawTennisData[
 };
 
 /**
- * Validate tennis data using the Rust backend
+ * Validates tennis data using the Rust backend (convenience function).
+ * Uses the singleton processor instance.
+ * 
+ * @param rawData - Raw tennis data to validate
+ * @returns true if data is valid, false otherwise
  */
 export const validateTennisDataViaRust = async (rawData: RawTennisData): Promise<boolean> => {
   const processor = getRustTennisProcessor();

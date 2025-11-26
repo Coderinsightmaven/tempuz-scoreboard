@@ -1,3 +1,15 @@
+/**
+ * useLiveDataStore - Live data connection and tennis API integration store.
+ * 
+ * Manages:
+ * - WebSocket and REST API connections for live tennis data
+ * - Component bindings to live data fields
+ * - Tennis API WebSocket connection state
+ * - Data polling intervals
+ * - Rust backend tennis data processing
+ * 
+ * This store handles all real-time data integration and component data binding.
+ */
 // src/stores/useLiveDataStore.ts
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
@@ -58,8 +70,27 @@ interface LiveDataActions {
   saveConnections: () => Promise<void>;
   
 
-  // Tennis API integration
-  connectToWebSocket: (wsUrl: string, courtFilter?: string, connectionId?: string) => Promise<void>;
+    // === Tennis API Integration ===
+    
+    /**
+     * Connects to tennis API WebSocket for live data.
+     * 
+     * @param wsUrl - WebSocket URL (e.g., 'wss://sub.ioncourt.com/?token=...')
+     * @param courtFilter - Optional court filter for WebSocket message filtering
+     * @param connectionId - Optional existing connection ID to update
+     * 
+     * Process:
+     * 1. Creates or updates connection
+     * 2. Establishes WebSocket connection via Tauri backend
+     * 3. Sets up message handlers
+     * 4. Updates connection state
+     * 
+     * Side effects:
+     * - Updates tennisApiConnected state
+     * - Sets up WebSocket event listeners
+     * - Processes incoming tennis data
+     */
+    connectToWebSocket: (wsUrl: string, courtFilter?: string, connectionId?: string) => Promise<void>;
   disconnectFromTennisApi: () => void;
   clearError: () => void;
   getTennisApiMatch: (scoreboardId: string) => any;
@@ -70,13 +101,36 @@ interface LiveDataActions {
   getLastProcessedData: () => ProcessedTennisMatch | null;
 }
 
+/**
+ * Gets a value from an object using a dot-notation path.
+ * 
+ * Example: getValueFromPath(data, 'player1.name') returns data.player1.name
+ * 
+ * @param obj - The object to traverse
+ * @param path - Dot-notation path (e.g., 'player1.name')
+ * @returns The value at the path, or undefined if path doesn't exist
+ */
 const getValueFromPath = (obj: any, path: string): any => {
   return path.split('.').reduce((current, key) => {
     return current && current[key] !== undefined ? current[key] : undefined;
   }, obj);
 };
 
-// Progressive mock tennis data for demo purposes
+// === Mock Data Generation (for demo/testing) ===
+
+/**
+ * Progressive mock tennis data generator for demo purposes.
+ * Simulates a tennis match that progresses over time.
+ * 
+ * Behavior:
+ * - Starts at set 1
+ * - Progresses to set 2 after 30 seconds
+ * - Progresses to set 3 after 60 seconds
+ * - Generates random scores for current set
+ * - Marks match as completed when a player wins 2 sets
+ * 
+ * @returns Mock tennis live data object
+ */
 let mockMatchStartTime: number | null = null;
 
 function getMockTennisDataProgressive(): TennisLiveData {
@@ -163,7 +217,19 @@ export const useLiveDataStore = create<LiveDataStoreState & LiveDataActions>()(
     // Rust processor integration
     lastProcessedData: null,
 
-    // Connection management
+    // === Connection Management ===
+    
+    /**
+     * Adds a new live data connection (WebSocket or REST API).
+     * 
+     * @param connectionData - Connection configuration (without ID, which is auto-generated)
+     * @returns The generated connection ID
+     * 
+     * Side effects:
+     * - Creates new connection with unique ID
+     * - Adds to connections array
+     * - Auto-saves connections to localStorage after 100ms
+     */
     addConnection: (connectionData) => {
       const id = uuidv4();
       const now = new Date();
@@ -187,6 +253,13 @@ export const useLiveDataStore = create<LiveDataStoreState & LiveDataActions>()(
       return id;
     },
 
+    /**
+     * Updates a connection with partial updates.
+     * 
+     * @param id - Connection ID to update
+     * @param updates - Partial connection object with properties to update
+     * Side effects: Updates lastUpdated timestamp
+     */
     updateConnection: (id, updates) =>
       set((state) => ({
         connections: state.connections.map(conn =>
@@ -196,6 +269,18 @@ export const useLiveDataStore = create<LiveDataStoreState & LiveDataActions>()(
         ),
       })),
 
+    /**
+     * Removes a connection and stops any associated polling.
+     * 
+     * @param id - Connection ID to remove
+     * 
+     * Side effects:
+     * - Stops polling for this connection
+     * - Removes connection from connections array
+     * - Removes associated active data
+     * - Removes component bindings for this connection
+     * - Auto-saves connections to localStorage
+     */
     removeConnection: (id) => {
       const { stopPolling } = get();
       stopPolling(id);

@@ -1,12 +1,33 @@
+/**
+ * TennisWorkerManager - Manages Web Worker lifecycle for tennis data processing.
+ * 
+ * Features:
+ * - Worker initialization and termination
+ * - Message passing between main thread and worker
+ * - Request/response tracking with timeouts
+ * - Error handling and retry logic
+ * - Singleton pattern for easy access
+ * 
+ * This manager handles all communication with the tennis data processing worker,
+ * providing a clean async API for the main application.
+ */
 import { TennisWorkerMessage, TennisWorkerResponse } from './tennisDataWorker';
 
 export interface TennisWorkerConfig {
+  /** Debounce delay in milliseconds */
   debounceMs?: number;
+  /** Enable debug logging */
   enableDebugLogging?: boolean;
+  /** Maximum retry attempts */
   maxRetries?: number;
+  /** Delay between retries in milliseconds */
   retryDelay?: number;
 }
 
+/**
+ * Processed tennis match data structure.
+ * Matches the format returned by the worker.
+ */
 export interface ProcessedTennisMatch {
   matchId: string;
   player1: {
@@ -44,16 +65,26 @@ export interface ProcessedTennisMatch {
 }
 
 export class TennisWorkerManager {
+  /** Web Worker instance */
   private worker: Worker | null = null;
+  /** Whether worker has been initialized */
   private isInitialized = false;
+  /** Map of pending requests waiting for worker responses */
   private pendingRequests = new Map<string, {
     resolve: (value: ProcessedTennisMatch) => void;
     reject: (error: Error) => void;
     timeout: number;
   }>();
+  /** Worker configuration */
   private config: Required<TennisWorkerConfig>;
+  /** Counter for generating unique request IDs */
   private requestId = 0;
 
+  /**
+   * Creates a new TennisWorkerManager instance.
+   * 
+   * @param config - Configuration options for the worker
+   */
   constructor(config: TennisWorkerConfig = {}) {
     this.config = {
       debounceMs: 100,
@@ -64,6 +95,17 @@ export class TennisWorkerManager {
     };
   }
 
+  /**
+   * Initializes the Web Worker.
+   * 
+   * Process:
+   * 1. Creates new Worker instance
+   * 2. Sets up message and error handlers
+   * 3. Waits for worker to signal ready
+   * 4. Sends initial configuration
+   * 
+   * @throws Error if initialization fails
+   */
   async initialize(): Promise<void> {
     if (this.isInitialized) return;
 
@@ -98,6 +140,17 @@ export class TennisWorkerManager {
     }
   }
 
+  /**
+   * Processes tennis data through the Web Worker.
+   * 
+   * @param rawData - Raw tennis data to process
+   * @returns Promise that resolves with processed tennis match data
+   * 
+   * @throws Error if:
+   * - Worker is not initialized
+   * - Request times out (5 seconds)
+   * - Worker processing fails
+   */
   async processTennisData(rawData: any): Promise<ProcessedTennisMatch> {
     if (!this.isInitialized || !this.worker) {
       throw new Error('Worker not initialized');
@@ -127,6 +180,12 @@ export class TennisWorkerManager {
     });
   }
 
+  /**
+   * Updates worker configuration.
+   * 
+   * @param newConfig - Partial configuration to merge
+   * @throws Error if worker is not initialized
+   */
   async updateConfig(newConfig: Partial<TennisWorkerConfig>): Promise<void> {
     if (!this.isInitialized || !this.worker) {
       throw new Error('Worker not initialized');
@@ -143,6 +202,15 @@ export class TennisWorkerManager {
     });
   }
 
+  /**
+   * Terminates the Web Worker and cleans up.
+   * 
+   * Process:
+   * 1. Rejects all pending requests
+   * 2. Sends stop message to worker
+   * 3. Terminates worker instance
+   * 4. Resets initialization state
+   */
   async terminate(): Promise<void> {
     if (this.worker) {
       // Clear all pending requests
@@ -167,6 +235,13 @@ export class TennisWorkerManager {
     this.log('TennisWorkerManager terminated');
   }
 
+  /**
+   * Sends a message to the worker.
+   * 
+   * @param message - Message to send
+   * @returns Promise that resolves when message is sent
+   * @throws Error if worker is not available or send times out
+   */
   private async sendMessage(message: TennisWorkerMessage): Promise<void> {
     return new Promise((resolve, reject) => {
       if (!this.worker) {
@@ -189,6 +264,16 @@ export class TennisWorkerManager {
     });
   }
 
+  /**
+   * Handles messages received from the worker.
+   * 
+   * Message types:
+   * - DATA_PROCESSED: Resolves pending request with processed data
+   * - ERROR: Rejects pending request with error
+   * - READY: Worker initialization complete
+   * 
+   * @param event - Message event from worker
+   */
   private handleWorkerMessage(event: MessageEvent<TennisWorkerResponse>) {
     const { type, payload, error } = event.data;
 
@@ -234,6 +319,13 @@ export class TennisWorkerManager {
     }
   }
 
+  /**
+   * Handles errors from the worker.
+   * 
+   * Rejects all pending requests and clears the request queue.
+   * 
+   * @param error - Error event from worker
+   */
   private handleWorkerError(error: ErrorEvent) {
     this.log('Worker error:', error);
 
@@ -245,6 +337,14 @@ export class TennisWorkerManager {
     this.pendingRequests.clear();
   }
 
+  /**
+   * Waits for the worker to signal it's ready.
+   * 
+   * Listens for 'READY' message from worker with 5 second timeout.
+   * 
+   * @returns Promise that resolves when worker is ready
+   * @throws Error if timeout occurs or worker is unavailable
+   */
   private async waitForWorkerReady(): Promise<void> {
     return new Promise((resolve, reject) => {
       if (!this.worker) {
@@ -268,6 +368,11 @@ export class TennisWorkerManager {
     });
   }
 
+  /**
+   * Logs debug messages if debug logging is enabled.
+   * 
+   * @param args - Arguments to log
+   */
   private log(...args: any[]) {
     if (this.config.enableDebugLogging) {
       console.log('[TennisWorkerManager]', ...args);
@@ -275,9 +380,21 @@ export class TennisWorkerManager {
   }
 }
 
-// Singleton instance for easy access
+// === Singleton Instance Management ===
+
+/**
+ * Singleton instance of TennisWorkerManager.
+ * Ensures only one worker instance exists.
+ */
 let workerManagerInstance: TennisWorkerManager | null = null;
 
+/**
+ * Gets the singleton TennisWorkerManager instance.
+ * Creates a new instance if one doesn't exist.
+ * 
+ * @param config - Optional configuration (only used on first creation)
+ * @returns The singleton TennisWorkerManager instance
+ */
 export const getTennisWorkerManager = (config?: TennisWorkerConfig): TennisWorkerManager => {
   if (!workerManagerInstance) {
     workerManagerInstance = new TennisWorkerManager(config);
@@ -285,12 +402,24 @@ export const getTennisWorkerManager = (config?: TennisWorkerConfig): TennisWorke
   return workerManagerInstance;
 };
 
+/**
+ * Initializes the tennis worker with configuration.
+ * 
+ * @param config - Optional configuration
+ * @returns Initialized TennisWorkerManager instance
+ * @throws Error if initialization fails
+ */
 export const initializeTennisWorker = async (config?: TennisWorkerConfig): Promise<TennisWorkerManager> => {
   const manager = getTennisWorkerManager(config);
   await manager.initialize();
   return manager;
 };
 
+/**
+ * Terminates the tennis worker and cleans up.
+ * 
+ * @throws Error if termination fails
+ */
 export const terminateTennisWorker = async (): Promise<void> => {
   if (workerManagerInstance) {
     await workerManagerInstance.terminate();

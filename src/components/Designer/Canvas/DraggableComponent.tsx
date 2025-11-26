@@ -1,3 +1,17 @@
+/**
+ * DraggableComponent - Renders a draggable scoreboard component on the canvas.
+ * 
+ * Features:
+ * - Drag-and-drop support via @dnd-kit
+ * - Resize handles (8 handles: corners and edges)
+ * - Live tennis data integration
+ * - Type-specific rendering (background, logo, text, video, tennis components)
+ * - Selection state visualization
+ * - Style application (colors, borders, fonts)
+ * 
+ * This component is the visual representation of a scoreboard component on the canvas.
+ * It handles rendering based on component type and integrates with live data sources.
+ */
 import React from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
@@ -13,10 +27,14 @@ import { getRustTennisProcessor } from '../../../services/rustTennisProcessor';
 import { RawTennisData } from '../../../types/tennisProcessor';
 
 interface DraggableComponentProps {
+  /** The component to render */
   component: ScoreboardComponent;
+  /** Callback when component is clicked/selected */
   onSelect?: (id: string) => void;
+  /** Callback when resize handle is grabbed */
   onResizeStart?: (componentId: string, handle: ResizeHandle, event: React.MouseEvent) => void;
-  tennisApiScoreboardId?: string; // For filtering tennis data in scoreboard windows
+  /** Optional tennis API scoreboard ID for filtering data in scoreboard windows */
+  tennisApiScoreboardId?: string;
 }
 
 export const DraggableComponent: React.FC<DraggableComponentProps> = ({
@@ -28,7 +46,17 @@ export const DraggableComponent: React.FC<DraggableComponentProps> = ({
   const { selectedComponents, isResizing } = useCanvasStore();
   const isSelected = selectedComponents.has(component.id);
 
-  // For tennis components, get the live data from tennis-api store with Rust processing
+  /**
+   * Gets live tennis data for tennis components.
+   * 
+   * Process:
+   * 1. Checks if component is a tennis component
+   * 2. Retrieves raw tennis data from live data store
+   * 3. Processes data through Rust backend for performance
+   * 4. Returns processed match data for rendering
+   * 
+   * Note: Rust processing happens asynchronously and doesn't block rendering.
+   */
   const tennisMatch = component.type.startsWith('tennis_') ?
     (() => {
       const state = useLiveDataStore.getState();
@@ -78,6 +106,10 @@ export const DraggableComponent: React.FC<DraggableComponentProps> = ({
   
   // Tennis data change animation disabled to prevent visual clutter
 
+  /**
+   * @dnd-kit drag configuration.
+   * Sets up drag handlers and transform for drag operations.
+   */
   const {
     attributes,
     listeners,
@@ -92,12 +124,30 @@ export const DraggableComponent: React.FC<DraggableComponentProps> = ({
     },
   });
 
+  /**
+   * Handles resize handle mouse down events.
+   * 
+   * @param handle - Which resize handle was grabbed
+   * @param event - Mouse event
+   */
   const handleResizeStart = (handle: ResizeHandle, event: React.MouseEvent) => {
     if (onResizeStart) {
       onResizeStart(component.id, handle, event);
     }
   };
 
+  /**
+   * Renders the content of the component based on its type.
+   * 
+   * Component types:
+   * - BACKGROUND: Background image (behind all components)
+   * - LOGO: Logo image
+   * - TEXT: Text overlay
+   * - VIDEO: Video player
+   * - Tennis components: Live tennis data displays
+   * 
+   * @returns JSX element for the component content
+   */
   const renderComponentContent = () => {
     switch (component.type) {
       case ComponentType.BACKGROUND:
@@ -222,6 +272,19 @@ export const DraggableComponent: React.FC<DraggableComponentProps> = ({
     }
   };
 
+  /**
+   * Renders tennis-specific components with live data integration.
+   * 
+   * Maps component types to tennis match data fields:
+   * - Player names from player1/player2
+   * - Scores from score object
+   * - Set scores from sets object
+   * - Serving indicator based on serving_player
+   * 
+   * Falls back to component.data.text or default text if no live data available.
+   * 
+   * @returns JSX element for tennis component display
+   */
   const renderTennisComponent = () => {
     // Get live data value for this component from tennis-api
     // First check for custom fallback text, then use default
@@ -470,6 +533,17 @@ export const DraggableComponent: React.FC<DraggableComponentProps> = ({
     );
   };
 
+  /**
+   * Gets default display text for tennis components when no live data is available.
+   * 
+   * Provides sensible defaults for each component type:
+   * - Player names: "Player 1", "Player 2"
+   * - Doubles names: "Smith / Johnson"
+   * - Scores: "0"
+   * - Serving indicator: "●"
+   * 
+   * @returns Default text string for the component type
+   */
   const getDefaultTennisText = () => {
     switch (component.type) {
       case ComponentType.TENNIS_PLAYER_NAME:
@@ -525,6 +599,11 @@ export const DraggableComponent: React.FC<DraggableComponentProps> = ({
     }
   };
 
+  /**
+   * Handles component click to select it.
+   * 
+   * @param e - Mouse event
+   */
   const handleComponentClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (onSelect) {
@@ -532,11 +611,19 @@ export const DraggableComponent: React.FC<DraggableComponentProps> = ({
     }
   };
 
+  /**
+   * Applies drag transform style from @dnd-kit during drag operation.
+   */
   const transformStyle = transform ? {
     transform: CSS.Translate.toString(transform),
   } : {};
 
-  // Calculate background color from RGB if available
+  /**
+   * Gets the background color for the component.
+   * Supports both hex colors and RGB color objects.
+   * 
+   * @returns CSS color string
+   */
   const getBackgroundColor = () => {
     if (component.style.rgbColor) {
       const { r, g, b, a = 1 } = component.style.rgbColor;

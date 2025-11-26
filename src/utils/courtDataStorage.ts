@@ -1,14 +1,33 @@
+/**
+ * CourtDataStorage - Utility class for storing and retrieving tennis court data.
+ * 
+ * Manages court data persistence in localStorage:
+ * - Stores court data as JSON
+ * - Tracks last update timestamp
+ * - Provides methods to check data staleness
+ * - Supports per-court data management
+ * 
+ * All data is stored in browser localStorage and persists across app restarts.
+ */
 // src/utils/courtDataStorage.ts
 export interface CourtData {
   [courtName: string]: any;
 }
 
+/** localStorage key for court data */
 const COURT_DATA_KEY = 'tennisCourtData';
+/** localStorage key for last update timestamp */
 const COURT_DATA_TIMESTAMP_KEY = 'tennisCourtDataTimestamp';
 
 export class CourtDataStorage {
   /**
-   * Store court data in localStorage
+   * Stores court data in localStorage.
+   * 
+   * @param courtData - Object mapping court names to their data
+   * 
+   * Side effects:
+   * - Saves data to localStorage
+   * - Updates timestamp to current time
    */
   static storeCourtData(courtData: CourtData): void {
     try {
@@ -21,7 +40,9 @@ export class CourtDataStorage {
   }
 
   /**
-   * Get court data from localStorage
+   * Gets all court data from localStorage.
+   * 
+   * @returns Object mapping court names to their data, or null if no data exists
    */
   static getCourtData(): CourtData | null {
     try {
@@ -34,7 +55,10 @@ export class CourtDataStorage {
   }
 
   /**
-   * Get data for a specific court
+   * Gets data for a specific court by name.
+   * 
+   * @param courtName - Name of the court to get data for
+   * @returns Court data object, or null if court not found
    */
   static getCourtDataByName(courtName: string): any | null {
     const allData = this.getCourtData();
@@ -44,7 +68,9 @@ export class CourtDataStorage {
   }
 
   /**
-   * Get timestamp of last data update
+   * Gets the timestamp of the last data update.
+   * 
+   * @returns Timestamp in milliseconds since epoch, or null if no timestamp exists
    */
   static getLastUpdateTimestamp(): number | null {
     try {
@@ -57,7 +83,10 @@ export class CourtDataStorage {
   }
 
   /**
-   * Check if data is stale (older than specified minutes)
+   * Checks if stored data is stale (older than specified age).
+   * 
+   * @param maxAgeMinutes - Maximum age in minutes before data is considered stale (default: 5)
+   * @returns true if data is stale or doesn't exist, false if data is fresh
    */
   static isDataStale(maxAgeMinutes: number = 5): boolean {
     const timestamp = this.getLastUpdateTimestamp();
@@ -70,7 +99,11 @@ export class CourtDataStorage {
   }
 
   /**
-   * Clear all court data
+   * Clears all court data from localStorage.
+   * 
+   * Side effects:
+   * - Removes court data
+   * - Removes timestamp
    */
   static clearCourtData(): void {
     try {
@@ -83,7 +116,9 @@ export class CourtDataStorage {
   }
 
   /**
-   * Get list of active courts (courts with recent data updates)
+   * Gets list of all court names that have stored data.
+   * 
+   * @returns Array of court name strings
    */
   static getAvailableCourts(): string[] {
     const data = this.getCourtData();
@@ -91,15 +126,26 @@ export class CourtDataStorage {
   }
 
   /**
-   * Get list of active courts (alias for getAvailableCourts)
+   * Gets list of active courts (alias for getAvailableCourts).
+   * 
    * @deprecated Use getAvailableCourts() instead
+   * @returns Array of court name strings
    */
   static getActiveCourts(): string[] {
     return this.getAvailableCourts();
   }
 
   /**
-   * Update data for a specific court
+   * Updates data for a specific court.
+   * 
+   * Merges new data with existing data for that court.
+   * 
+   * @param courtName - Name of the court to update
+   * @param courtData - New data for the court
+   * 
+   * Side effects:
+   * - Updates localStorage
+   * - Updates timestamp
    */
   static updateCourtData(courtName: string, courtData: any): void {
     const allData = this.getCourtData() || {};
@@ -108,7 +154,13 @@ export class CourtDataStorage {
   }
 
   /**
-   * Remove data for a specific court
+   * Removes data for a specific court.
+   * 
+   * @param courtName - Name of the court to remove
+   * 
+   * Side effects:
+   * - Removes court from localStorage
+   * - Updates timestamp
    */
   static removeCourtData(courtName: string): void {
     const allData = this.getCourtData();

@@ -1,11 +1,31 @@
+/**
+ * ImageComponent - Renders an image from the image store.
+ * 
+ * Features:
+ * - Loads image data from Tauri backend
+ * - Supports multiple scale modes (cover, contain, stretch, original)
+ * - Loading and error states
+ * - Dynamic image loading via useEffect
+ * 
+ * Scale modes:
+ * - cover: Fill area, maintain aspect ratio, may crop
+ * - contain: Fit within area, maintain aspect ratio, may have empty space
+ * - stretch: Fill area, ignore aspect ratio
+ * - original: Display at original size
+ */
 // src/components/Designer/Canvas/ImageComponent.tsx
 import React, { useEffect, useState } from 'react';
 
 interface ImageComponentProps {
+  /** ID of the image to load from the image store */
   imageId: string;
+  /** Alt text for the image */
   alt?: string;
+  /** Additional CSS classes */
   className?: string;
+  /** Inline styles */
   style?: React.CSSProperties;
+  /** How the image should scale to fit its container */
   scaleMode?: 'cover' | 'contain' | 'stretch' | 'original';
 }
 
@@ -20,6 +40,15 @@ export const ImageComponent: React.FC<ImageComponentProps> = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
+  /**
+   * Loads image data from Tauri backend when imageId changes.
+   * 
+   * Process:
+   * 1. Sets loading state
+   * 2. Fetches image data via Tauri invoke
+   * 3. Sets image source (base64 data URL)
+   * 4. Handles errors gracefully
+   */
   useEffect(() => {
     const loadImage = async () => {
       try {
@@ -71,6 +100,11 @@ export const ImageComponent: React.FC<ImageComponentProps> = ({
     );
   }
 
+  /**
+   * Maps scale mode to CSS object-fit class.
+   * 
+   * @returns Tailwind CSS class for object-fit
+   */
   const getObjectFit = () => {
     switch (scaleMode) {
       case 'cover':

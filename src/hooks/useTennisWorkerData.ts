@@ -1,25 +1,50 @@
+/**
+ * Hooks for processing and accessing tennis match data.
+ * 
+ * Provides React hooks for:
+ * - Processing tennis data via Rust backend
+ * - Accessing processed match data
+ * - Batch processing multiple matches
+ * - Error handling and loading states
+ */
 import { useEffect, useState, useCallback } from 'react';
 import { useLiveDataStore } from '../stores/useLiveDataStore';
 import { ProcessedTennisMatch, getRustTennisProcessor } from '../services/rustTennisProcessor';
 import { RawTennisData } from '../types/tennisProcessor';
 
 export interface UseTennisWorkerDataOptions {
+  /** Optional component ID for tracking */
   componentId?: string;
+  /** Debounce delay in milliseconds (reserved for future use) */
   debounceMs?: number;
+  /** Whether to enable fallback processing */
   enableFallback?: boolean;
 }
 
 export interface UseTennisWorkerDataResult {
+  /** Processed tennis match data */
   processedData: ProcessedTennisMatch | null;
+  /** Whether data is currently being processed */
   isProcessing: boolean;
+  /** Error message if processing failed */
   error: string | null;
+  /** Function to process raw tennis data */
   processData: (rawData: any) => Promise<void>;
+  /** Timestamp of last successful update */
   lastUpdate: Date | null;
 }
 
 /**
- * Hook for using tennis data processed by Web Worker
- * Provides a clean interface for components to access worker-processed tennis data
+ * Hook for processing tennis data via Rust backend.
+ * 
+ * Features:
+ * - Processes raw tennis data through Rust backend
+ * - Tracks processing state and errors
+ * - Updates when live data store changes
+ * - Provides manual processing function
+ * 
+ * @param options - Configuration options
+ * @returns Object with processed data, state, and processing function
  */
 export const useTennisWorkerData = (
   options: UseTennisWorkerDataOptions = {}
@@ -59,6 +84,17 @@ export const useTennisWorkerData = (
     }
   }, [lastError]);
 
+  /**
+   * Processes raw tennis data through Rust backend.
+   * 
+   * @param rawData - Raw tennis data to process
+   * 
+   * Side effects:
+   * - Sets isProcessing state during operation
+   * - Updates processedData on success
+   * - Sets error state on failure
+   * - Updates lastUpdate timestamp
+   */
   const processData = useCallback(async (rawData: RawTennisData) => {
     setIsProcessing(true);
     setError(null);
@@ -95,8 +131,12 @@ export const useTennisWorkerData = (
 };
 
 /**
- * Hook for getting tennis match data by component ID
- * Automatically handles data retrieval and worker processing
+ * Hook for getting tennis match data by component ID.
+ * 
+ * Automatically fetches and processes match data for a specific component.
+ * 
+ * @param componentId - Component ID to get match data for
+ * @returns Tennis worker data result with processed match data
  */
 export const useTennisMatchData = (componentId: string) => {
   const { getTennisApiMatch } = useLiveDataStore();
@@ -123,8 +163,17 @@ export const useTennisMatchData = (componentId: string) => {
 };
 
 /**
- * Hook for batch processing multiple tennis data items
- * Useful for processing multiple matches or large datasets
+ * Hook for batch processing multiple tennis data items.
+ * 
+ * Useful for processing multiple matches or large datasets efficiently.
+ * 
+ * Features:
+ * - Processes items sequentially
+ * - Tracks progress (completed/total)
+ * - Returns all processed results
+ * - Handles errors gracefully
+ * 
+ * @returns Object with batch processing function and state
  */
 export const useBatchTennisProcessing = () => {
   const { processTennisDataViaRust } = useLiveDataStore();

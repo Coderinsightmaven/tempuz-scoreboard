@@ -1,3 +1,15 @@
+/**
+ * AlignmentGuides - Renders visual alignment guide lines on the canvas.
+ * 
+ * Displays guide lines when components align during drag operations.
+ * Guides help users align components precisely with each other.
+ * 
+ * Features:
+ * - Vertical guides (for left/right/center alignment)
+ * - Horizontal guides (for top/bottom/middle alignment)
+ * - Extends beyond component bounds for better visibility
+ * - Only visible when alignment snapping is enabled
+ */
 // src/components/Designer/Canvas/AlignmentGuides.tsx
 import React from 'react';
 import { AlignmentGuide } from '../../../utils/alignment';
@@ -5,8 +17,11 @@ import { ScoreboardComponent } from '../../../types/scoreboard';
 import { getGuideExtents } from '../../../utils/alignment';
 
 interface AlignmentGuidesProps {
+  /** Array of alignment guides to display */
   guides: AlignmentGuide[];
+  /** All components (for calculating guide extents) */
   components: ScoreboardComponent[];
+  /** Canvas dimensions (for constraining guide lines) */
   canvasSize: { width: number; height: number };
 }
 

@@ -1,3 +1,14 @@
+/**
+ * useVideoStore - Video asset management store.
+ * 
+ * Manages:
+ * - Video uploads to Tauri backend
+ * - Video list and metadata
+ * - Video deletion
+ * - Thumbnail generation
+ * 
+ * All videos are stored via Tauri filesystem API and can be used in scoreboard components.
+ */
 // src/stores/useVideoStore.ts
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
@@ -35,7 +46,16 @@ export const useVideoStore = create<VideoState & VideoActions>()(
     isLoading: false,
     lastError: null,
 
-    // Actions
+    // === Video Management Actions ===
+    
+    /**
+     * Loads all stored videos from the Tauri backend.
+     * 
+     * Side effects:
+     * - Sets isLoading state during operation
+     * - Updates videos array with loaded videos
+     * - Sets lastError on failure
+     */
     loadVideos: async () => {
       set({ isLoading: true, lastError: null });
       
@@ -54,6 +74,23 @@ export const useVideoStore = create<VideoState & VideoActions>()(
       }
     },
 
+    /**
+     * Uploads a video file to the Tauri backend.
+     * 
+     * Process:
+     * 1. Converts file to base64
+     * 2. Sends to Tauri backend via invoke
+     * 3. Backend stores file and generates thumbnail
+     * 4. Adds to local videos array
+     * 
+     * @param file - The video file to upload
+     * @returns The stored video object, or null if upload fails
+     * 
+     * Side effects:
+     * - Sets isLoading state during operation
+     * - Adds video to videos array on success
+     * - Sets lastError on failure
+     */
     uploadVideo: async (file: File) => {
       set({ isLoading: true, lastError: null });
       
@@ -99,6 +136,17 @@ export const useVideoStore = create<VideoState & VideoActions>()(
       }
     },
 
+    /**
+     * Deletes a video from the Tauri backend and local state.
+     * 
+     * @param videoId - The ID of the video to delete
+     * @returns true if successful, false if failed
+     * 
+     * Side effects:
+     * - Deletes file from Tauri backend
+     * - Removes video from local videos array
+     * - Sets lastError on failure
+     */
     deleteVideo: async (videoId: string) => {
       set({ isLoading: true, lastError: null });
       
@@ -124,11 +172,20 @@ export const useVideoStore = create<VideoState & VideoActions>()(
       }
     },
 
+    /**
+     * Gets a video by ID.
+     * 
+     * @param videoId - The ID of the video to retrieve
+     * @returns The video object, or null if not found
+     */
     getVideo: (videoId: string) => {
       const { videos } = get();
       return videos.find(video => video.id === videoId) || null;
     },
 
+    /**
+     * Clears the current error state.
+     */
     clearError: () => {
       set({ lastError: null });
     },

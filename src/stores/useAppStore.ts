@@ -1,3 +1,15 @@
+/**
+ * useAppStore - Global application state management store.
+ * 
+ * Manages:
+ * - UI state (theme, sidebar, property panel visibility)
+ * - Monitor detection and selection
+ * - Scoreboard instance management (multiple display windows)
+ * - Application settings and preferences
+ * - Error handling
+ * 
+ * This store coordinates high-level application behavior and multi-monitor display management.
+ */
 // src/stores/useAppStore.ts
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
@@ -120,32 +132,81 @@ export const useAppStore = create<AppState & AppActions>()(
       enableHotkeys: true,
     },
 
-    // Theme actions
+    // === Theme Management ===
+    
+    /**
+     * Sets the application theme.
+     * 
+     * @param theme - The theme to apply ('light', 'dark', or 'system')
+     * Side effects: Theme is persisted to localStorage via subscription
+     */
     setTheme: (theme: Theme) =>
       set(() => ({ theme })),
 
+    /**
+     * Toggles between light and dark theme.
+     * If current theme is 'system', switches to 'light'.
+     * 
+     * Side effects: Theme is persisted to localStorage via subscription
+     */
     toggleTheme: () =>
       set((state) => ({
         theme: state.theme === 'light' ? 'dark' : 'light'
       })),
 
-    // UI actions
+    // === UI State Management ===
+    
+    /**
+     * Toggles the sidebar open/closed state.
+     */
     toggleSidebar: () =>
       set((state) => ({ sidebarOpen: !state.sidebarOpen })),
 
+    /**
+     * Toggles the property panel open/closed state.
+     */
     togglePropertyPanel: () =>
       set((state) => ({ propertyPanelOpen: !state.propertyPanelOpen })),
 
+    /**
+     * Toggles the toolbar compact mode.
+     */
     toggleToolbarCompact: () =>
       set((state) => ({ toolbarCompact: !state.toolbarCompact })),
 
+    /**
+     * Sets the sidebar open state explicitly.
+     * 
+     * @param open - Whether the sidebar should be open
+     */
     setSidebarOpen: (open: boolean) =>
       set(() => ({ sidebarOpen: open })),
 
+    /**
+     * Sets the property panel open state explicitly.
+     * 
+     * @param open - Whether the property panel should be open
+     */
     setPropertyPanelOpen: (open: boolean) =>
       set(() => ({ propertyPanelOpen: open })),
 
-    // Monitor management
+    // === Monitor Management ===
+    
+    /**
+     * Loads available monitors from the system via Tauri API.
+     * 
+     * Process:
+     * 1. Sets loading state to true
+     * 2. Fetches monitors from Tauri backend
+     * 3. Selects first monitor by default if available
+     * 4. Handles errors and updates error state
+     * 
+     * Side effects:
+     * - Updates isLoadingMonitors state
+     * - Updates monitors array
+     * - Auto-selects first monitor if available
+     * - Sets lastError on failure
+     */
     loadMonitors: async () => {
       set(() => ({ isLoadingMonitors: true, lastError: null }));
       
@@ -164,10 +225,41 @@ export const useAppStore = create<AppState & AppActions>()(
       }
     },
 
+    /**
+     * Selects a monitor for scoreboard display.
+     * 
+     * @param monitor - The monitor to select, or null to deselect
+     */
     selectMonitor: (monitor: MonitorInfo | null) =>
       set(() => ({ selectedMonitor: monitor })),
 
-    // Multiple Scoreboard Management
+    // === Multiple Scoreboard Instance Management ===
+    
+    /**
+     * Creates a new scoreboard display window on the selected monitor.
+     * 
+     * This function:
+     * - Creates a new Tauri window for scoreboard display
+     * - Loads scoreboard data (either from saved scoreboard or current designer state)
+     * - Associates tennis API scoreboard ID and court filter if provided
+     * - Tracks the instance in the store
+     * 
+     * @param name - Display name for the scoreboard instance
+     * @param width - Window width in pixels
+     * @param height - Window height in pixels
+     * @param offsetX - X offset from monitor origin (default: 0)
+     * @param offsetY - Y offset from monitor origin (default: 0)
+     * @param savedScoreboardId - Optional ID of saved scoreboard to load
+     * @param tennisApiScoreboardId - Optional tennis API scoreboard ID for live data
+     * @param courtFilter - Optional court filter for WebSocket data filtering
+     * @returns The instance ID if successful, null if failed
+     * 
+     * Side effects:
+     * - Creates a new Tauri window
+     * - Adds instance to scoreboardInstances array
+     * - Sets isCreatingScoreboardWindow state
+     * - Sets lastError on failure
+     */
     createScoreboardInstance: async (
       name: string,
       width: number,
@@ -296,6 +388,16 @@ export const useAppStore = create<AppState & AppActions>()(
       }
     },
 
+    /**
+     * Closes a scoreboard display window and removes it from tracking.
+     * 
+     * @param instanceId - The ID of the instance to close
+     * 
+     * Side effects:
+     * - Closes the Tauri window
+     * - Removes instance from scoreboardInstances array
+     * - Sets lastError if instance not found or close fails
+     */
     closeScoreboardInstance: async (instanceId: string) => {
       const state = get();
       const instance = state.scoreboardInstances.find(inst => inst.id === instanceId);
@@ -317,6 +419,14 @@ export const useAppStore = create<AppState & AppActions>()(
       }
     },
 
+    /**
+     * Closes all scoreboard display windows.
+     * 
+     * Side effects:
+     * - Closes all Tauri scoreboard windows
+     * - Clears scoreboardInstances array
+     * - Sets lastError if close fails
+     */
     closeAllScoreboardInstances: async () => {
       try {
         await TauriAPI.closeAllScoreboardWindows();
@@ -328,6 +438,18 @@ export const useAppStore = create<AppState & AppActions>()(
       }
     },
 
+    /**
+     * Updates the position of a scoreboard display window.
+     * 
+     * @param instanceId - The ID of the instance to update
+     * @param offsetX - New X offset from monitor origin
+     * @param offsetY - New Y offset from monitor origin
+     * 
+     * Side effects:
+     * - Updates Tauri window position
+     * - Updates instance position in scoreboardInstances array
+     * - Sets lastError if instance not found or update fails
+     */
     updateScoreboardInstancePosition: async (
       instanceId: string,
       offsetX: number,
@@ -367,6 +489,18 @@ export const useAppStore = create<AppState & AppActions>()(
       }
     },
 
+    /**
+     * Updates the size of a scoreboard display window.
+     * 
+     * @param instanceId - The ID of the instance to update
+     * @param width - New window width in pixels
+     * @param height - New window height in pixels
+     * 
+     * Side effects:
+     * - Updates Tauri window size
+     * - Updates instance size in scoreboardInstances array
+     * - Sets lastError if instance not found or update fails
+     */
     updateScoreboardInstanceSize: async (
       instanceId: string,
       width: number,
@@ -397,24 +531,54 @@ export const useAppStore = create<AppState & AppActions>()(
       }
     },
 
+    /**
+     * Gets a scoreboard instance by ID.
+     * 
+     * @param instanceId - The ID of the instance to retrieve
+     * @returns The scoreboard instance, or undefined if not found
+     */
     getScoreboardInstance: (instanceId: string) => {
       const state = get();
       return state.scoreboardInstances.find(inst => inst.id === instanceId);
     },
 
-    // Error handling
+    // === Error Handling ===
+    
+    /**
+     * Sets an error message in the store.
+     * 
+     * @param error - Error message string, or null to clear error
+     */
     setError: (error: string | null) =>
       set(() => ({ lastError: error })),
 
+    /**
+     * Clears the current error message.
+     */
     clearError: () =>
       set(() => ({ lastError: null })),
 
-    // Settings
+    // === Settings Management ===
+    
+    /**
+     * Updates application settings with partial settings object.
+     * Merges new settings with existing settings.
+     * 
+     * @param newSettings - Partial settings object to merge
+     * Side effects: Settings are persisted to localStorage via subscription
+     */
     updateSettings: (newSettings: Partial<AppState['settings']>) =>
       set((state) => ({
         settings: { ...state.settings, ...newSettings }
       })),
 
+    /**
+     * Adds a file path to the recent files list.
+     * Removes duplicate entries and keeps only the 10 most recent files.
+     * 
+     * @param filepath - The file path to add
+     * Side effects: Settings are persisted to localStorage via subscription
+     */
     addRecentFile: (filepath: string) =>
       set((state) => {
         const recentFiles = [
@@ -427,12 +591,30 @@ export const useAppStore = create<AppState & AppActions>()(
         };
       }),
 
+    /**
+     * Clears all recent files from the list.
+     * Side effects: Settings are persisted to localStorage via subscription
+     */
     clearRecentFiles: () =>
       set((state) => ({
         settings: { ...state.settings, recentFiles: [] }
       })),
 
-    // Initialization
+    // === Initialization ===
+    
+    /**
+     * Initializes the application by loading saved settings and monitors.
+     * 
+     * Process:
+     * 1. Loads saved settings from localStorage
+     * 2. Loads saved theme from localStorage
+     * 3. Loads available monitors
+     * 
+     * Side effects:
+     * - Restores settings from localStorage
+     * - Restores theme from localStorage
+     * - Loads and selects monitors
+     */
     initializeApp: async () => {
       const { loadMonitors } = get();
       
@@ -465,7 +647,12 @@ export const useAppStore = create<AppState & AppActions>()(
   }))
 );
 
-// Subscribe to settings changes and save to localStorage
+// === Persistence Subscriptions ===
+
+/**
+ * Auto-saves settings to localStorage whenever they change.
+ * This ensures user preferences persist across app restarts.
+ */
 useAppStore.subscribe(
   (state) => state.settings,
   (settings) => {
@@ -477,7 +664,10 @@ useAppStore.subscribe(
   }
 );
 
-// Subscribe to theme changes and save to localStorage
+/**
+ * Auto-saves theme to localStorage whenever it changes.
+ * This ensures theme preference persists across app restarts.
+ */
 useAppStore.subscribe(
   (state) => state.theme,
   (theme) => {
